@@ -4,22 +4,27 @@ Retrieval service — orchestrates query understanding and hybrid retrieval.
 Flow:
   raw query
     → process_query        (normalize, keywords, legal concepts)
-    → dense retriever      (semantic similarity, stub → Qdrant in prod)
+    → dense retriever      (semantic similarity)
     → keyword retriever    (lexical match)
     → fuse_results         (dedup, rank, top_k)
+    → reranker (optional)  (re-score by query overlap)
     → list[RetrievedChunk]
 
 Usage:
     service = RetrievalService(
-        dense=DenseRetriever(),
+        dense=DenseRetriever(...),
         keyword=KeywordRetriever(corpus),
+        reranker=SimpleReranker(),   # optional
     )
     results = service.search("žena cizinka unesla dítě do Ruska", top_k=5)
 """
 
+from __future__ import annotations
+
 from app.core.logging import get_logger
 from app.core.tracing import trace_event
 from app.rag.query.query_processor import process_query
+from app.rag.reranker.base import BaseReranker
 from app.rag.retrieval.base import BaseRetriever
 from app.rag.retrieval.dense_retriever import DenseRetriever
 from app.rag.retrieval.fusion import fuse_results
@@ -36,9 +41,11 @@ class RetrievalService:
         self,
         dense: DenseRetriever,
         keyword: KeywordRetriever,
+        reranker: BaseReranker | None = None,
     ) -> None:
         self._dense: BaseRetriever = dense
         self._keyword: BaseRetriever = keyword
+        self._reranker = reranker
 
     def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
         """Find the top_k most relevant chunks for a free-text query."""
@@ -63,5 +70,15 @@ class RetrievalService:
 
         fused = fuse_results(dense_results, keyword_results, top_k=top_k)
         trace_event(logger, "retrieval.fused", count=len(fused))
+
+        if self._reranker is not None:
+            before = len(fused)
+            fused = self._reranker.rerank(query, fused, top_k=top_k)
+            trace_event(
+                logger,
+                "retrieval.rerank",
+                before_count=before,
+                after_count=len(fused),
+            )
 
         return fused
