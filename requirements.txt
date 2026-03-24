@@ -4,3 +4,5 @@ lxml
 tenacity
 python-dotenv
 playwright
+fastapi
+uvicorn[standard]
