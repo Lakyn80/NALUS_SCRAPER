@@ -19,6 +19,7 @@ from app.rag.retrieval.dense_retriever import DenseRetriever
 from app.rag.retrieval.embedder import MockEmbedder
 from app.rag.retrieval.keyword_retriever import KeywordRetriever
 from app.rag.retrieval.retrieval_service import RetrievalService
+from app.rag.llm.providers.deepseek import DeepSeekTextLLM
 from app.rag.synthesis.synthesis_service import MockSynthesisLLM, SynthesisService
 
 logger = get_logger(__name__)
@@ -142,12 +143,13 @@ def _build(qdrant_url: str) -> OrchestratorService:
     keyword = KeywordRetriever(corpus=list(CORPUS))
     retrieval = RetrievalService(dense=dense, keyword=keyword)
 
+    synthesis_llm = _build_synthesis_llm()
     logger.info("[startup] OrchestratorService built with real retrievers (%d docs)", len(CORPUS))
 
     return OrchestratorService(
         planner=PlannerService(llm=MockPlannerLLM()),
         execution=ExecutionService(retrieval_service=retrieval),
-        synthesis=SynthesisService(llm=MockSynthesisLLM()),
+        synthesis=SynthesisService(llm=synthesis_llm),
     )
 
 
@@ -177,6 +179,22 @@ def _ingest(client: Any) -> None:
     ]
     ingestor.ingest_chunks(chunks)
     logger.info("[startup] ingest complete")
+
+
+def _build_synthesis_llm():
+    """Return DeepSeekTextLLM when configured, otherwise MockSynthesisLLM."""
+    provider = os.getenv("LLM_PROVIDER", "").lower()
+    api_key = os.getenv("LLM_API_KEY", "")
+
+    if provider == "deepseek" and api_key:
+        logger.info("[startup] synthesis LLM: DeepSeek (deepseek-chat)")
+        return DeepSeekTextLLM(api_key=api_key)
+
+    if provider == "deepseek" and not api_key:
+        logger.warning("[startup] LLM_PROVIDER=deepseek but LLM_API_KEY is not set — falling back to Mock")
+
+    logger.info("[startup] synthesis LLM: MockSynthesisLLM (set LLM_PROVIDER=deepseek + LLM_API_KEY to enable real LLM)")
+    return MockSynthesisLLM()
 
 
 def _stub_orchestrator() -> OrchestratorService:

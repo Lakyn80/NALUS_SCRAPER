@@ -30,24 +30,38 @@ logger = get_logger(__name__)
 # Prompt
 # ---------------------------------------------------------------------------
 
-_PROMPT_TEMPLATE = """\
-Jsi právní asistent specializovaný na judikaturu Ústavního soudu České republiky.
+_SYSTEM_PROMPT = (
+    "You are a legal assistant specialized in constitutional law of the Czech Republic. "
+    "Use only the provided case excerpts to answer. Do not hallucinate. "
+    "If the excerpts do not contain sufficient information, say so explicitly."
+)
 
-Na základě níže uvedených úryvků z rozhodnutí Ústavního soudu odpověz na otázku.
+_USER_TEMPLATE = """\
+User question:
+{query}
 
-Pravidla:
-- odpovídej v češtině
-- strukturuj odpověď do sekcí: Shrnutí, Klíčové závěry, Relevantní rozhodnutí
-- cituj konkrétní rozhodnutí podle jejich ID
-- buď věcný a přesný
-- pokud úryvky neobsahují relevantní informace, uveď to
-
-Otázka: {query}
-
-Úryvky z rozhodnutí:
+Relevant case excerpts:
 {chunks_text}
 
-Odpověď:"""
+Instructions:
+- Answer only from the provided excerpts
+- If information is insufficient, state it clearly
+- Provide a structured legal explanation in Czech
+- Keep it concise but precise
+- Cite specific decisions by their ID (e.g. III.ÚS 255/22)
+- Structure the answer: Shrnutí / Klíčové závěry / Relevantní rozhodnutí
+
+Answer:"""
+
+# Combined into a single prompt for BaseTextLLM (text-in / text-out interface)
+_PROMPT_TEMPLATE = f"SYSTEM: {_SYSTEM_PROMPT}\n\nUSER:\n{{query_block}}"
+
+# Resolved at call time via _build_prompt()
+_PROMPT_TEMPLATE = """\
+SYSTEM: {system}
+
+USER:
+{user}"""
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +120,10 @@ class SynthesisService:
         )
 
         chunks_text = _format_chunks(chunks)
-        prompt = _PROMPT_TEMPLATE.format(query=query, chunks_text=chunks_text)
+        prompt = _PROMPT_TEMPLATE.format(
+            system=_SYSTEM_PROMPT,
+            user=_USER_TEMPLATE.format(query=query, chunks_text=chunks_text),
+        )
 
         try:
             answer = self._llm.generate_text(prompt).strip()
