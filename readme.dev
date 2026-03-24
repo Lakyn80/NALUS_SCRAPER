@@ -1,468 +1,870 @@
-# NALUS Scraper - development notes
+# NALUS Scraper & RAG Pipeline — developer notes
 
-Tento soubor shrnuje detailne, co bylo v projektu doposud udelano, proc to bylo udelano, jak aktualni scraper funguje a jak se testuje.
+Interni technicka dokumentace. Neni to uzivatelsky README.
+Pokryva vse: scraper, RAG pipeline, architekturu, testy, spousteni.
 
-Dokument je urceny pro dalsi vyvoj. Neni to uzivatelsky README, ale interni technicka poznamka ke stavu kodu.
+---
 
-## 1. Cil projektu
+## OBSAH
 
-Cilem projektu je scrapovat databazi rozhodnuti Ustavniho soudu CR (NALUS), konkretne:
+1. Cil projektu
+2. Scraper — jak funguje
+3. RAG pipeline — architektura a moduly
+4. Struktura souboru
+5. Jak spoustet
+6. Testovani
+7. Git historie
+8. Zname limity
+9. Doporuceny dalsi postup
 
-- odeslat vyhledavani do NALUS
-- ziskat HTML stranky s vysledky
-- parsovat strukturovane metadata jednotlivych rozhodnuti
-- ziskat odkaz na plny text rozhodnuti (`GetText.aspx?sz=...`)
-- stahnout cely text rozhodnuti
-- ulozit vse do programu a do `results.json`
+---
 
-Aktualni stav:
+## 1. CIL PROJEKTU
 
-- scraper umi nacist vysledky vyhledavani
-- umi parsovat prvni stranku i konkretni dalsi stranky
-- umi ziskat `text_url`
-- umi z `text_url` stahnout plny text rozhodnuti
-- umi ulozit `full_text` do `results.json`
-- ma unit testy i volitelny live integration test
+Projekt ma dve casti:
 
-## 2. Co bylo udelano chronologicky
+### 1.1 Scraper
 
-### 2.1 Overeni, ze Docker a request flow funguje
+Scrapovat databazi rozhodnuti Ustavniho soudu CR (NALUS):
 
-Na zacatku bylo overeno, ze kontejner bezi a scraper se dostane na NALUS.
+- odeslat vyhledavani do NALUS (POST na Search.aspx)
+- parsovat HTML stranky s vysledky
+- ziskat metadata jednotlivych rozhodnuti
+- stahnout plny text rozhodnuti (GetText.aspx)
+- ulozit vse do `results.json`
 
-Puvodni vystup ukazoval:
+### 1.2 RAG pipeline
 
-- Docker image se korektne sestavila
-- `docker run --rm nalus-scraper` vratil HTML z NALUS
-- HTML bylo opravdu HTML vysledkove stranky, ne chyba nebo blokace
+Nad stazenyma rozhodnutima provozovat retrieval-augmented generation:
 
-To znamenalo, ze problem nebyl v Dockeru ani v pripojeni, ale v tom, ze program koncil u raw HTML misto skutecneho parsovani.
+- chunkovani dokumentu
+- indexovani do Qdrant (vektorova DB)
+- hybridni vyhledavani (dense + keyword)
+- reranking vysledku
+- query understanding + rewrite
+- planovani multi-step dotazu
+- generovani odpovedi (rule-based i LLM)
+- FastAPI endpoint pro vyhledavani
 
-### 2.2 Oprava flow pro vyhledani a strankovani
+---
 
-Bylo zjisteno, ze NALUS bezi jako ASP.NET WebForms a potrebuje:
+## 2. SCRAPER
+
+### 2.1 Jak NALUS funguje
+
+NALUS bezi jako ASP.NET WebForms. Potrebuje:
 
 - nacist hidden fieldy (`__VIEWSTATE`, `__VIEWSTATEGENERATOR`, `__EVENTVALIDATION`)
 - odeslat POST na `Search.aspx`
 - zachovat session
 - pri dalsich strankach chodit na `Results.aspx?page=...`
 
-Bylo doplneno:
+### 2.2 Scraping flow (end-to-end)
 
-- extrahovani hidden fields
-- session-aware vyhledavani
-- spravny prechod na `Results.aspx?page=...`
-- validace, ze vysledkem je opravdu vysledkova stranka
+```
+app/main.py
+  └── fetch_page_html()           → stahne HTML vysledkove stranky
+  └── extract_search_page(html)   → NalusSearchPage (metadata + vysledky)
+  └── enrich_results_with_text()  → pro kazdy vysledek stahne full_text
+  └── ulozi results.json
+```
 
-Aktualni implementace je v:
+### 2.3 Datove modely (app/models/search_result.py)
 
-- `app/crawler/playwright_crawler.py`
+**NalusResult** — jedno rozhodnuti:
 
-Poznamka:
-
-Soubor se jmenuje `playwright_crawler.py`, ale aktualne pouziva `requests`, ne Playwright. Nazev souboru zustal, implementace je HTTP-based.
-
-### 2.3 Vytvoreni strukturovaneho parseru vysledku
-
-Byl vytvoren parser, ktery z HTML vysledkove stranky vytahuje:
-
-- metadata stranky (`page_number`, `total_pages`, `start_result`, `end_result`, `total_results`)
-- jednotlive vysledky
-- `result_id`
-- `case_reference`
-- `ecli`
-- `judge_rapporteur`
-- `petitioner`
-- `popular_name`
-- datumove udaje
-- souvisejici predpisy
-- formu rozhodnuti
-- vyrok
+- `result_id`, `case_reference`, `ecli`
+- `judge_rapporteur`, `petitioner`, `popular_name`
+- datumove udaje, predpisy, forma, vyrok
 - temata a klicova slova
-- `detail_url`
-- `text_url`
+- `detail_url`, `text_url`
+- `full_text: str | None` — plny text rozhodnuti
+
+**NalusSearchPage** — jedna stranka vysledku:
+
+- `page_number`, `total_pages`, `start_result`, `end_result`, `total_results`
+- `results: list[NalusResult]`
+
+### 2.4 Klicove soubory scraperu
+
+| Soubor | Uloha |
+|--------|-------|
+| `app/crawler/playwright_crawler.py` | HTTP fetch (pouziva requests, ne Playwright) |
+| `app/crawler/paginator.py` | prechod mezi strankami |
+| `app/crawler/extractor.py` | parser HTML → NalusSearchPage |
+| `app/crawler/text_fetcher.py` | stazeni + cisteni plneho textu |
+| `app/services/decision_service.py` | enrich_results_with_text() |
+| `app/models/search_result.py` | datove modely |
+| `app/main.py` | entry point |
+
+### 2.5 Co je v results.json
+
+Vystup posledniho behu. Obsahuje:
+- 10 zaznamu z prvni stranky pro vychozi dotaz
+- pole `full_text` u kazdeho zaznamu
+- overeno: full_text dela tisice znaku (23100, 9238, 11145...)
+
+---
+
+## 3. RAG PIPELINE
+
+Kompletni architektura RAG systemu nad judikaturou Ustavniho soudu.
+
+### 3.1 Prehled vrstev (shora dolu)
+
+```
+User query
+    │
+    ▼
+[KROK 4]  QueryProcessor         — normalizace, keywords, legal concepts
+    │
+    ▼
+[KROK 19] QueryRewriteService    — LLM rewrite na presnejsi pravni dotaz (optional)
+    │
+    ▼
+[KROK 20] PlannerService         — rozklad na 2-5 sub-queries (optional)
+    │
+    ▼
+[KROK 21] ExecutionService       — spusti retrieval pro kazdy krok planu
+    │         ┌──────────────────────────────┐
+    │         │                              │
+    ▼         ▼                              ▼
+[KROK 9]  DenseRetriever      [KROK 5]  KeywordRetriever
+          (Qdrant + embedder)            (in-memory, BM25-like)
+    │         │                              │
+    └────┬────┘                              │
+         ▼                                   │
+[KROK 5] fuse_results          ←────────────┘
+    │
+    ▼
+[KROK 10/11] Reranker          — SimpleReranker nebo CrossEncoderReranker (optional)
+    │
+    ▼
+[KROK 18] StrategyService      — rozhodne: no_results / direct_answer / llm_summary
+    │
+    ├──────────────────┬────────────────────┐
+    ▼                  ▼                    ▼
+[KROK 12]         [KROK 15/16]        (no_results)
+AnswerService     LLMService
+(rule-based)      (LLM backend)
+    │                  │
+    └──────┬───────────┘
+           ▼
+[KROK 16] HybridAnswerService  — routing: < 2 chunks → Answer, >= 2 → LLM
+           │
+           ▼
+[KROK 13] FastAPI endpoint     — POST /api/rag/search → SearchResponse
+```
+
+### 3.2 KROK 1 — Core: Logging a Tracing
+
+**app/core/logging.py**
+
+- `get_logger(name)` — vraci nakonfigurovany logger
+- respektuje `LOG_LEVEL` a `LOG_FILE` env promenne
+- guard: `type(h) is logging.StreamHandler` (ne isinstance, protoze FileHandler dedi)
+- modul-level flag `_configured` brani duplicate handlerum
+
+**app/core/tracing.py**
+
+- `trace_event(logger, name, **payload)` — logi na DEBUG: `TRACE event.name | key=value`
+- fallback na `str(value)` pro neserializovatelne typy (ne repr)
+
+### 3.3 KROK 2 — Chunking
+
+**app/rag/chunking/chunker.py**
+
+```python
+@dataclass
+class TextChunk:
+    id: str              # "{normalize(case_reference)}_{chunk_index}"
+    text: str
+    case_reference: str | None
+    ecli: str | None
+    decision_date: str | None
+    judge: str | None
+    text_url: str | None
+    chunk_index: int
 
-Byly zavedene dva hlavni datove modely:
+def chunk_document(result: NalusResult, chunk_size=1500, overlap=200) -> list[TextChunk]:
+    # step = chunk_size - overlap
+    # id = normalize(case_reference) + "_" + str(index)
+```
 
-- `NalusResult`
-- `NalusSearchPage`
+### 3.4 KROK 3 — JSONL Export
 
-Aktualni implementace je v:
+**app/rag/exporter/jsonl_exporter.py**
 
-- `app/models/search_result.py`
-- `app/crawler/extractor.py`
+```python
+def export_chunks_to_jsonl(chunks: list[TextChunk], output_path: str) -> None:
+    # kazdy chunk → {"id": ..., "text": ..., "metadata": {..., "source": "nalus"}}
+    # ensure_ascii=False, overwrite mode
+```
 
-Dulezita poznamka k nazvum funkci:
+### 3.5 KROK 4 — Query Understanding
 
-Spravny parser vysledkove stranky je:
+**app/rag/query/query_processor.py**
 
-- `extract_search_page(...)`
+```python
+@dataclass
+class ProcessedQuery:
+    original_query: str
+    normalized_query: str   # lowercase + collapse whitespace
+    keywords: list[str]     # slova >= 3 znaky, deduplikovano
+    legal_concepts: list[str]  # substring match v _LEGAL_CONCEPTS_MAP
 
-Pomocna funkce na ziskani ID je:
+def process_query(query: str) -> ProcessedQuery: ...
+```
 
-- `extract_ids(...)`
+`_LEGAL_CONCEPTS_MAP` pouziva stems jako klice ("rusk" matchuje "rusko"/"ruska"/"ruske").
 
-Drive se resila chyba, kdy nekde zustal import `parse_results`. Ten byl opraven. Aktualne ma byt vsude pouzivano `extract_search_page`.
+### 3.6 KROK 5 — Retrieval Interfaces
 
-### 2.4 Oprava paginatoru
+**app/rag/retrieval/models.py**
 
-`app/crawler/paginator.py` byl sjednocen s hlavnim flow tak, aby pouzival stejny session-aware mechanismus jako hlavni crawler.
+```python
+@dataclass
+class RetrievedChunk:
+    id: str
+    text: str
+    score: float
+    source: str   # "dense" | "keyword"
+```
 
-Aktualni stav:
+**app/rag/retrieval/base.py** — `BaseRetriever(ABC)` s `retrieve(query, top_k)`
 
-- `fetch_page(page, query)` deleguje na `fetch_page_html(query=query, page=page)`
+**app/rag/retrieval/keyword_retriever.py** — in-memory, score = min(0.3 + 0.1 * match_count, 0.9)
 
-### 2.5 Napojeni `main.py` na parser
+**app/rag/retrieval/fusion.py** — dedup po id (zachova vyssi score), sort desc, top_k
 
-Hlavni vstup programu byl upraven tak, aby:
+### 3.7 KROK 6 — Qdrant Ingest
 
-- stahl HTML vysledku
-- zavolal `extract_search_page(...)`
-- pracoval se `search_page.results`
+**app/rag/ingest/qdrant_ingest.py**
 
-Pozdeji byl `main.py` dale rozsireny tak, aby neukladal jen metadata vysledku, ale i plny text rozhodnuti.
+```python
+class QdrantIngestor:
+    def __init__(self, client: _UpsertableClient, collection_name: str, batch_size: int = 100)
+    def ingest_chunks(self, chunks: list[TextChunk]) -> None
+        # batch upsert IngestPoint(id, vector, payload)
+        # vektor: placeholder [0.0, 0.1, ..., 0.9] (10-dim)
+```
 
-Aktualni vstupni bod je:
+`_UpsertableClient` je Protocol — ziadny import qdrant_client na module level.
 
-- `app/main.py`
+### 3.8 KROK 7 — Retrieval Service
 
-## 3. Full text vrstva
+**app/rag/retrieval/retrieval_service.py**
 
-### 3.1 Problem
+```python
+class RetrievalService:
+    def __init__(self, dense: DenseRetriever, keyword: KeywordRetriever,
+                 reranker: BaseReranker | None = None)
+    def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
+        # process_query → dense.retrieve + keyword.retrieve → fuse → optional rerank
+```
 
-Parser vysledku umel dostat `text_url`, ale tim scraper koncil. To znamenalo:
+### 3.9 KROK 8 — Pipeline
 
-- metadata rozhodnuti byla k dispozici
-- plny text rozhodnuti jeste nebyl stazen
+**app/rag/orchestration/pipeline.py**
 
-### 3.2 Vytvorena modulova architektura
+```python
+@dataclass
+class RetrievalPipelineResult:
+    processed_query: ProcessedQuery
+    results: list[RetrievedChunk]
+    decision: StrategyDecision | None = None   # KROK 18
+    rewritten_query: str | None = None         # KROK 19
 
-Byla dodelana samostatna vrstva pro plne texty, aby se dal scraper rozsirovat bez zasahu do `extractor.py`.
+class RetrievalPipeline:
+    def __init__(self, retrieval_service, strategy=None, rewrite_service=None)
+    def run(self, query: str, top_k: int = 5) -> RetrievalPipelineResult:
+        # optional rewrite → process_query → search → optional strategy
+```
 
-Byly pridany:
+### 3.10 KROK 9 — DenseRetriever
 
-- `app/crawler/text_fetcher.py`
-- `app/services/decision_service.py`
+**app/rag/retrieval/dense_retriever.py**
 
-### 3.3 `app/crawler/text_fetcher.py`
+```python
+class DenseRetriever(BaseRetriever):
+    def __init__(self, client: _SearchableClient, collection_name: str, embedder: BaseEmbedder)
+    def retrieve(self, query: str, top_k: int = 10) -> list[RetrievedChunk]:
+        # embedder.embed_query(query) → client.search(collection, vector, limit)
 
-Obsahuje dve funkce:
+class MockEmbedder(BaseEmbedder):
+    def embed_query(self, query: str) -> list[float]: return [0.1] * dim
+```
 
-#### `fetch_decision_html(text_url: str) -> str`
+`_SearchableClient` je Protocol — testovatelne bez qdrant_client baliku.
 
-Uloha:
+Poznamka: nova verze qdrant_client (>= 1.9) nema `.search()`, ma `.query_points()`.
+V e2e testech je `_SearchAdapter` ktery bricuje stare API na nove.
 
-- stahnout HTML plneho textu rozhodnuti
-- nastavit `utf-8`
-- zavolat `raise_for_status()`
-- vratit raw HTML
+### 3.11 KROK 10 — SimpleReranker
 
-#### `extract_plain_text(html: str) -> str`
+**app/rag/reranker/base.py** — `BaseReranker(ABC)` s `rerank(query, chunks, top_k)`
 
-Uloha:
+**app/rag/reranker/simple_reranker.py**
 
-- vytvorit `BeautifulSoup`
-- odstranit `script` a `style`
-- ziskat cisty text
-- normalizovat whitespace
-- vratit text po radcich oddeleny `\n`
+```python
+class SimpleReranker(BaseReranker):
+    # boost = 0.05 * count unikatnich slov query v textu chunku
+    # pouziva dataclasses.replace (bez mutace originalu)
+```
 
-### 3.4 Rozsireni modelu `NalusResult`
+### 3.12 KROK 11 — CrossEncoderReranker
 
-Do `NalusResult` bylo pridano:
+**app/rag/reranker/cross_encoder_reranker.py**
 
-- `full_text: str | None = None`
+```python
+class CrossEncoderReranker(BaseReranker):
+    def __init__(self, model_name="cross-encoder/ms-marco-MiniLM-L-6-v2", model=None):
+        # lazy import sentence_transformers az kdyz neni injected model
+    def rerank(self, query, chunks, top_k=5):
+        # pairs = [(query, chunk.text) for chunk in chunks]
+        # scores = model.predict(pairs)
+        # fallback na puvodni poradi pri chybe
+```
 
-To znamena, ze kazdy vysledek umi obsahovat:
+### 3.13 KROK 12 — AnswerService
 
-- metadata
-- odkaz na detail
-- odkaz na text
-- plny stazeny text rozhodnuti
+**app/rag/answer/answer_service.py**
 
-### 3.5 `app/services/decision_service.py`
+```python
+@dataclass
+class AnswerResult:
+    query: str
+    summary: str        # rule-based, LLM-ready rozhrani
+    top_cases: list[str]   # max 5 unikatnich chunk.id
+    excerpts: list[str]    # max 3 excerpty po 300 znacich
 
-Hlavni funkce:
+# prazdne chunks → summary = "Nenalezeny zadne relevantni pripady."
+# neprazdne → "Na zaklade judikatury Ustavniho soudu..."
+```
 
-- `enrich_results_with_text(results: list[NalusResult]) -> list[NalusResult]`
+### 3.14 KROK 13 — FastAPI Endpoint
 
-Co dela:
+**app/api/rag_router.py**
 
-- projde list vysledku
-- pokud vysledek nema `text_url`, vrati kopii bez zmeny
-- pokud `text_url` ma:
-  - stahne HTML pres `fetch_decision_html`
-  - prevede HTML na plain text pres `extract_plain_text`
-  - vrati novou instanci `NalusResult` s vyplnenym `full_text`
-- pri chybe nespadne
-- pri chybe vrati vysledek s `full_text=None`
+```python
+router = APIRouter(prefix="/api/rag", tags=["rag"])
 
-Dulezita architektonicka vlastnost:
+class SearchRequest(BaseModel):
+    query: str
+    top_k: int = 5
 
-- service nema global state
-- nic netiskne
-- vraci novy list
-- pracuje funkcionalnim stylem pres `dataclasses.replace`
+class SearchResponse(BaseModel):
+    query: str; summary: str; top_cases: list[str]; excerpts: list[str]
 
-To je priprava na pozdejsi paralelizaci.
+@router.post("/search", response_model=SearchResponse)
+def search(request, pipeline=Depends(get_pipeline), answer_service=Depends(get_answer_service))
+```
 
-## 4. Jak ted bezi program end-to-end
+**app/api_app.py** — FastAPI entry point s `include_router(rag_router)`
 
-Aktualni tok programu v `app/main.py`:
+Spusteni:
+```bash
+uvicorn app.api_app:app --reload
+```
 
-1. `fetch_page_html()` stahne HTML vysledku
-2. `extract_search_page(...)` vytvori `NalusSearchPage`
-3. `search_page.results` se preda do `enrich_results_with_text(...)`
-4. pro kazdy vysledek s `text_url` se stahne cely text rozhodnuti
-5. `results` se serializuji pres `asdict(...)`
-6. vse se ulozi do `results.json`
+Production override pipeline:
+```python
+app.dependency_overrides[get_pipeline] = lambda: RetrievalPipeline(
+    RetrievalService(
+        dense=DenseRetriever(client=real_client, collection_name="nalus", embedder=RealEmbedder()),
+        keyword=KeywordRetriever(corpus=loaded_corpus),
+    )
+)
+```
 
-To znamena, ze `results.json` uz ted obsahuje:
+### 3.15 KROK 14 — LLM Interface
 
-- metadata vysledku
-- `text_url`
-- `full_text`
+**app/rag/llm/**
 
-## 5. Co je aktualne v `results.json`
+```python
+@dataclass
+class LLMInput:
+    query: str
+    chunks: list[RetrievedChunk]
 
-Aktualni `results.json` je vystup posledniho behu programu.
+@dataclass
+class LLMOutput:
+    answer: str; reasoning: str; sources: list[str]; confidence: float
 
-Obsahuje:
+class BaseLLM(ABC):
+    @abstractmethod
+    def generate(self, data: LLMInput) -> LLMOutput: ...
 
-- 10 zaznamu z prvni stranky vysledku pro vychozi dotaz
-- u kazdeho zaznamu pole `full_text`
+class MockLLM(BaseLLM):
+    # deterministicky, ziadne externi volani
+    def generate(self, data: LLMInput) -> LLMOutput:
+        return LLMOutput(answer=f"Mock odpoved na: {data.query}", ...)
+```
 
-Bylo overeno primo na datech:
+### 3.16 KROK 15 — LLMService
 
-- 1. zaznam mel `full_text` delky `23100`
-- 2. zaznam mel `full_text` delky `9238`
-- 3. zaznam mel `full_text` delky `11145`
+**app/rag/llm/service.py**
 
-Prvni zaznam zacina napr.:
+```python
+class LLMService:
+    def __init__(self, llm: BaseLLM)
+    def generate(self, query: str, chunks: list[RetrievedChunk]) -> LLMOutput:
+        # trace llm_service.start / done
+        # konstruuje LLMInput a deleguje na llm.generate()
+```
 
-- `NALUS - databaze rozhodnuti Ustavniho soudu`
-- `III.ÚS 255/26 ze dne 4. 3. 2026`
+### 3.17 KROK 16 — HybridAnswerService
 
-Pokud editor neukazuje `full_text`, nejcastejsi duvod je:
+**app/rag/answer/hybrid_service.py**
 
-- otevreny stary tab souboru
-- soubor nebyl po behu programu znovu nacen
+```python
+class HybridAnswerService:
+    def __init__(self, answer_service: AnswerService, llm_service: LLMService)
+    def generate(self, query: str, chunks: list[RetrievedChunk]) -> AnswerResult | LLMOutput:
+        # chunks < 2  → AnswerService   (rule-based, rychly)
+        # chunks >= 2 → LLMService      (bohatsi odpoved)
+        # trace hybrid.start / hybrid.route / hybrid.done
+```
 
-## 6. Testovani a TDD
+Routing tabulka:
 
-V projektu nebyl zadny test stack, proto byly doplneny testy pres standardni `unittest`.
+| Pocet chunks | Route | Vraceny typ |
+|---|---|---|
+| 0 | answer | AnswerResult |
+| 1 | answer | AnswerResult |
+| >= 2 | llm | LLMOutput |
 
-Nebyl pridavan `pytest`, aby testovani zustalo minimalni a bez nove runtime zavislosti.
+### 3.18 KROK 17 — E2E Evaluation Tests
 
-### 6.1 Unit testy pro fetcher
+**tests/e2e/**
 
-Soubor:
+- `conftest.py` — session fixtures: seedi Qdrant kolekci `nalus_e2e_test` s 8 realnyma ceskymi pravnimy texty, vyvori plny pipeline, cleanupuje po session
+- `test_rag_real_queries.py` — 25 testu ve 4 scenarech
 
-- `tests/test_text_fetcher.py`
+Technicky problem reseny bez zmeny existujicich modulu:
+- `_PointStructAdapter` — konverze `IngestPoint` → `PointStruct` (qdrant_client pozaduje pydantic)
+- `_SearchAdapter` — bridge `.query_points()` → `.search()` (nova verze qdrant_client zrusila `.search()`)
 
-Pokryva:
+Scenare:
+1. "matka unesla dite do Ruska" → III.US 255/22, III.US 401/22, IV.US 190/23
+2. "rodicovska odpovednost po rozvodu" → II.US 100/21
+3. "nahrada skody zpusobena statem" → I.US 88/23, I.US 502/21
+4. "neprimerena delka soudniho rizeni" → IV.US 312/20, II.US 77/19
 
-- ze `fetch_decision_html(...)` vola `requests.get`, nastavi `utf-8` a vraci `response.text`
-- ze `extract_plain_text(...)` odstrani `script` a `style`
-- ze plain text obsahuje jen cisty text
+### 3.19 KROK 18 — Strategy Layer
 
-### 6.2 Unit testy pro service vrstvu
+**app/rag/strategy/strategy_service.py**
+
+```python
+class StrategyDecision:
+    mode: str    # "no_results" | "direct_answer" | "llm_summary"
+    reason: str
+
+class StrategyService:
+    def decide(self, query: str, results: list[RetrievedChunk]) -> StrategyDecision:
+        # 0 chunks   → no_results
+        # 1 chunk    → direct_answer ("single chunk")
+        # 2 chunks   → direct_answer ("default fallback")
+        # >= 3 chunks → llm_summary  ("multi-source synthesis")
+```
 
-Soubor:
-
-- `tests/test_decision_service.py`
-
-Pokryva:
-
-- uspesne naplneni `full_text`
-- chovani pri chybejicim `text_url`
-- chovani pri selhani downloadu
-
-Dulezite:
-
-- test overuje i to, ze puvodni objekt neni mutovan primo
-- service vraci novy objekt
-
-### 6.3 Live integration test
-
-Soubor:
-
-- `tests/test_live_full_text.py`
-
-Tento test:
-
-- stahne realnou vysledkovou stranku
-- vybere prvni vysledek s `text_url`
-- zavola `enrich_results_with_text(...)`
-- overi, ze:
-  - `full_text` neni `None`
-  - obsahuje `Ústavní soud`
-  - ma rozumnou delku nad `1000`
-
-Live test je zamerne volitelny a nespousti se automaticky bez env promenne:
-
-- `NALUS_LIVE_TEST=1`
-
-To je dulezite, aby bezne unit testy nebyly zavisle na dostupnosti internetu a externiho webu.
-
-## 7. Jak spoustet projekt
-
-### 7.1 Bez Dockeru
-
-Spusteni hlavniho programu:
-
-```powershell
+Integrace do pipeline:
+```python
+pipeline = RetrievalPipeline(service, strategy=StrategyService())
+result = pipeline.run("query")
+result.decision.mode  # → "llm_summary"
+# LOG: [strategy] mode=llm_summary reason=multi-source synthesis query=...
+```
+
+### 3.20 KROK 19 — Query Rewrite Service
+
+**app/rag/rewrite/query_rewrite_service.py**
+
+```python
+class BaseTextLLM(ABC):
+    @abstractmethod
+    def generate_text(self, prompt: str) -> str: ...
+    # odlisny od BaseLLM — text-in/text-out, bez chunks
+
+class MockTextLLM(BaseTextLLM):
+    # expands query with: "ustavni soud judikatura pravni veta zakladni prava"
+
+class QueryRewriteService:
+    def __init__(self, llm: BaseTextLLM)
+    def rewrite(self, query: str) -> str:
+        # prompt s pravidly pro pravni rewrite v cestine
+        # fallback na original query kdyz LLM selze nebo vrati prazdny string
+        # LOG: [rewrite] original=... rewritten=...
+```
+
+Priklad:
+```
+Input:  "matka unesla dite do Ruska"
+Output: "matka unesla dite do Ruska ustavni soud judikatura pravni veta zakladni prava"
+```
+
+### 3.21 KROK 20 — Planner Service
+
+**app/rag/planner/planner_service.py**
+
+```python
+class PlanStep:
+    query: str   # sub-dotaz pro retrieval
+    reason: str  # proc tento krok
+
+class Plan:
+    steps: list[PlanStep]   # max 5 kroku
+
+class MockPlannerLLM(BaseTextLLM):
+    # vraci 3-krokovy plan v cestine, deterministicky
+
+class PlannerService:
+    def __init__(self, llm: BaseTextLLM)
+    def plan(self, query: str) -> Plan:
+        # prompt: rozloz dotaz na 2-5 pravnich sub-dotazu
+        # _parse(): "N. <query> | <reason>" → list[PlanStep]
+        # fallback: [PlanStep(query, "fallback")] pri chybe nebo prazdnem parse
+        # LOG: [planner] steps=N query=...
+```
+
+Priklad vystupu pro "matka unesla dite do Ruska":
+```
+1. matka unesla dite Haagska umluva | mezinarodni aspekt
+2. rodicovska odpovednost unos ditete | prislustnost soudu
+3. navrat ditete do zeme obvykleho bydliste | vykon rozhodnuti
+```
+
+### 3.22 KROK 21 — Execution Service
+
+**app/rag/execution/execution_service.py**
+
+```python
+@dataclass
+class ExecutionResult:
+    steps_results: list[dict]
+    # kazdy dict: {"query": str, "reason": str, "results": list[RetrievedChunk]}
+
+    def all_chunks(self) -> list[RetrievedChunk]:
+        # flatten + dedup po id (zachova vyssi score) + sort desc
+
+class ExecutionService:
+    def __init__(self, retrieval_service: RetrievalService, top_k: int = 5)
+    def execute(self, plan: Plan) -> ExecutionResult:
+        # pro kazdy PlanStep: retrieval.search(step.query, top_k)
+        # trace execution.step / execution.step_done / execution.done
+        # LOG: [execution] steps=N
+```
+
+Typicky flow s plannerem:
+```python
+plan = planner.plan(query)           # 3 sub-queries
+exec_result = execution.execute(plan) # retrieval pro kazdy krok
+all_chunks = exec_result.all_chunks() # flatten + dedup
+answer = answer_service.generate(query, all_chunks)
+```
+
+---
+
+## 4. STRUKTURA SOUBORU
+
+```
+nalus-scraper/
+├── app/
+│   ├── main.py                         # scraper entry point
+│   ├── api_app.py                      # FastAPI entry point
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── rag_router.py               # POST /api/rag/search
+│   ├── core/
+│   │   ├── logging.py                  # get_logger()
+│   │   └── tracing.py                  # trace_event()
+│   ├── crawler/
+│   │   ├── playwright_crawler.py       # HTTP fetch (requests)
+│   │   ├── paginator.py
+│   │   ├── extractor.py                # HTML → NalusSearchPage
+│   │   └── text_fetcher.py             # stazeni + cisteni textu
+│   ├── models/
+│   │   └── search_result.py            # NalusResult, NalusSearchPage
+│   ├── services/
+│   │   └── decision_service.py         # enrich_results_with_text()
+│   └── rag/
+│       ├── answer/
+│       │   ├── answer_service.py       # AnswerService, AnswerResult
+│       │   └── hybrid_service.py       # HybridAnswerService
+│       ├── chunking/
+│       │   └── chunker.py              # TextChunk, chunk_document()
+│       ├── execution/
+│       │   └── execution_service.py    # ExecutionService, ExecutionResult
+│       ├── exporter/
+│       │   └── jsonl_exporter.py       # export_chunks_to_jsonl()
+│       ├── ingest/
+│       │   └── qdrant_ingest.py        # QdrantIngestor
+│       ├── llm/
+│       │   ├── base.py                 # BaseLLM
+│       │   ├── mock_llm.py             # MockLLM
+│       │   ├── models.py               # LLMInput, LLMOutput
+│       │   └── service.py              # LLMService
+│       ├── orchestration/
+│       │   └── pipeline.py             # RetrievalPipeline
+│       ├── planner/
+│       │   └── planner_service.py      # PlannerService, Plan, PlanStep
+│       ├── query/
+│       │   └── query_processor.py      # process_query(), ProcessedQuery
+│       ├── reranker/
+│       │   ├── base.py                 # BaseReranker
+│       │   ├── cross_encoder_reranker.py  # CrossEncoderReranker
+│       │   └── simple_reranker.py      # SimpleReranker
+│       ├── retrieval/
+│       │   ├── base.py                 # BaseRetriever
+│       │   ├── dense_retriever.py      # DenseRetriever, MockEmbedder
+│       │   ├── embedder.py             # BaseEmbedder, MockEmbedder
+│       │   ├── fusion.py               # fuse_results()
+│       │   ├── keyword_retriever.py    # KeywordRetriever
+│       │   ├── models.py               # RetrievedChunk
+│       │   └── retrieval_service.py    # RetrievalService
+│       ├── rewrite/
+│       │   └── query_rewrite_service.py  # QueryRewriteService, BaseTextLLM
+│       └── strategy/
+│           └── strategy_service.py     # StrategyService, StrategyDecision
+├── tests/
+│   ├── e2e/
+│   │   ├── conftest.py                 # Qdrant fixtures, _PointStructAdapter, _SearchAdapter
+│   │   └── test_rag_real_queries.py    # 25 e2e testu
+│   ├── rag/
+│   │   ├── test_answer_service.py      # 34 testu
+│   │   ├── test_chunker.py
+│   │   ├── test_cross_encoder_reranker.py
+│   │   ├── test_execution_service.py   # 28 testu
+│   │   ├── test_fusion.py
+│   │   ├── test_jsonl_exporter.py
+│   │   ├── test_llm_interface.py       # 20 testu
+│   │   ├── test_llm_service.py         # 17 testu
+│   │   ├── test_hybrid_answer_service.py  # 16 testu
+│   │   ├── test_pipeline.py
+│   │   ├── test_planner_service.py     # 44 testu
+│   │   ├── test_query_processor.py
+│   │   ├── test_query_rewrite.py       # 26 testu
+│   │   ├── test_retrieval.py
+│   │   ├── test_reranker.py
+│   │   └── test_strategy_service.py    # 27 testu
+│   ├── test_core_tracing.py
+│   ├── test_decision_service.py
+│   ├── test_live_full_text.py          # live integration test
+│   └── test_text_fetcher.py
+├── requirements.txt
+├── Dockerfile
+└── .gitignore
+```
+
+---
+
+## 5. JAK SPOUSTET
+
+### 5.1 Scraper
+
+```bash
 python app/main.py
+# → vypise pocet parsovanych vysledku
+# → ulozi results.json
 ```
 
-Vysledek:
+### 5.2 FastAPI server
 
-- vypise pocet parsovanych vysledku
-- ulozi `results.json`
+```bash
+pip install fastapi uvicorn[standard]
+uvicorn app.api_app:app --reload
+# → http://localhost:8000/docs  (Swagger UI)
+# → POST http://localhost:8000/api/rag/search
+```
 
-### 7.2 Docker
+Test endpointu:
+```bash
+curl -X POST http://localhost:8000/api/rag/search \
+  -H "Content-Type: application/json" \
+  -d '{"query":"únos dítěte Rusko","top_k":5}'
+```
 
-Build:
+### 5.3 Docker
 
-```powershell
+```bash
 docker build -t nalus-scraper .
-```
-
-Run:
-
-```powershell
 docker run --rm nalus-scraper
 ```
 
-Bylo overeno, ze Docker build i run funguji.
+### 5.4 Qdrant (lokalne)
 
-### 7.3 Spusteni unit testu
+Qdrant bezi na `localhost:6333`. E2E testy automaticky skipnou pokud neni dostupny.
 
-```powershell
-python -m unittest discover -s tests -v
+Qdrant v Dockeru:
+```bash
+docker run -p 6333:6333 qdrant/qdrant
 ```
 
-### 7.4 Spusteni live integration testu
+---
 
-```powershell
-$env:NALUS_LIVE_TEST='1'
-python -m unittest tests.test_live_full_text -v
+## 6. TESTOVANI
+
+### 6.1 Unit testy (RAG pipeline)
+
+```bash
+pytest tests/rag/ -v
+# 516 passed
 ```
 
-## 8. Co bylo realne overeno
+### 6.2 E2E testy (vyzaduje Qdrant na localhost:6333)
 
-Bylo overeno:
+```bash
+pytest tests/e2e/ -v -s --log-cli-level=INFO
+# 25 passed
+# seedi nalus_e2e_test kolekci, cleanupuje po sobe
+```
 
-- scraper se dostane na NALUS
-- search POST funguje
-- hidden fields se nacitaji spravne
-- vysledky se vraci jako realna vysledkova stranka
-- parser umi precist stranku 1
-- parser umi precist i dalsi stranky
-- parser umi precist i posledni stranku
-- `text_url` vede na plny text rozhodnuti
-- `fetch_decision_html(...)` vraci HTML plneho textu
-- `extract_plain_text(...)` vraci cisty text
-- `enrich_results_with_text(...)` naplni `full_text`
-- `main.py` uklada `full_text` do `results.json`
-- unit testy prosly
-- live integration test prosel
+### 6.3 Vsechny testy
 
-## 9. Aktualni struktura relevantnich souboru
+```bash
+pytest tests/ -v
+```
 
-### Core scraping
+### 6.4 Scraper unit testy
 
-- `app/crawler/playwright_crawler.py`
-- `app/crawler/paginator.py`
-- `app/crawler/extractor.py`
+```bash
+pytest tests/test_text_fetcher.py tests/test_decision_service.py -v
+```
 
-### Full text vrstva
+### 6.5 Live integration test (vyzaduje internet)
 
-- `app/crawler/text_fetcher.py`
-- `app/services/decision_service.py`
+```bash
+NALUS_LIVE_TEST=1 pytest tests/test_live_full_text.py -v
+# nebo na Windows:
+$env:NALUS_LIVE_TEST='1'; pytest tests/test_live_full_text.py -v
+```
 
-### Modely
+### 6.6 Architektura testu
 
-- `app/models/search_result.py`
+- zadne mocky na urovni service — pouze na urovni externich zavislosti (Qdrant, sentence-transformers)
+- `MagicMock` pro Qdrant client a CrossEncoder model
+- `_SpyLLM`, `_FixedLLM`, `_FailingLLM` pattern pro testovani LLM vrstev
+- `caplog` fixture pro overeni trace logu
+- session-scoped fixtures v e2e pro efektivni seeding Qdrantu
 
-### Entry point
+---
 
-- `app/main.py`
+## 7. GIT HISTORIE
 
-### Testy
+```
+d138b77 KROK 21: Execution Service — multi-step retrieval over Planner output
+c2a8872 KROK 20: Planner Service — multi-step query decomposition
+6e1ae59 KROK 19: Query Rewrite Service — LLM-based query expansion
+c287aea KROK 18: Strategy Layer — deterministic mode routing in pipeline
+1a3c68d KROK 17: E2E evaluation tests against real Qdrant + seeded corpus
+88b9f74 KROK 16: HybridAnswerService — routes between AnswerService and LLMService
+fa74a0d KROK 15: LLMService — thin service over BaseLLM
+56eeae4 KROK 14: LLM interface (BaseLLM, MockLLM, models)
+876e355 KROK 13: FastAPI endpoint POST /api/rag/search
+1a56e30 KROK 12: Answer Service (rule-based, LLM-ready interface)
+fa5be50 chore: add .gitignore
+859c2c3 KROK 11: CrossEncoderReranker (sentence-transformers, injectable model)
+f684837 KROK 10: Reranker layer (SimpleReranker + RetrievalService integration)
+e3ae78c Initial RAG pipeline implementation (KROKY 1-9)
+```
 
-- `tests/test_text_fetcher.py`
-- `tests/test_decision_service.py`
-- `tests/test_live_full_text.py`
+---
 
-## 10. Zname limity aktualni implementace
+## 8. ARCHITEKTONICKE PRINCIPY
 
-Aktualni stav je funkcni, ale nejsou jeste hotove tyto veci:
+### 8.1 Pravidla kodu
 
-- nejsou retries pro stahovani plnych textu
-- neni rate limiting
-- neni paralelni stahovani textu
-- neni cachovani stazenych rozhodnuti
-- neni export po jednom rozhodnuti do samostatnych `.txt` nebo `.html` souboru
-- neni CLI parametrizace pro query/page/limit/full text mode
-- `main.py` uklada vse jen do jednoho `results.json`
-- `text_fetcher.py` nema custom headers nebo backoff
-- `decision_service.py` chyby tise preskoci a jen necha `full_text=None`
-- neexistuje zatim persistence vrstva do databaze
-- neexistuje dedikovany parser struktury textu rozhodnuti na oddily typu "Odduvodneni", "Poučení" atd.
+- **zadny global mutable state** — vsechny zavislosti injected pres `__init__`
+- **Protocol-based structural typing** — ne `isinstance` na externih typech (Qdrant, CrossEncoder)
+- **lazy imports** pro optional heavy deps (`from sentence_transformers import ...` az v `__init__`)
+- **dataclasses.replace** pro immutable updates (zadna mutace vstupnich objektu)
+- **zadne print()** — pouze structured logging pres `trace_event()` a `logger.info()`
+- **thin orchestration** — pipeline a execution service nema business logiku
+- **fat services** — logika je v cistem service modulu, ne v orchestratoru
 
-## 11. Proc je to navrzene takto
+### 8.2 LLM interfaces — dva ruzne kontrakty
 
-Architektura byla rozdelena zamerne:
+```
+BaseLLM (app/rag/llm/base.py)
+  └── generate(LLMInput) → LLMOutput
+  └── pouziti: RAG answering (query + chunks → strukturovana odpoved)
 
-- crawler pro search/results HTML
-- extractor pro parsovani vysledku
-- text fetcher pro plne texty
-- service vrstva pro enrichment
-- modely pro sdilenou strukturu dat
+BaseTextLLM (app/rag/rewrite/query_rewrite_service.py)
+  └── generate_text(prompt: str) → str
+  └── pouziti: text generation (query rewrite, planner)
+```
 
-Vyhody:
+### 8.3 Dependency injection vzory
 
-- jednodussi testovani
-- mensi coupling
-- snadnejsi budouci paralelizace
-- snadnejsi nahrazeni persistence vrstvy
-- jasne oddeleni metadata scraping vs. full text download
+```python
+# Vsechny external deps injected:
+CrossEncoderReranker(model=mock_model)      # ne lazy-loaded model
+DenseRetriever(client=mock_client, embedder=MockEmbedder())
+QdrantIngestor(client=adapter)
+PlannerService(llm=MockPlannerLLM())
+RetrievalPipeline(service, strategy=StrategyService(), rewrite_service=QueryRewriteService(...))
+```
 
-## 12. Doporuceny dalsi postup
+### 8.4 Optional features (feature flags)
 
-Nejrozumnejsi dalsi kroky:
+Vsechny rozsirene funkce jsou optional — pipeline funguje bez nich:
 
-1. Pridat CLI nebo env konfiguraci pro:
-   - query
-   - page
-   - limit
-   - zapnuti/vypnuti full text downloadu
-2. Pridat export:
-   - JSON
-   - samostatne `.txt` soubory
-   - samostatne `.html` soubory
-3. Pridat retries + backoff pro `text_fetcher.py`
-4. Pridat paralelni stahovani rozhodnuti
-5. Pridat parser struktury samotneho rozhodnuti
-6. Pridat dedikovany integration command nebo script
+```python
+RetrievalPipeline(service)                          # minimalni
+RetrievalPipeline(service, strategy=..., rewrite_service=...)  # plny
+```
 
-## 13. Kratke shrnuti aktualniho stavu
+---
 
-Projekt uz neni jen "HTML preview scraper".
+## 9. ZNAME LIMITY
 
-Aktualne umi:
+### Scraper
 
-- odeslat search do NALUS
-- parsovat vysledky do datove struktury
-- ziskat odkazy na plne texty
-- stahnout plne texty
-- ulozit je do `results.json`
-- otestovat to unit testy i live testem
+- zadne retries / backoff pro text_fetcher
+- zadny rate limiting
+- zadna paralelizace stahovani
+- export jen do jednoho results.json
+- neni CLI parametrizace
 
-To znamena, ze zaklad scraperu pro metadata i plne texty je hotovy a dalsi prace uz bude hlavne o:
+### RAG pipeline
 
-- robustnosti
-- exportech
-- vykonu
-- dalsi strukturalizaci dat
+- **MockEmbedder** — vsechny vektory jsou stejne ([0.1]*10), dense search neni semanticky
+  → pro produkcni pouziti nutno nahradit realnym embedderem (napr. sentence-transformers `paraphrase-multilingual-mpnet-base-v2`)
+- **KeywordRetriever** — jednoduchy substring match, ne BM25
+  → vhodne nahradit Qdrant sparse index nebo BM25
+- **MockLLM / MockPlannerLLM / MockTextLLM** — deterministicke stuby, ne realne LLM
+  → implementovat `BaseLLM` a `BaseTextLLM` pro zvolenou LLM API (DeepSeek, OpenAI, atd.)
+- **HybridAnswerService threshold** — pevne 2 chunks → hardcoded, ne konfigurovatelne
+- **StrategyService** — ciste deterministicke, bez ML
+
+---
+
+## 10. DOPORUCENY DALSI POSTUP
+
+### Scraper
+
+1. CLI / env konfigurace: query, page, limit, full text on/off
+2. Retries + backoff v text_fetcher
+3. Paralelni stahovani (asyncio nebo ThreadPoolExecutor)
+4. Export do samostatnych .txt/.json souboru
+
+### RAG pipeline
+
+1. **Realny embedder** — sentence-transformers `paraphrase-multilingual-mpnet-base-v2`
+   - nahradit `MockEmbedder` v `DenseRetriever`
+   - reingestovat chunks s realnyma vektorama
+
+2. **Realna NALUS kolekce v Qdrantu**
+   - scraper → chunk_document() → QdrantIngestor → Qdrant
+   - keyword corpus z tekstu chunků
+
+3. **Realne LLM** pro QueryRewriteService a PlannerService
+   - implementovat `BaseTextLLM` napr. pres DeepSeek API
+
+4. **BM25 keyword retrieval** misto simple substring match
+
+5. **Pipeline wiring** — propojit PlannerService + ExecutionService do RetrievalPipeline
+
+6. **Konfigurace thresholds** pres env / config objekt
+
+7. **Monitoring** — Prometheus metriky na response time a pocet results
