@@ -10,4 +10,6 @@ COPY . .
 
 ENV PYTHONPATH=/app
 
-CMD ["python", "app/main.py"]
+# Default: run the FastAPI API server
+# Override CMD to run the crawler: docker run ... python app/main.py
+CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

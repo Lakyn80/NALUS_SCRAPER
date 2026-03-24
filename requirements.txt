@@ -6,3 +6,6 @@ python-dotenv
 playwright
 fastapi
 uvicorn[standard]
+httpx
+pydantic
+qdrant-client
