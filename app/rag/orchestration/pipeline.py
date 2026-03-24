@@ -23,13 +23,14 @@ Usage:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.core.logging import get_logger
 from app.core.tracing import trace_event
 from app.rag.query.query_processor import ProcessedQuery, process_query
 from app.rag.retrieval.models import RetrievedChunk
 from app.rag.retrieval.retrieval_service import RetrievalService
+from app.rag.rewrite.query_rewrite_service import QueryRewriteService
 from app.rag.strategy.strategy_service import StrategyDecision, StrategyService
 
 logger = get_logger(__name__)
@@ -40,24 +41,34 @@ class RetrievalPipelineResult:
     processed_query: ProcessedQuery
     results: list[RetrievedChunk]
     decision: StrategyDecision | None = None
+    rewritten_query: str | None = None
 
 
 class RetrievalPipeline:
-    """Orchestrates query processing, retrieval, and strategy decision."""
+    """Orchestrates query rewrite, processing, retrieval, and strategy decision."""
 
     def __init__(
         self,
         retrieval_service: RetrievalService,
         strategy: StrategyService | None = None,
+        rewrite_service: QueryRewriteService | None = None,
     ) -> None:
         self._service = retrieval_service
         self._strategy = strategy
+        self._rewrite = rewrite_service
 
     def run(self, query: str, top_k: int = 5) -> RetrievalPipelineResult:
         """Execute the full retrieval pipeline for a user query."""
         trace_event(logger, "pipeline.start", query=query, top_k=top_k)
 
-        processed = process_query(query)
+        # Optional query rewrite (before processing)
+        rewritten_query: str | None = None
+        retrieval_query = query
+        if self._rewrite is not None:
+            rewritten_query = self._rewrite.rewrite(query)
+            retrieval_query = rewritten_query
+
+        processed = process_query(retrieval_query)
         trace_event(
             logger,
             "pipeline.processed",
@@ -66,7 +77,7 @@ class RetrievalPipeline:
             concepts=processed.legal_concepts,
         )
 
-        results = self._service.search(query, top_k=top_k)
+        results = self._service.search(retrieval_query, top_k=top_k)
         trace_event(logger, "pipeline.done", result_count=len(results))
 
         decision: StrategyDecision | None = None
@@ -83,4 +94,5 @@ class RetrievalPipeline:
             processed_query=processed,
             results=results,
             decision=decision,
+            rewritten_query=rewritten_query,
         )
