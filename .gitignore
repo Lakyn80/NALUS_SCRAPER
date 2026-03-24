@@ -10,3 +10,6 @@ build/
 data/
 logs/
 results.json
+report.html
+test_results.txt
+vsledky_vyhledavani.txt
