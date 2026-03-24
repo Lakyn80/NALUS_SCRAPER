@@ -1,15 +1,27 @@
 services:
+  qdrant:
+    image: qdrant/qdrant:v1.13.6
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "8029:8000"
     environment:
       - PYTHONPATH=/app
       - LOG_LEVEL=INFO
-      # LLM provider — override with real values:
+      - QDRANT_URL=http://qdrant:6333
+      # LLM provider — odkomentuj pro reálný LLM:
       # - LLM_PROVIDER=deepseek
       # - LLM_API_KEY=your_key_here
       # - LLM_MODEL_DEEPSEEK=deepseek-chat
       # - LLM_TIMEOUT=10
       # - LLM_MAX_TOKENS=512
+    depends_on:
+      - qdrant
     restart: unless-stopped
+
+volumes:
+  qdrant_storage:

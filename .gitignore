@@ -8,6 +8,7 @@ build/
 .pytest_cache/
 .mypy_cache/
 data/
+!app/data/
 logs/
 results.json
 report.html

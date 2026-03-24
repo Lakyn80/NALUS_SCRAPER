@@ -63,6 +63,12 @@ class QueryResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Live orchestrator — set by startup lifespan, None until Qdrant is ready
+# ---------------------------------------------------------------------------
+
+_live_orchestrator: OrchestratorService | None = None
+
+# ---------------------------------------------------------------------------
 # Dependency providers
 # ---------------------------------------------------------------------------
 
@@ -99,16 +105,13 @@ def get_answer_service() -> AnswerService:
 
 def get_orchestrator() -> OrchestratorService:
     """
-    Default orchestrator wired with stub services.
-
-    Override in production:
-        app.dependency_overrides[get_orchestrator] = lambda: OrchestratorService(
-            planner=PlannerService(real_text_llm),
-            execution=ExecutionService(real_retrieval_service),
-            synthesis=SynthesisService(real_text_llm),
-            rewrite=QueryRewriteService(real_text_llm),
-        )
+    Returns the live orchestrator (real Qdrant + corpus) if startup succeeded,
+    otherwise falls back to a stub with keyword-only retrieval.
     """
+    if _live_orchestrator is not None:
+        return _live_orchestrator
+
+    # Fallback stub (used when Qdrant is not available or in tests)
     mock_client = MagicMock()
     mock_client.query_points.return_value = MagicMock(points=[])
     dense = DenseRetriever(
