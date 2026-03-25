@@ -20,6 +20,7 @@ from app.rag.ingest.qdrant_ingest import (
     _make_payload,
     _make_point,
 )
+from app.rag.retrieval.embedder import BaseEmbedder
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +52,17 @@ def _make_chunk(
 def _mock_ingestor(batch_size: int = 100) -> tuple[QdrantIngestor, MagicMock]:
     client = MagicMock()
     return QdrantIngestor(client, "test-collection", batch_size=batch_size), client
+
+
+class _FixedEmbedder(BaseEmbedder):
+    def __init__(self, vector: list[float]) -> None:
+        self._vector = vector
+
+    def embed_query(self, query: str) -> list[float]:
+        return list(self._vector)
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [list(self._vector) for _ in texts]
 
 
 # ---------------------------------------------------------------------------
@@ -264,6 +276,21 @@ class TestQdrantIngestorMetadata:
         ingestor.ingest_chunks([_make_chunk(i) for i in range(3)])
         for point in self._get_all_points(client):
             assert point.payload["source"] == "nalus"
+
+    def test_custom_embedder_vector_used(self) -> None:
+        client = MagicMock()
+        embedder = _FixedEmbedder([0.9, 0.8, 0.7])
+        ingestor = QdrantIngestor(
+            client,
+            "test-collection",
+            batch_size=10,
+            embedder=embedder,
+        )
+
+        ingestor.ingest_chunks([_make_chunk()])
+
+        point = self._get_all_points(client)[0]
+        assert point.vector == [0.9, 0.8, 0.7]
 
 
 # ---------------------------------------------------------------------------

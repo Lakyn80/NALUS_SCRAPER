@@ -13,6 +13,10 @@ Override dependency providers via app.dependency_overrides for production
 or test injection.
 """
 
+import os
+from unittest.mock import MagicMock
+
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -23,12 +27,11 @@ from app.rag.execution.execution_service import ExecutionService
 from app.rag.orchestration.pipeline import RetrievalPipeline
 from app.rag.orchestrator.orchestrator_service import OrchestratorResult, OrchestratorService
 from app.rag.planner.planner_service import MockPlannerLLM, PlannerService
-from app.rag.retrieval.retrieval_service import RetrievalService
-from app.rag.retrieval.keyword_retriever import KeywordRetriever
 from app.rag.retrieval.dense_retriever import DenseRetriever
 from app.rag.retrieval.embedder import MockEmbedder
+from app.rag.retrieval.keyword_retriever import KeywordRetriever
+from app.rag.retrieval.retrieval_service import RetrievalService
 from app.rag.synthesis.synthesis_service import MockSynthesisLLM, SynthesisService
-from unittest.mock import MagicMock
 
 logger = get_logger(__name__)
 
@@ -110,6 +113,12 @@ def get_orchestrator() -> OrchestratorService:
     """
     if _live_orchestrator is not None:
         return _live_orchestrator
+
+    if os.getenv("RAG_STRICT_REAL_MODE", "").strip().lower() in {"1", "true", "yes", "on"}:
+        raise HTTPException(
+            status_code=503,
+            detail="Live orchestrator is unavailable in strict real mode.",
+        )
 
     # Fallback stub (used when Qdrant is not available or in tests)
     mock_client = MagicMock()

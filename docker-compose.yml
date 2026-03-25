@@ -18,9 +18,17 @@ services:
       - LLM_MODEL_DEEPSEEK=deepseek-chat
       - LLM_TIMEOUT=30
       - LLM_MAX_TOKENS=800
+      - RAG_STRICT_REAL_MODE=1
+      - NALUS_RESULTS_PATH=/app/results_rodinne_pravo_1000.json
+      - EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+      - EMBEDDING_BATCH_SIZE=32
+      - EMBEDDING_NORMALIZE=1
     depends_on:
       - qdrant
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
     restart: unless-stopped
 
 volumes:
   qdrant_storage:
+  huggingface_cache:

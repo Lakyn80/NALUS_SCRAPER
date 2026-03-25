@@ -183,6 +183,26 @@ Implementace:
 
 To znamena, ze docasne sitove chyby nebo kratke vypadky HTTP requestu uz neshodi beh pri prvnim selhani.
 
+### 2.9 Runtime corpus pro RAG
+
+Scraper vystup uz neni jen archivni `results.json`, ale funguje jako primarni vstup
+pro live RAG ingest.
+
+`app/data/runtime_corpus.py`:
+
+- nacita `results_rodinne_pravo_1000.json` nebo cestu z `NALUS_RESULTS_PATH`
+- prevadi JSON list rozhodnuti na `NalusResult`
+- chunkuje vsechny dokumenty pres `chunk_document()`
+- sklada keyword corpus nad stejnymi chunky pro hybridni retrieval
+- fail-fast na duplicate chunk IDs
+- fallbackuje na `app/data/corpus.py`, pokud JSON chybi nebo je prazdny
+
+Overeno na aktualnich datech:
+
+- `1000` rozhodnuti
+- `12638` chunku
+- live Qdrant kolekce `nalus` ma po ingestu `12638` pointu
+
 ---
 
 ## 3. RAG PIPELINE
@@ -312,13 +332,18 @@ class RetrievedChunk:
 
 ```python
 class QdrantIngestor:
-    def __init__(self, client: _UpsertableClient, collection_name: str, batch_size: int = 100)
+    def __init__(self, client: _UpsertableClient, collection_name: str,
+                 batch_size: int = 100, embedder: BaseEmbedder | None = None)
     def ingest_chunks(self, chunks: list[TextChunk]) -> None
         # batch upsert IngestPoint(id, vector, payload)
-        # vektor: placeholder [0.0, 0.1, ..., 0.9] (10-dim)
+        # embedder.embed_documents([chunk.text ...]) po batchich
+        # fallback MockEmbedder(dim=10) zustava jen pro test/offline path
 ```
 
 `_UpsertableClient` je Protocol — zadny import qdrant_client na module level.
+
+V live startupu je do `QdrantIngestor` injected realny `SentenceTransformersEmbedder`,
+takze ingest uz nevytvari placeholder vektory.
 
 ### 3.8 KROK 7 — Retrieval Service
 
@@ -362,12 +387,27 @@ class DenseRetriever(BaseRetriever):
 
 class MockEmbedder(BaseEmbedder):
     def embed_query(self, query: str) -> list[float]: return [0.1] * dim
+
+class SentenceTransformersEmbedder(BaseEmbedder):
+    def __init__(self, model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+                 batch_size=32, normalize_embeddings=True):
+        # lazy import sentence_transformers
+        # model = SentenceTransformer(model_name)
+        # dim je inferovana z modelu
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        # model.encode(texts, batch_size=batch_size, normalize_embeddings=True)
 ```
 
 `_SearchableClient` je Protocol — testovatelne bez qdrant_client baliku.
 
 Poznamka: nova verze qdrant_client (>= 1.9) nema `.search()`, ma `.query_points()`.
 V produkci pouzivame `_QdrantSearchAdapter` v `app/api/startup.py`.
+
+Aktualni live konfigurace:
+
+- model: `sentence-transformers/paraphrase-multilingual-mpnet-base-v2`
+- vektorova dimenze: `768`
+- runtime: CPU-only `torch==2.5.1+cpu`
 
 ### 3.11 KROK 10 — SimpleReranker
 
@@ -787,27 +827,22 @@ def health() -> dict:
 
 ```python
 COLLECTION = "nalus"
-VECTOR_DIM = 10
+VECTOR_DIM = 10   # zustava jen pro stub fallback
 
 def build_live_orchestrator(qdrant_url=None) -> OrchestratorService:
-    # pokusi se pripojit k Qdrantu
-    # pri selhani vraci stub orchestrator (API vzdy nastartuje)
+    # load_runtime_corpus() z NALUS_RESULTS_PATH / default results_rodinne_pravo_1000.json
+    # strict mode pres RAG_STRICT_REAL_MODE
+    # pri selhani bez strict mode vraci stub orchestrator
 
 def _build(qdrant_url) -> OrchestratorService:
     # 1. QdrantClient(url, timeout=10)
-    # 2. vytvor kolekci "nalus" (dim=10, COSINE) pokud neexistuje
-    # 3. ingestuj corpus pokud kolekce prazdna
-    # 4. wire DenseRetriever + KeywordRetriever + RetrievalService
-    # 5. _build_synthesis_llm() → DeepSeekTextLLM nebo MockSynthesisLLM
-    # 6. vrat OrchestratorService
-
-def _build_synthesis_llm():
-    provider = os.getenv("LLM_PROVIDER", "").lower()
-    api_key = os.getenv("LLM_API_KEY", "")
-    if provider == "deepseek" and api_key:
-        return DeepSeekTextLLM(api_key=api_key)
-    # warning pokud provider=deepseek ale klic chybi
-    return MockSynthesisLLM()
+    # 2. _build_embedder() → SentenceTransformersEmbedder
+    # 3. inferuj real vector_dim z modelu
+    # 4. recreate collection kdyz nesedi count nebo dimenze
+    # 5. ingestuj runtime corpus do Qdrantu pres real embedder
+    # 6. wire DenseRetriever + KeywordRetriever + RetrievalService
+    # 7. _build_text_llm() → real provider nebo MockTextLLM fallback
+    # 8. vrat OrchestratorService
 ```
 
 Adaptery pro qdrant_client kompatibilitu:
@@ -829,7 +864,16 @@ class _QdrantUpsertAdapter:
         self._client.upsert(collection_name=collection_name, points=converted)
 ```
 
-**app/data/corpus.py** — seeded corpus pro development
+**app/data/runtime_corpus.py** — live loader pro produkcni corpus
+
+- default vstup: `results_rodinne_pravo_1000.json`
+- env override: `NALUS_RESULTS_PATH`
+- chunking: `NALUS_CHUNK_SIZE`, `NALUS_CHUNK_OVERLAP`
+- verified live stav: `1000` rozhodnuti → `12638` chunku → Qdrant `12638` pointu
+
+**app/data/corpus.py** — fallback seed corpus
+
+Pouziva se jen kdyz runtime JSON chybi nebo je nevalidni.
 
 8 rozhodnuti Ustavniho soudu CR jako `CORPUS: list[tuple[str, str]]`:
 
@@ -844,7 +888,13 @@ class _QdrantUpsertAdapter:
 | "7" | I.ÚS 502/21 | odpovědnost státu za škodu |
 | "8" | IV.ÚS 190/23 | přeshraniční rodičovství |
 
-Tato data se automaticky ingestují do Qdrantu pri prvnim startu.
+**Docker / build vrstva**
+
+- base image uz neni Playwright, ale `python:3.10-slim`
+- `requirements.txt` pinuje `torch==2.5.1+cpu` z PyTorch CPU indexu
+- `sentence-transformers==5.3.0` se instaluje az po zbytku dependencies pres `--no-deps`
+- tim se zabranilo stahovani CUDA / NVIDIA baliku do image
+- `huggingface_cache` volume drzi model cache mezi restarty
 
 ---
 
@@ -870,7 +920,8 @@ nalus-scraper/
 │   │   └── text_fetcher.py             # stazeni + cisteni textu
 │   ├── data/
 │   │   ├── __init__.py
-│   │   └── corpus.py                   # 8 seeded rozhodnuti (KROK 25)
+│   │   ├── corpus.py                   # 8 seeded rozhodnuti (fallback)
+│   │   └── runtime_corpus.py           # load + chunk live JSON corpus
 │   ├── models/
 │   │   └── search_result.py            # NalusResult, NalusSearchPage
 │   ├── services/
@@ -914,8 +965,8 @@ nalus-scraper/
 │       │   └── simple_reranker.py
 │       ├── retrieval/
 │       │   ├── base.py                 # BaseRetriever
-│       │   ├── dense_retriever.py      # DenseRetriever, MockEmbedder
-│       │   ├── embedder.py             # BaseEmbedder
+│       │   ├── dense_retriever.py      # DenseRetriever + payload/original_id mapping
+│       │   ├── embedder.py             # BaseEmbedder, MockEmbedder, SentenceTransformersEmbedder
 │       │   ├── fusion.py               # fuse_results()
 │       │   ├── keyword_retriever.py    # KeywordRetriever
 │       │   ├── models.py               # RetrievedChunk
@@ -952,14 +1003,18 @@ nalus-scraper/
 │   │   ├── test_retrieval.py
 │   │   ├── test_reranker.py
 │   │   ├── test_strategy_service.py    # 27 testu
-│   │   └── test_synthesis_service.py   # 22 testu (KROK 22)
+│   │   ├── test_synthesis_service.py   # 22 testu (KROK 22)
+│   │   ├── test_dense_qdrant_retriever.py  # original_id + dense Qdrant mapping
+│   │   ├── test_qdrant_ingest.py       # real embedder injection do ingestu
+│   │   └── test_embedder.py            # SentenceTransformersEmbedder
 │   ├── test_core_tracing.py
 │   ├── test_decision_service.py
 │   ├── test_live_full_text.py          # live integration test
-│   └── test_text_fetcher.py
+│   ├── test_text_fetcher.py
+│   └── test_runtime_corpus.py          # load/build runtime corpus z JSON
 ├── docker-compose.yml                  # api + qdrant stack
-├── Dockerfile                          # uvicorn app.api.main:app
-├── requirements.txt
+├── Dockerfile                          # CPU-only API image (`python:3.10-slim`)
+├── requirements.txt                    # CPU torch + HF/transformers stack
 ├── .env                                # LLM_API_KEY (gitignored)
 └── .gitignore
 ```
@@ -986,9 +1041,16 @@ Health check: `http://localhost:8029/health`
 
 Pri prvnim startu:
 1. API se pripoji k Qdrantu
-2. Vytvori kolekci "nalus" (10-dim vektory, cosine)
-3. Ingestuje 8 rozhodnuti z `app/data/corpus.py`
-4. Wires DeepSeekTextLLM pro syntezi (pokud LLM_API_KEY nastaven)
+2. Nacte runtime corpus z `results_rodinne_pravo_1000.json` (nebo `NALUS_RESULTS_PATH`)
+3. Nacte real embedder `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` na CPU
+4. Vytvori nebo zrekonstruuje kolekci `nalus`, pokud nesedi dimenze nebo count
+5. Pri aktualnim datasetu ingestuje `1000` rozhodnuti → `12638` pointu v `768` dimenzi
+6. Wires real dense retrieval + keyword retrieval + DeepSeekTextLLM (pokud `LLM_API_KEY` nastaven)
+
+Poznamka:
+
+- cold start po prazdne kolekci muze trvat desitky minut, protoze se vsechny chunky embedduji na CPU
+- dalsi starty jsou rychlejsi, pokud zustane Qdrant volume a `huggingface_cache`
 
 ### 5.2 API endpointy
 
@@ -1028,6 +1090,14 @@ curl -X POST http://localhost:8029/api/rag/search \
 | `LLM_TIMEOUT` | `10` (`docker-compose`: `30`) | HTTP timeout v sekundach |
 | `LLM_MAX_TOKENS` | `512` (`docker-compose`: `800`) | Max tokeny v odpovedi |
 | `QDRANT_URL` | `http://qdrant:6333` | URL Qdrant serveru |
+| `RAG_STRICT_REAL_MODE` | `0` (`docker-compose`: `1`) | pri `1` odmitne mock fallback pro startup |
+| `NALUS_RESULTS_PATH` | `results_rodinne_pravo_1000.json` | runtime JSON corpus pro ingest |
+| `NALUS_CHUNK_SIZE` | `1500` | velikost chunku pro runtime ingest |
+| `NALUS_CHUNK_OVERLAP` | `200` | overlap chunku |
+| `EMBEDDING_MODEL` | `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` | embedding model pro dense retrieval |
+| `EMBEDDING_BATCH_SIZE` | `32` | batch size pro `model.encode()` |
+| `EMBEDDING_NORMALIZE` | `1` | zapne L2 normalizaci embeddingu |
+| `HF_TOKEN` | `""` | optional token pro rychlejsi/průchodnejsi HF downloady |
 | `LOG_LEVEL` | `INFO` | Uroven logovani |
 | `PYTHONPATH` | `/app` | Nutne pro Docker |
 
@@ -1119,7 +1189,22 @@ Pokryti posledniho scraper update:
 - batch sleep mezi strankami
 - fail-fast na duplicate / empty page / missing full_text
 
-### 6.6 Live integration test (vyzaduje internet)
+### 6.6 Runtime corpus + dense retrieval testy
+
+```bash
+pytest tests/test_runtime_corpus.py tests/rag/test_embedder.py \
+       tests/rag/test_qdrant_ingest.py tests/rag/test_dense_qdrant_retriever.py -q
+```
+
+Pokryti posledniho runtime update:
+
+- load JSON corpusu z `results_rodinne_pravo_1000.json`
+- deduplikace a validace chunk IDs
+- real `SentenceTransformersEmbedder`
+- ingest s injected embedderem
+- mapovani `original_id` z Qdrantu zpet do `RetrievedChunk.id`
+
+### 6.7 Live integration test (vyzaduje internet)
 
 ```bash
 NALUS_LIVE_TEST=1 pytest tests/test_live_full_text.py -v
@@ -1127,7 +1212,7 @@ NALUS_LIVE_TEST=1 pytest tests/test_live_full_text.py -v
 $env:NALUS_LIVE_TEST='1'; pytest tests/test_live_full_text.py -v
 ```
 
-### 6.7 Architektura testu
+### 6.8 Architektura testu
 
 - zadne mocky na urovni service — pouze na urovni externich zavislosti (Qdrant, HTTP, LLM)
 - `MagicMock` pro Qdrant client a CrossEncoder model
@@ -1157,6 +1242,14 @@ Aktualni scraper update popsany v tomto dokumentu:
 - env-driven scraper konfigurace v `app/main.py`
 - retry wrapper pro search requesty i fulltext fetch
 - nove testy v `tests/test_search_service.py`
+
+Aktualni real-RAG runtime update popsany v tomto dokumentu:
+
+- `app/data/runtime_corpus.py` nacte `results_rodinne_pravo_1000.json` jako live corpus
+- `SentenceTransformersEmbedder` bezi na CPU-only `torch==2.5.1+cpu`
+- startup recreatuje Qdrant kolekci pri mismatchi dimenze / countu
+- live kolekce `nalus` ma `12638` pointu v `768` dimenzi
+- Docker image uz netaha CUDA/NVIDIA baliky
 
 ---
 
@@ -1210,9 +1303,13 @@ QdrantIngestor → _QdrantUpsertAdapter → QdrantClient
 ```python
 # Vsechny external deps injected:
 CrossEncoderReranker(model=mock_model)
-DenseRetriever(client=_QdrantSearchAdapter(client), embedder=MockEmbedder())
-QdrantIngestor(client=_QdrantUpsertAdapter(client, id_map))
-PlannerService(llm=MockPlannerLLM())
+DenseRetriever(
+    client=_QdrantSearchAdapter(client),
+    collection_name="nalus",
+    embedder=SentenceTransformersEmbedder(model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2"),
+)
+QdrantIngestor(client=_QdrantUpsertAdapter(client, id_map), embedder=SentenceTransformersEmbedder(...))
+PlannerService(llm=DeepSeekTextLLM(api_key=...))
 SynthesisService(llm=DeepSeekTextLLM(api_key=...))
 OrchestratorService(planner=..., execution=..., synthesis=...)
 ```
@@ -1247,14 +1344,15 @@ s jinym Qdrantem bezicim na hostu.
 
 ### RAG pipeline
 
-- **MockEmbedder** — vsechny vektory jsou stejne ([0.1]*10), dense search neni semanticky
-  → nutno nahradit realnym embedderem (sentence-transformers `paraphrase-multilingual-mpnet-base-v2`)
 - **KeywordRetriever** — jednoduchy substring match, ne BM25
   → vhodne nahradit Qdrant sparse index nebo BM25
-- **MockPlannerLLM** — deterministicky stub, ne realni LLM planner
-  → wiring pres `get_text_llm("deepseek", api_key)` pro realny planner
-- **Seeded corpus** — jen 8 rozhodnuti
-  → pro produkcni pouziti nutno scrapovat NALUS a ingestovat plny korpus
+- **Cold start dense ingest** — pri prazdne kolekci se `1000` rozhodnuti / `12638` chunku embedduje na CPU
+  → prvni start muze trvat desitky minut, dalsi starty jsou rychlejsi
+- **HF Hub zavislost** — bez `HF_TOKEN` funguje download taky, ale pomaleji a s warningem
+- **Mock fallback path** — stale existuje, pokud se vypne `RAG_STRICT_REAL_MODE`
+  → produkcni docker-compose ma strict mode zapnuty
+- **Qdrant client/server mismatch warning** — client `1.17.1` vs server `1.13.6`
+  → ingest i query funguji, ale verze je vhodne srovnat
 
 ### Deployment
 
@@ -1266,28 +1364,23 @@ s jinym Qdrantem bezicim na hostu.
 
 ## 10. DOPORUCENY DALSI POSTUP
 
-### Priorita 1 — Realny data corpus
+### Priorita 1 — Retrieval kvalita
 
-1. Spustit scraper pres vice stranek → ziskat 100-1000 rozhodnuti z NALUS
-2. Pridat per-document export (`.txt` / `.html` / `.json`)
-3. Pridat deduplikaci a incremental sync
-4. `chunk_document()` na vsechna rozhodnuti
-5. Ingestovat do Qdrantu pres `QdrantIngestor`
-6. `KeywordRetriever` corpus z textu vsech chunků
+1. BM25 nebo Qdrant sparse retrieval misto simple substring keyword layer
+2. Thresholding a score fusion tuning mezi dense / keyword
+3. Dedikovana evaluace precision@k nad realnymi dotazy
 
-### Priorita 2 — Realny embedder
+### Priorita 2 — Startup / ingest optimalizace
 
-1. Nahradit `MockEmbedder` za sentence-transformers `paraphrase-multilingual-mpnet-base-v2`
-2. Reingestovat vsechny chunks s realnyma vektorama
-3. Dense search bude semanticky (ne jen vsechny vektory stejne)
+1. Precompute embeddingy mimo startup a udelat import path bez re-encodovani
+2. Drzet HF model cache predwarmovanou a pripadne doplnit `HF_TOKEN`
+3. Srovnat verze `qdrant_client` a Qdrant serveru
 
-### Priorita 3 — Realny LLM Planner
+### Priorita 3 — Planner / odpovedi
 
-```python
-# V startup.py pridat:
-planner_llm = DeepSeekTextLLM(api_key=api_key)
-planner = PlannerService(llm=planner_llm)
-```
+1. Vyladit planner prompt a rewrite prompt na realnych pravnich dotazech
+2. Omezit pocet plan steps podle typu dotazu
+3. Pridat kvalitativni regression set pro final answer
 
 ### Priorita 4 — Produkcni hardening
 
@@ -1299,7 +1392,7 @@ planner = PlannerService(llm=planner_llm)
 
 ### Priorita 5 — Vyssi kvalita odpovedi
 
-1. BM25 keyword retrieval misto simple substring match
-2. Realny CrossEncoder reranking (sentence-transformers)
-3. Query rewrite pres realny LLM (ne MockTextLLM)
-4. Konfigurace top_k, threshold, max_tokens pres env
+1. Realny CrossEncoder reranking (sentence-transformers)
+2. Konfigurace top_k, threshold, max_tokens pres env
+3. Citace relevantnich chunk IDs / case references primo v odpovedi
+4. Samostatny eval dataset pro rodinne pravo vs ostatni agendy

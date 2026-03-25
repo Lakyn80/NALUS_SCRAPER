@@ -23,6 +23,7 @@ from typing import Any, Protocol
 from app.core.logging import get_logger
 from app.core.tracing import trace_event
 from app.rag.chunking.chunker import TextChunk
+from app.rag.retrieval.embedder import BaseEmbedder, MockEmbedder
 
 logger = get_logger(__name__)
 
@@ -58,10 +59,12 @@ class QdrantIngestor:
         client: _UpsertableClient,
         collection_name: str,
         batch_size: int = 100,
+        embedder: BaseEmbedder | None = None,
     ) -> None:
         self._client = client
         self._collection = collection_name
         self._batch_size = batch_size
+        self._embedder = embedder or MockEmbedder(dim=_MOCK_VECTOR_DIM)
 
     def ingest_chunks(self, chunks: list[TextChunk]) -> None:
         """Upsert all chunks into the collection.
@@ -78,10 +81,16 @@ class QdrantIngestor:
             collection=self._collection,
         )
 
-        points = [_make_point(chunk) for chunk in chunks]
         total_inserted = 0
 
-        for batch in _batched(points, self._batch_size):
+        for batch_chunks in _batched(chunks, self._batch_size):
+            vectors = self._embedder.embed_documents([chunk.text for chunk in batch_chunks])
+            if len(vectors) != len(batch_chunks):
+                raise ValueError("Embedder returned vector count different from chunk count.")
+            batch = [
+                _make_point(chunk, vector)
+                for chunk, vector in zip(batch_chunks, vectors, strict=True)
+            ]
             trace_event(
                 logger,
                 "ingest.batch",
@@ -107,10 +116,10 @@ class QdrantIngestor:
 # ---------------------------------------------------------------------------
 
 
-def _make_point(chunk: TextChunk) -> IngestPoint:
+def _make_point(chunk: TextChunk, vector: list[float] | None = None) -> IngestPoint:
     return IngestPoint(
         id=chunk.id,
-        vector=_make_vector(chunk),
+        vector=vector if vector is not None else _make_vector(chunk),
         payload=_make_payload(chunk),
     )
 

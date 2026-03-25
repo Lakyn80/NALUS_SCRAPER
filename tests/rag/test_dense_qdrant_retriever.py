@@ -121,6 +121,14 @@ class TestToChunk:
         assert isinstance(_to_chunk(point).id, str)
         assert _to_chunk(point).id == "42"
 
+    def test_original_id_in_payload_takes_precedence(self) -> None:
+        point = _FakePoint(
+            id=42,
+            score=0.5,
+            payload={"text": "Haagská úmluva.", "original_id": "III.ÚS_255_22_0"},
+        )
+        assert _to_chunk(point).id == "III.ÚS_255_22_0"
+
 
 # ---------------------------------------------------------------------------
 # Embedder interaction
