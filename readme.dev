@@ -14,8 +14,9 @@ Pokryva vse: scraper, RAG pipeline, architekturu, testy, spousteni.
 5. Jak spoustet
 6. Testovani
 7. Git historie
-8. Zname limity
-9. Doporuceny dalsi postup
+8. Architektonicke principy
+9. Zname limity
+10. Doporuceny dalsi postup
 
 ---
 
@@ -43,8 +44,10 @@ Nad stazenyma rozhodnutima provozovat retrieval-augmented generation:
 - reranking vysledku
 - query understanding + rewrite
 - planovani multi-step dotazu
-- generovani odpovedi (rule-based i LLM)
-- FastAPI endpoint pro vyhledavani
+- exekuce planu pres retrieval
+- synteza odpovedi pres LLM (DeepSeek / OpenAI / Claude)
+- FastAPI endpoint pro vyhledavani + RAG query
+- Docker Compose stack s Qdrantem
 
 ---
 
@@ -63,10 +66,12 @@ NALUS bezi jako ASP.NET WebForms. Potrebuje:
 
 ```
 app/main.py
-  └── fetch_page_html()           → stahne HTML vysledkove stranky
-  └── extract_search_page(html)   → NalusSearchPage (metadata + vysledky)
-  └── enrich_results_with_text()  → pro kazdy vysledek stahne full_text
-  └── ulozi results.json
+  └── load_dotenv()               → nacte scraper konfiguraci z .env / env
+  └── collect_results()           → sesbira vysledky pres 1..N stranek
+       └── fetch_page_html()      → stahne HTML vysledkove stranky
+       └── extract_search_page()  → NalusSearchPage (metadata + vysledky)
+       └── enrich_results_with_text()  → optional full_text download
+  └── ulozi vystupni JSON
 ```
 
 ### 2.3 Datove modely (app/models/search_result.py)
@@ -94,15 +99,89 @@ app/main.py
 | `app/crawler/extractor.py` | parser HTML → NalusSearchPage |
 | `app/crawler/text_fetcher.py` | stazeni + cisteni plneho textu |
 | `app/services/decision_service.py` | enrich_results_with_text() |
+| `app/services/search_service.py` | collect_results() pro vice stranek + limit |
 | `app/models/search_result.py` | datove modely |
 | `app/main.py` | entry point |
 
 ### 2.5 Co je v results.json
 
 Vystup posledniho behu. Obsahuje:
-- 10 zaznamu z prvni stranky pro vychozi dotaz
-- pole `full_text` u kazdeho zaznamu
+- konfigurovatelny pocet zaznamu podle `NALUS_PAGE_START`, `NALUS_PAGE_END`, `NALUS_MAX_RESULTS`
+- pole `full_text` u kazdeho zaznamu, pokud je `NALUS_FETCH_FULL_TEXT=true`
+- pri neexplicitnim `NALUS_OUTPUT_PATH` se jmeno vystupu sklada automaticky z query + limitu/rozsahu stran
 - overeno: full_text dela tisice znaku (23100, 9238, 11145...)
+
+### 2.6 Aktualni scraper konfigurace
+
+Scraper ted umi bez zmeny kodu konfigurovat:
+
+- `NALUS_QUERY`
+- `NALUS_PAGE`
+- `NALUS_PAGE_START`
+- `NALUS_PAGE_END`
+- `NALUS_MAX_RESULTS`
+- `NALUS_FETCH_FULL_TEXT`
+- `NALUS_BATCH_PAGES`
+- `NALUS_BATCH_SLEEP_SECONDS`
+- `NALUS_OUTPUT_PATH`
+
+Priklad:
+
+```powershell
+$env:NALUS_QUERY='rodinné právo'
+$env:NALUS_PAGE_START='1'
+$env:NALUS_PAGE_END='2'
+$env:NALUS_FETCH_FULL_TEXT='0'
+$env:NALUS_OUTPUT_PATH='results_pages_1_2.json'
+python app/main.py
+```
+
+Overeno:
+
+- `PAGES: 1-2`
+- `PARSED RESULTS: 20`
+- vystup ulozen do `results_pages_1_2.json`
+
+Pokud `NALUS_OUTPUT_PATH` neni nastaveno, `app/main.py` generuje vystup automaticky:
+
+- `results.json` pro single-page default
+- `results_<query>_<max_results>.json` pri limitovanem scrape
+- `results_<query>_pages_<start>_<end>.json` pri explicitnim rozsahu stran
+
+### 2.7 Search service guardy a batching
+
+`app/services/search_service.py` zavadi ridici vrstvu nad jednotlivym page fetch:
+
+- vice-strankovy sber pres `collect_results()`
+- auto-stop pri dosazeni `total_pages`, `page_end` nebo `max_results`
+- deduplikaci podle `ecli`, fallback na `case_reference`
+- prubeznou validaci po kazdych 10 zaznamech
+- batch pausovani po `NALUS_BATCH_PAGES` strankach pres `NALUS_BATCH_SLEEP_SECONDS`
+
+Typicky use-case:
+
+- scrape 100 zaznamu bez fulltextu
+- po 10 strankach udelat kratkou pauzu
+- vystup automaticky pojmenovat podle query
+
+### 2.8 Retry a timeouty
+
+Retry logika je ted zapojena na dvou mistech:
+
+- `app/crawler/playwright_crawler.py`
+  - retry pro NALUS search a pagination fetch
+- `app/crawler/text_fetcher.py`
+  - retry pro stahovani plneho textu rozhodnuti
+
+Implementace:
+
+- lokalni helper `_safe_request()` v `app/crawler/playwright_crawler.py`
+- lokalni helper `_safe_get()` v `app/crawler/text_fetcher.py`
+- `REQUEST_MAX_RETRIES = 3`
+- `REQUEST_TIMEOUT_SECONDS = 15`
+- fixed sleep `1s` mezi retry pokusy
+
+To znamena, ze docasne sitove chyby nebo kratke vypadky HTTP requestu uz neshodi beh pri prvnim selhani.
 
 ---
 
@@ -114,9 +193,6 @@ Kompletni architektura RAG systemu nad judikaturou Ustavniho soudu.
 
 ```
 User query
-    │
-    ▼
-[KROK 4]  QueryProcessor         — normalizace, keywords, legal concepts
     │
     ▼
 [KROK 19] QueryRewriteService    — LLM rewrite na presnejsi pravni dotaz (optional)
@@ -140,20 +216,13 @@ User query
 [KROK 10/11] Reranker          — SimpleReranker nebo CrossEncoderReranker (optional)
     │
     ▼
-[KROK 18] StrategyService      — rozhodne: no_results / direct_answer / llm_summary
+[KROK 22] SynthesisService     — LLM synteza odpovedi z ExecutionResult
     │
-    ├──────────────────┬────────────────────┐
-    ▼                  ▼                    ▼
-[KROK 12]         [KROK 15/16]        (no_results)
-AnswerService     LLMService
-(rule-based)      (LLM backend)
-    │                  │
-    └──────┬───────────┘
-           ▼
-[KROK 16] HybridAnswerService  — routing: < 2 chunks → Answer, >= 2 → LLM
-           │
-           ▼
-[KROK 13] FastAPI endpoint     — POST /api/rag/search → SearchResponse
+    ▼
+[KROK 24] OrchestratorService  — konec-konec orchestrace: rewrite→plan→execute→synthesize
+    │
+    ▼
+[KROK 25] FastAPI /query       — POST /api/rag/query → QueryResponse
 ```
 
 ### 3.2 KROK 1 — Core: Logging a Tracing
@@ -249,7 +318,7 @@ class QdrantIngestor:
         # vektor: placeholder [0.0, 0.1, ..., 0.9] (10-dim)
 ```
 
-`_UpsertableClient` je Protocol — ziadny import qdrant_client na module level.
+`_UpsertableClient` je Protocol — zadny import qdrant_client na module level.
 
 ### 3.8 KROK 7 — Retrieval Service
 
@@ -298,7 +367,7 @@ class MockEmbedder(BaseEmbedder):
 `_SearchableClient` je Protocol — testovatelne bez qdrant_client baliku.
 
 Poznamka: nova verze qdrant_client (>= 1.9) nema `.search()`, ma `.query_points()`.
-V e2e testech je `_SearchAdapter` ktery bricuje stare API na nove.
+V produkci pouzivame `_QdrantSearchAdapter` v `app/api/startup.py`.
 
 ### 3.11 KROK 10 — SimpleReranker
 
@@ -342,13 +411,11 @@ class AnswerResult:
 # neprazdne → "Na zaklade judikatury Ustavniho soudu..."
 ```
 
-### 3.14 KROK 13 — FastAPI Endpoint
+### 3.14 KROK 13 — FastAPI /search Endpoint
 
-**app/api/rag_router.py**
+**app/api/rag_router.py** — endpoint `/api/rag/search`
 
 ```python
-router = APIRouter(prefix="/api/rag", tags=["rag"])
-
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 5
@@ -358,23 +425,6 @@ class SearchResponse(BaseModel):
 
 @router.post("/search", response_model=SearchResponse)
 def search(request, pipeline=Depends(get_pipeline), answer_service=Depends(get_answer_service))
-```
-
-**app/api_app.py** — FastAPI entry point s `include_router(rag_router)`
-
-Spusteni:
-```bash
-uvicorn app.api_app:app --reload
-```
-
-Production override pipeline:
-```python
-app.dependency_overrides[get_pipeline] = lambda: RetrievalPipeline(
-    RetrievalService(
-        dense=DenseRetriever(client=real_client, collection_name="nalus", embedder=RealEmbedder()),
-        keyword=KeywordRetriever(corpus=loaded_corpus),
-    )
-)
 ```
 
 ### 3.15 KROK 14 — LLM Interface
@@ -396,7 +446,6 @@ class BaseLLM(ABC):
     def generate(self, data: LLMInput) -> LLMOutput: ...
 
 class MockLLM(BaseLLM):
-    # deterministicky, ziadne externi volani
     def generate(self, data: LLMInput) -> LLMOutput:
         return LLMOutput(answer=f"Mock odpoved na: {data.query}", ...)
 ```
@@ -423,10 +472,7 @@ class HybridAnswerService:
     def generate(self, query: str, chunks: list[RetrievedChunk]) -> AnswerResult | LLMOutput:
         # chunks < 2  → AnswerService   (rule-based, rychly)
         # chunks >= 2 → LLMService      (bohatsi odpoved)
-        # trace hybrid.start / hybrid.route / hybrid.done
 ```
-
-Routing tabulka:
 
 | Pocet chunks | Route | Vraceny typ |
 |---|---|---|
@@ -440,10 +486,6 @@ Routing tabulka:
 
 - `conftest.py` — session fixtures: seedi Qdrant kolekci `nalus_e2e_test` s 8 realnyma ceskymi pravnimy texty, vyvori plny pipeline, cleanupuje po session
 - `test_rag_real_queries.py` — 25 testu ve 4 scenarech
-
-Technicky problem reseny bez zmeny existujicich modulu:
-- `_PointStructAdapter` — konverze `IngestPoint` → `PointStruct` (qdrant_client pozaduje pydantic)
-- `_SearchAdapter` — bridge `.query_points()` → `.search()` (nova verze qdrant_client zrusila `.search()`)
 
 Scenare:
 1. "matka unesla dite do Ruska" → III.US 255/22, III.US 401/22, IV.US 190/23
@@ -468,14 +510,6 @@ class StrategyService:
         # >= 3 chunks → llm_summary  ("multi-source synthesis")
 ```
 
-Integrace do pipeline:
-```python
-pipeline = RetrievalPipeline(service, strategy=StrategyService())
-result = pipeline.run("query")
-result.decision.mode  # → "llm_summary"
-# LOG: [strategy] mode=llm_summary reason=multi-source synthesis query=...
-```
-
 ### 3.20 KROK 19 — Query Rewrite Service
 
 **app/rag/rewrite/query_rewrite_service.py**
@@ -494,13 +528,6 @@ class QueryRewriteService:
     def rewrite(self, query: str) -> str:
         # prompt s pravidly pro pravni rewrite v cestine
         # fallback na original query kdyz LLM selze nebo vrati prazdny string
-        # LOG: [rewrite] original=... rewritten=...
-```
-
-Priklad:
-```
-Input:  "matka unesla dite do Ruska"
-Output: "matka unesla dite do Ruska ustavni soud judikatura pravni veta zakladni prava"
 ```
 
 ### 3.21 KROK 20 — Planner Service
@@ -524,14 +551,6 @@ class PlannerService:
         # prompt: rozloz dotaz na 2-5 pravnich sub-dotazu
         # _parse(): "N. <query> | <reason>" → list[PlanStep]
         # fallback: [PlanStep(query, "fallback")] pri chybe nebo prazdnem parse
-        # LOG: [planner] steps=N query=...
-```
-
-Priklad vystupu pro "matka unesla dite do Ruska":
-```
-1. matka unesla dite Haagska umluva | mezinarodni aspekt
-2. rodicovska odpovednost unos ditete | prislustnost soudu
-3. navrat ditete do zeme obvykleho bydliste | vykon rozhodnuti
 ```
 
 ### 3.22 KROK 21 — Execution Service
@@ -552,16 +571,280 @@ class ExecutionService:
     def execute(self, plan: Plan) -> ExecutionResult:
         # pro kazdy PlanStep: retrieval.search(step.query, top_k)
         # trace execution.step / execution.step_done / execution.done
-        # LOG: [execution] steps=N
 ```
 
-Typicky flow s plannerem:
+### 3.23 KROK 22 — Synthesis Service
+
+**app/rag/synthesis/synthesis_service.py**
+
+Bere `ExecutionResult` (vsechny chunks ze vsech kroku planu), posle je LLM a vrati strukturovanou pravni odpoved v cestine.
+
 ```python
-plan = planner.plan(query)           # 3 sub-queries
-exec_result = execution.execute(plan) # retrieval pro kazdy krok
-all_chunks = exec_result.all_chunks() # flatten + dedup
-answer = answer_service.generate(query, all_chunks)
+@dataclass
+class SynthesisOutput:
+    answer: str       # cela odpoved od LLM
+    sources: list[str]  # chunk IDs pouzite (deduplikovane, zachovano poradi)
+
+class MockSynthesisLLM(BaseTextLLM):
+    # deterministicky stub — vraci fixed czech legal answer
+
+class SynthesisService:
+    def __init__(self, llm: BaseTextLLM)
+    def synthesize(self, query: str, execution_result: ExecutionResult) -> SynthesisOutput:
+        # 1. flatten chunks pres execution_result.all_chunks()
+        # 2. format do textu s [chunk_id] + score + text
+        # 3. build prompt (SYSTEM + USER)
+        # 4. llm.generate_text(prompt)
+        # 5. fallback na "" kdyz LLM selze
 ```
+
+Prompt architektura:
+
+```
+SYSTEM: You are a legal assistant specialized in constitutional law of the Czech Republic.
+        Use only the provided case excerpts to answer. Do not hallucinate.
+        If the excerpts do not contain sufficient information, say so explicitly.
+
+USER:
+User question:
+{query}
+
+Relevant case excerpts:
+[chunk_id] (skóre: 0.900)
+{chunk text}
+---
+...
+
+Instructions:
+- Answer only from the provided excerpts
+- Provide a structured legal explanation in Czech
+- Cite specific decisions by their ID (e.g. III.ÚS 255/22)
+- Structure: Shrnutí / Klíčové závěry / Relevantní rozhodnutí
+```
+
+Vystup LLM je strukturovany cesky pravni text — napr.:
+
+```
+## Shrnutí
+...
+
+## Klíčové závěry
+Ústavní soud opakovaně zdůraznil...
+
+## Relevantní rozhodnutí
+III.ÚS 255/22, III.ÚS 401/22, II.ÚS 100/21...
+```
+
+### 3.24 KROK 23 — LLM Provider Adapters
+
+Modularna vrstva HTTP provideru. Kazdy provider implementuje `BaseLLM` (structured output)
+i `BaseTextLLM` (text-in/text-out).
+
+**app/rag/llm/providers/_base.py** — sdilena HTTP infrastruktura
+
+```python
+class HTTPClient:
+    # httpx.Client s retry smyckou
+    # _RETRY_DELAYS = [0.5, 1.0]  (2 retry pokusy)
+    # ENV: DEFAULT_TIMEOUT=10, DEFAULT_MAX_TOKENS=512
+    def post(self, url, headers, payload) -> dict:
+        # LOG: [llm] provider=X model=Y latency_ms=Z tokens_prompt=N tokens_completion=M
+        # raise httpx.HTTPStatusError pri 4xx/5xx po vsech retry
+
+def build_rag_messages(query, chunks) -> list[dict]:   # pro BaseLLM
+def build_text_messages(prompt) -> list[dict]:          # pro BaseTextLLM
+def to_claude_payload(messages) -> dict:                # konverze na Anthropic format
+def parse_rag_response(body) -> LLMOutput:              # parsuje OpenAI-style response
+def empty_output() -> LLMOutput:                        # fallback
+```
+
+Prompt injection ochrana: `_escape()` nahradi `{`/`}` za `(`/`)` v user inputu.
+
+**app/rag/llm/providers/deepseek.py**
+
+```python
+class DeepSeekLLM(BaseLLM):      # pro structured RAG
+class DeepSeekTextLLM(BaseTextLLM):  # pro synthesis, rewrite, planner
+
+# Endpoint: https://api.deepseek.com/chat/completions
+# Default model: os.getenv("LLM_MODEL_DEEPSEEK", "deepseek-chat")
+# Konstruktor: DeepSeekTextLLM(api_key, model=None, timeout=None, max_tokens=None)
+```
+
+**app/rag/llm/providers/openai.py**
+
+```python
+class OpenAILLM(BaseLLM)
+class OpenAITextLLM(BaseTextLLM)
+# Endpoint: https://api.openai.com/v1/chat/completions
+```
+
+**app/rag/llm/providers/claude.py**
+
+```python
+class ClaudeLLM(BaseLLM)
+class ClaudeTextLLM(BaseTextLLM)
+# Endpoint: https://api.anthropic.com/v1/messages
+# Headers: x-api-key, anthropic-version: 2023-06-01
+# _extract_claude_text(body) → body["content"][0]["text"]
+```
+
+**app/rag/llm/provider_factory.py**
+
+```python
+def get_llm(provider: str, api_key: str) -> BaseLLM:
+def get_text_llm(provider: str, api_key: str) -> BaseTextLLM:
+# podporovane hodnoty: "deepseek", "openai", "claude"
+# raises ValueError pro neznamy provider
+```
+
+### 3.25 KROK 24 — OrchestratorService
+
+**app/rag/orchestrator/orchestrator_service.py**
+
+Hlavni end-to-end orchestrator — ridi cely RAG flow od dotazu po odpoved.
+
+```python
+@dataclass
+class OrchestratorResult:
+    answer: str
+    sources: list[str]
+    plan_steps: list[str] = field(default_factory=list)
+
+class OrchestratorService:
+    def __init__(self,
+                 planner: PlannerService,
+                 execution: ExecutionService,
+                 synthesis: SynthesisService,
+                 rewrite: QueryRewriteService | None = None)
+
+    def run(self, query: str) -> OrchestratorResult:
+        # 1. optional rewrite (pokud rewrite service nastaven)
+        # 2. _safe_plan()      → Plan (fallback: [PlanStep(query, "fallback")])
+        # 3. _safe_execute()   → ExecutionResult (fallback: prazdne steps_results)
+        # 4. _safe_synthesize() → SynthesisOutput (fallback: duck-compatible _EmptySynthesisOutput)
+```
+
+Trace events: `orchestrator.start` / `.rewrite` / `.plan` / `.execute` / `.synthesis` / `.done`
+
+Bezpecnostni fallbacky:
+- `_safe_plan`: kdyz planner selze → `Plan([PlanStep(query, "orchestrator fallback")])`
+- `_safe_execute`: kdyz execution selze → `ExecutionResult(steps_results=[])`
+- `_safe_synthesize`: kdyz synthesis selze → `_EmptySynthesisOutput` (duck-compatible s `SynthesisOutput`)
+
+### 3.26 KROK 25 — FastAPI /query Endpoint
+
+**app/api/rag_router.py** — pridan endpoint `/api/rag/query`
+
+```python
+class QueryRequest(BaseModel):
+    query: str
+
+class QueryResponse(BaseModel):
+    answer: str
+    sources: list[str]
+    plan_steps: list[str]
+
+_live_orchestrator: OrchestratorService | None = None  # nastavi startup.py
+
+def get_orchestrator() -> OrchestratorService:
+    # vraci _live_orchestrator pokud nastaven
+    # jinak stub s MockPlannerLLM + MockSynthesisLLM + keyword corpus
+
+@router.post("/query", response_model=QueryResponse)
+def query(req: QueryRequest, orchestrator=Depends(get_orchestrator)):
+    # LOG: [api] query received query=...
+    try:
+        result = orchestrator.run(req.query)
+    except Exception:
+        return QueryResponse(answer="", sources=[], plan_steps=[])
+    # LOG: [api] query completed answer_length=N sources=M plan_steps=K
+    return QueryResponse(answer=result.answer, sources=result.sources, plan_steps=result.plan_steps)
+```
+
+**app/api/main.py** — FastAPI aplikace s lifespan
+
+```python
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from app.api.startup import build_live_orchestrator
+    import app.api.rag_router as rtr
+    orchestrator = build_live_orchestrator()
+    rtr._live_orchestrator = orchestrator
+    yield
+
+app = FastAPI(title="NALUS RAG API", lifespan=lifespan)
+app.include_router(router)
+
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok"}
+```
+
+### 3.27 Docker + Qdrant + Ingest (startup)
+
+**app/api/startup.py** — spousteci logika (volana z lifespan)
+
+```python
+COLLECTION = "nalus"
+VECTOR_DIM = 10
+
+def build_live_orchestrator(qdrant_url=None) -> OrchestratorService:
+    # pokusi se pripojit k Qdrantu
+    # pri selhani vraci stub orchestrator (API vzdy nastartuje)
+
+def _build(qdrant_url) -> OrchestratorService:
+    # 1. QdrantClient(url, timeout=10)
+    # 2. vytvor kolekci "nalus" (dim=10, COSINE) pokud neexistuje
+    # 3. ingestuj corpus pokud kolekce prazdna
+    # 4. wire DenseRetriever + KeywordRetriever + RetrievalService
+    # 5. _build_synthesis_llm() → DeepSeekTextLLM nebo MockSynthesisLLM
+    # 6. vrat OrchestratorService
+
+def _build_synthesis_llm():
+    provider = os.getenv("LLM_PROVIDER", "").lower()
+    api_key = os.getenv("LLM_API_KEY", "")
+    if provider == "deepseek" and api_key:
+        return DeepSeekTextLLM(api_key=api_key)
+    # warning pokud provider=deepseek ale klic chybi
+    return MockSynthesisLLM()
+```
+
+Adaptery pro qdrant_client kompatibilitu:
+
+```python
+class _QdrantSearchAdapter:
+    # Bricuje novy .query_points() na stary .search() protokol (DenseRetriever ocekava)
+    def search(self, collection_name, query_vector, limit) -> list:
+        result = self._client.query_points(collection_name, query=query_vector, limit=limit)
+        return result.points
+
+class _QdrantUpsertAdapter:
+    # Konvertuje IngestPoint dataclasses na PointStruct pydantic modely
+    # id_map: str_id → int (Qdrant vyzaduje int ID)
+    def upsert(self, collection_name, points):
+        converted = [PointStruct(id=id_map[p.id], vector=p.vector,
+                                 payload={**p.payload, "original_id": p.id})
+                     for p in points]
+        self._client.upsert(collection_name=collection_name, points=converted)
+```
+
+**app/data/corpus.py** — seeded corpus pro development
+
+8 rozhodnuti Ustavniho soudu CR jako `CORPUS: list[tuple[str, str]]`:
+
+| ID | Rozhodnuti | Tema |
+|----|-----------|------|
+| "1" | III.ÚS 255/22 | únos dítěte do Ruska — Haagská úmluva |
+| "2" | II.ÚS 100/21 | střídavá péče, rozvod |
+| "3" | I.ÚS 88/23 | náhrada škody, trestný čin |
+| "4" | IV.ÚS 312/20 | délka řízení, průtahy |
+| "5" | III.ÚS 401/22 | Haagská úmluva, navrácení dítěte |
+| "6" | II.ÚS 77/19 | trestní řízení, základní práva |
+| "7" | I.ÚS 502/21 | odpovědnost státu za škodu |
+| "8" | IV.ÚS 190/23 | přeshraniční rodičovství |
+
+Tato data se automaticky ingestují do Qdrantu pri prvnim startu.
 
 ---
 
@@ -571,10 +854,12 @@ answer = answer_service.generate(query, all_chunks)
 nalus-scraper/
 ├── app/
 │   ├── main.py                         # scraper entry point
-│   ├── api_app.py                      # FastAPI entry point
+│   ├── api_app.py                      # stara FastAPI app (legacy)
 │   ├── api/
 │   │   ├── __init__.py
-│   │   └── rag_router.py               # POST /api/rag/search
+│   │   ├── main.py                     # Nova FastAPI app s lifespan (KROK 25)
+│   │   ├── rag_router.py               # POST /api/rag/search + /api/rag/query
+│   │   └── startup.py                  # Qdrant connect + ingest + wiring
 │   ├── core/
 │   │   ├── logging.py                  # get_logger()
 │   │   └── tracing.py                  # trace_event()
@@ -583,6 +868,9 @@ nalus-scraper/
 │   │   ├── paginator.py
 │   │   ├── extractor.py                # HTML → NalusSearchPage
 │   │   └── text_fetcher.py             # stazeni + cisteni textu
+│   ├── data/
+│   │   ├── __init__.py
+│   │   └── corpus.py                   # 8 seeded rozhodnuti (KROK 25)
 │   ├── models/
 │   │   └── search_result.py            # NalusResult, NalusSearchPage
 │   ├── services/
@@ -603,32 +891,47 @@ nalus-scraper/
 │       │   ├── base.py                 # BaseLLM
 │       │   ├── mock_llm.py             # MockLLM
 │       │   ├── models.py               # LLMInput, LLMOutput
-│       │   └── service.py              # LLMService
+│       │   ├── service.py              # LLMService
+│       │   ├── provider_factory.py     # get_llm(), get_text_llm() (KROK 23)
+│       │   └── providers/
+│       │       ├── __init__.py
+│       │       ├── _base.py            # HTTPClient, sdilena infrastruktura
+│       │       ├── deepseek.py         # DeepSeekLLM, DeepSeekTextLLM
+│       │       ├── openai.py           # OpenAILLM, OpenAITextLLM
+│       │       └── claude.py           # ClaudeLLM, ClaudeTextLLM
 │       ├── orchestration/
-│       │   └── pipeline.py             # RetrievalPipeline
+│       │   └── pipeline.py             # RetrievalPipeline (stara, KROK 8)
+│       ├── orchestrator/
+│       │   ├── __init__.py
+│       │   └── orchestrator_service.py # OrchestratorService (nova, KROK 24)
 │       ├── planner/
 │       │   └── planner_service.py      # PlannerService, Plan, PlanStep
 │       ├── query/
 │       │   └── query_processor.py      # process_query(), ProcessedQuery
 │       ├── reranker/
 │       │   ├── base.py                 # BaseReranker
-│       │   ├── cross_encoder_reranker.py  # CrossEncoderReranker
-│       │   └── simple_reranker.py      # SimpleReranker
+│       │   ├── cross_encoder_reranker.py
+│       │   └── simple_reranker.py
 │       ├── retrieval/
 │       │   ├── base.py                 # BaseRetriever
 │       │   ├── dense_retriever.py      # DenseRetriever, MockEmbedder
-│       │   ├── embedder.py             # BaseEmbedder, MockEmbedder
+│       │   ├── embedder.py             # BaseEmbedder
 │       │   ├── fusion.py               # fuse_results()
 │       │   ├── keyword_retriever.py    # KeywordRetriever
 │       │   ├── models.py               # RetrievedChunk
 │       │   └── retrieval_service.py    # RetrievalService
 │       ├── rewrite/
 │       │   └── query_rewrite_service.py  # QueryRewriteService, BaseTextLLM
-│       └── strategy/
-│           └── strategy_service.py     # StrategyService, StrategyDecision
+│       ├── strategy/
+│       │   └── strategy_service.py     # StrategyService, StrategyDecision
+│       └── synthesis/
+│           ├── __init__.py
+│           └── synthesis_service.py    # SynthesisService, SynthesisOutput (KROK 22)
 ├── tests/
+│   ├── api/
+│   │   └── test_rag_api.py             # 25 testu (KROK 25)
 │   ├── e2e/
-│   │   ├── conftest.py                 # Qdrant fixtures, _PointStructAdapter, _SearchAdapter
+│   │   ├── conftest.py
 │   │   └── test_rag_real_queries.py    # 25 e2e testu
 │   ├── rag/
 │   │   ├── test_answer_service.py      # 34 testu
@@ -636,23 +939,28 @@ nalus-scraper/
 │   │   ├── test_cross_encoder_reranker.py
 │   │   ├── test_execution_service.py   # 28 testu
 │   │   ├── test_fusion.py
+│   │   ├── test_hybrid_answer_service.py  # 16 testu
 │   │   ├── test_jsonl_exporter.py
 │   │   ├── test_llm_interface.py       # 20 testu
+│   │   ├── test_llm_providers.py       # 64 testu (KROK 23)
 │   │   ├── test_llm_service.py         # 17 testu
-│   │   ├── test_hybrid_answer_service.py  # 16 testu
+│   │   ├── test_orchestrator_service.py  # 39 testu (KROK 24)
 │   │   ├── test_pipeline.py
 │   │   ├── test_planner_service.py     # 44 testu
 │   │   ├── test_query_processor.py
 │   │   ├── test_query_rewrite.py       # 26 testu
 │   │   ├── test_retrieval.py
 │   │   ├── test_reranker.py
-│   │   └── test_strategy_service.py    # 27 testu
+│   │   ├── test_strategy_service.py    # 27 testu
+│   │   └── test_synthesis_service.py   # 22 testu (KROK 22)
 │   ├── test_core_tracing.py
 │   ├── test_decision_service.py
 │   ├── test_live_full_text.py          # live integration test
 │   └── test_text_fetcher.py
+├── docker-compose.yml                  # api + qdrant stack
+├── Dockerfile                          # uvicorn app.api.main:app
 ├── requirements.txt
-├── Dockerfile
+├── .env                                # LLM_API_KEY (gitignored)
 └── .gitignore
 ```
 
@@ -660,7 +968,86 @@ nalus-scraper/
 
 ## 5. JAK SPOUSTET
 
-### 5.1 Scraper
+### 5.1 Doporuceny zpusob: Docker Compose
+
+```bash
+# Nastav API klic (jednou)
+echo "LLM_API_KEY=sk-xxx" > .env
+
+# Spust stack (api + qdrant)
+docker-compose up --build
+```
+
+API bezi na `http://localhost:8029`.
+
+Swagger UI: `http://localhost:8029/docs`
+
+Health check: `http://localhost:8029/health`
+
+Pri prvnim startu:
+1. API se pripoji k Qdrantu
+2. Vytvori kolekci "nalus" (10-dim vektory, cosine)
+3. Ingestuje 8 rozhodnuti z `app/data/corpus.py`
+4. Wires DeepSeekTextLLM pro syntezi (pokud LLM_API_KEY nastaven)
+
+### 5.2 API endpointy
+
+**POST /api/rag/query** — hlavni RAG endpoint
+
+```bash
+curl -X POST http://localhost:8029/api/rag/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "únos dítěte do zahraničí"}'
+```
+
+Odpoved:
+
+```json
+{
+  "answer": "## Shrnutí\n...\n## Klíčové závěry\n...\n## Relevantní rozhodnutí\n...",
+  "sources": ["6", "1", "4", "2", "5"],
+  "plan_steps": ["únos dítěte", "Haagská úmluva", "navrácení dítěte"]
+}
+```
+
+**POST /api/rag/search** — stary endpoint (keyword search bez LLM)
+
+```bash
+curl -X POST http://localhost:8029/api/rag/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "únos dítěte Rusko", "top_k": 5}'
+```
+
+### 5.3 Env promenne
+
+| Promenna | Vychozi | Popis |
+|----------|---------|-------|
+| `LLM_PROVIDER` | `""` | `deepseek` \| `openai` \| `claude` |
+| `LLM_API_KEY` | `""` | API klic pro zvoleneho providera |
+| `LLM_MODEL_DEEPSEEK` | `deepseek-chat` | Model pro DeepSeek |
+| `LLM_TIMEOUT` | `10` (`docker-compose`: `30`) | HTTP timeout v sekundach |
+| `LLM_MAX_TOKENS` | `512` (`docker-compose`: `800`) | Max tokeny v odpovedi |
+| `QDRANT_URL` | `http://qdrant:6333` | URL Qdrant serveru |
+| `LOG_LEVEL` | `INFO` | Uroven logovani |
+| `PYTHONPATH` | `/app` | Nutne pro Docker |
+
+### 5.4 Lokalni vyvoj bez Dockeru
+
+```bash
+pip install -r requirements.txt
+export QDRANT_URL=http://localhost:6333
+export LLM_PROVIDER=deepseek
+export LLM_API_KEY=sk-xxx
+uvicorn app.api.main:app --reload --port 8029
+```
+
+Qdrant lokalne:
+
+```bash
+docker run -p 6333:6333 qdrant/qdrant:v1.13.6
+```
+
+### 5.5 Scraper
 
 ```bash
 python app/main.py
@@ -668,50 +1055,43 @@ python app/main.py
 # → ulozi results.json
 ```
 
-### 5.2 FastAPI server
+Priklad vice stranek bez full textu:
 
-```bash
-pip install fastapi uvicorn[standard]
-uvicorn app.api_app:app --reload
-# → http://localhost:8000/docs  (Swagger UI)
-# → POST http://localhost:8000/api/rag/search
+```powershell
+$env:NALUS_QUERY='rodinné právo'
+$env:NALUS_PAGE_START='1'
+$env:NALUS_PAGE_END='2'
+$env:NALUS_FETCH_FULL_TEXT='0'
+$env:NALUS_OUTPUT_PATH='results_pages_1_2.json'
+python app/main.py
 ```
 
-Test endpointu:
-```bash
-curl -X POST http://localhost:8000/api/rag/search \
-  -H "Content-Type: application/json" \
-  -d '{"query":"únos dítěte Rusko","top_k":5}'
-```
+Priklad s limitem:
 
-### 5.3 Docker
-
-```bash
-docker build -t nalus-scraper .
-docker run --rm nalus-scraper
-```
-
-### 5.4 Qdrant (lokalne)
-
-Qdrant bezi na `localhost:6333`. E2E testy automaticky skipnou pokud neni dostupny.
-
-Qdrant v Dockeru:
-```bash
-docker run -p 6333:6333 qdrant/qdrant
+```powershell
+$env:NALUS_MAX_RESULTS='25'
+python app/main.py
 ```
 
 ---
 
 ## 6. TESTOVANI
 
-### 6.1 Unit testy (RAG pipeline)
+### 6.1 Unit testy (RAG pipeline vcetne novych vrstev)
 
 ```bash
 pytest tests/rag/ -v
-# 516 passed
+# ~666 passed  (516 puvodnich + 22 synthesis + 64 llm_providers + 39 orchestrator + 25 api)
 ```
 
-### 6.2 E2E testy (vyzaduje Qdrant na localhost:6333)
+### 6.2 API testy
+
+```bash
+pytest tests/api/ -v
+# 25 passed
+```
+
+### 6.3 E2E testy (vyzaduje Qdrant na localhost:6333)
 
 ```bash
 pytest tests/e2e/ -v -s --log-cli-level=INFO
@@ -719,19 +1099,27 @@ pytest tests/e2e/ -v -s --log-cli-level=INFO
 # seedi nalus_e2e_test kolekci, cleanupuje po sobe
 ```
 
-### 6.3 Vsechny testy
+### 6.4 Vsechny testy
 
 ```bash
 pytest tests/ -v
 ```
 
-### 6.4 Scraper unit testy
+### 6.5 Scraper testy
 
 ```bash
-pytest tests/test_text_fetcher.py tests/test_decision_service.py -v
+pytest tests/test_search_service.py tests/test_text_fetcher.py -v
 ```
 
-### 6.5 Live integration test (vyzaduje internet)
+Pokryti posledniho scraper update:
+
+- vice-strankovy sber
+- respektovani `max_results` jeste pred full-text enrichmentem
+- auto-stop na posledni strance
+- batch sleep mezi strankami
+- fail-fast na duplicate / empty page / missing full_text
+
+### 6.6 Live integration test (vyzaduje internet)
 
 ```bash
 NALUS_LIVE_TEST=1 pytest tests/test_live_full_text.py -v
@@ -739,34 +1127,36 @@ NALUS_LIVE_TEST=1 pytest tests/test_live_full_text.py -v
 $env:NALUS_LIVE_TEST='1'; pytest tests/test_live_full_text.py -v
 ```
 
-### 6.6 Architektura testu
+### 6.7 Architektura testu
 
-- zadne mocky na urovni service — pouze na urovni externich zavislosti (Qdrant, sentence-transformers)
+- zadne mocky na urovni service — pouze na urovni externich zavislosti (Qdrant, HTTP, LLM)
 - `MagicMock` pro Qdrant client a CrossEncoder model
 - `_SpyLLM`, `_FixedLLM`, `_FailingLLM` pattern pro testovani LLM vrstev
 - `caplog` fixture pro overeni trace logu
 - session-scoped fixtures v e2e pro efektivni seeding Qdrantu
+- `httpx.MockTransport` v tests/rag/test_llm_providers.py pro HTTP interakce
 
 ---
 
 ## 7. GIT HISTORIE
 
 ```
+b535e6b Wire DeepSeek into SynthesisService via LLM_PROVIDER env var
+f91a326 Add Qdrant ingest, real retrievers, and Docker stack
+0df531b Add Docker deployment and FastAPI entry point
+6aed3ab Add KROK 24-25: OrchestratorService and /api/rag/query endpoint
+c73f106 Add KROK 22-23: Synthesis layer and LLM provider adapters
 d138b77 KROK 21: Execution Service — multi-step retrieval over Planner output
 c2a8872 KROK 20: Planner Service — multi-step query decomposition
 6e1ae59 KROK 19: Query Rewrite Service — LLM-based query expansion
-c287aea KROK 18: Strategy Layer — deterministic mode routing in pipeline
-1a3c68d KROK 17: E2E evaluation tests against real Qdrant + seeded corpus
-88b9f74 KROK 16: HybridAnswerService — routes between AnswerService and LLMService
-fa74a0d KROK 15: LLMService — thin service over BaseLLM
-56eeae4 KROK 14: LLM interface (BaseLLM, MockLLM, models)
-876e355 KROK 13: FastAPI endpoint POST /api/rag/search
-1a56e30 KROK 12: Answer Service (rule-based, LLM-ready interface)
-fa5be50 chore: add .gitignore
-859c2c3 KROK 11: CrossEncoderReranker (sentence-transformers, injectable model)
-f684837 KROK 10: Reranker layer (SimpleReranker + RetrievalService integration)
-e3ae78c Initial RAG pipeline implementation (KROKY 1-9)
 ```
+
+Aktualni scraper update popsany v tomto dokumentu:
+
+- `collect_results()` pro vice stranek, limit, deduplikaci a batch sleep
+- env-driven scraper konfigurace v `app/main.py`
+- retry wrapper pro search requesty i fulltext fetch
+- nove testy v `tests/test_search_service.py`
 
 ---
 
@@ -775,12 +1165,14 @@ e3ae78c Initial RAG pipeline implementation (KROKY 1-9)
 ### 8.1 Pravidla kodu
 
 - **zadny global mutable state** — vsechny zavislosti injected pres `__init__`
-- **Protocol-based structural typing** — ne `isinstance` na externih typech (Qdrant, CrossEncoder)
+- **Protocol-based structural typing** — ne `isinstance` na externích typech (Qdrant, CrossEncoder)
 - **lazy imports** pro optional heavy deps (`from sentence_transformers import ...` az v `__init__`)
 - **dataclasses.replace** pro immutable updates (zadna mutace vstupnich objektu)
-- **zadne print()** — pouze structured logging pres `trace_event()` a `logger.info()`
-- **thin orchestration** — pipeline a execution service nema business logiku
-- **fat services** — logika je v cistem service modulu, ne v orchestratoru
+- **RAG vrstva bez `print()`** — structured logging pres `trace_event()` a `logger.info()`
+- **scraper CLI muze pouzit `print()`** pro prubeh batch behu a fail-fast diagnostiku
+- **thin orchestration** — orchestrator nema business logiku, jen wiring
+- **fat services** — logika je v ciste service modulu, ne v orchestratoru
+- **safe fallbacks vsude** — kazdy krok v OrchestratorService ma fallback, API vzdy odpovi
 
 ### 8.2 LLM interfaces — dva ruzne kontrakty
 
@@ -788,31 +1180,57 @@ e3ae78c Initial RAG pipeline implementation (KROKY 1-9)
 BaseLLM (app/rag/llm/base.py)
   └── generate(LLMInput) → LLMOutput
   └── pouziti: RAG answering (query + chunks → strukturovana odpoved)
+  └── implementace: DeepSeekLLM, OpenAILLM, ClaudeLLM, MockLLM
 
 BaseTextLLM (app/rag/rewrite/query_rewrite_service.py)
   └── generate_text(prompt: str) → str
-  └── pouziti: text generation (query rewrite, planner)
+  └── pouziti: text generation (query rewrite, planner, synthesis)
+  └── implementace: DeepSeekTextLLM, OpenAITextLLM, ClaudeTextLLM, MockTextLLM, MockSynthesisLLM
 ```
 
-### 8.3 Dependency injection vzory
+### 8.3 Qdrant client kompatibilita
+
+qdrant_client >= 1.9 zrusil `.search()` ve prospech `.query_points()`.
+DenseRetriever stale ocekava stare `.search()` API.
+Bridge je v `app/api/startup.py`:
+
+```
+QdrantClient → _QdrantSearchAdapter → DenseRetriever
+              (query_points)          (search)
+```
+
+Podobne pro ingest:
+```
+QdrantIngestor → _QdrantUpsertAdapter → QdrantClient
+  (IngestPoint)   (PointStruct)
+```
+
+### 8.4 Dependency injection vzory
 
 ```python
 # Vsechny external deps injected:
-CrossEncoderReranker(model=mock_model)      # ne lazy-loaded model
-DenseRetriever(client=mock_client, embedder=MockEmbedder())
-QdrantIngestor(client=adapter)
+CrossEncoderReranker(model=mock_model)
+DenseRetriever(client=_QdrantSearchAdapter(client), embedder=MockEmbedder())
+QdrantIngestor(client=_QdrantUpsertAdapter(client, id_map))
 PlannerService(llm=MockPlannerLLM())
-RetrievalPipeline(service, strategy=StrategyService(), rewrite_service=QueryRewriteService(...))
+SynthesisService(llm=DeepSeekTextLLM(api_key=...))
+OrchestratorService(planner=..., execution=..., synthesis=...)
 ```
 
-### 8.4 Optional features (feature flags)
+### 8.5 Docker sít
 
-Vsechny rozsirene funkce jsou optional — pipeline funguje bez nich:
-
-```python
-RetrievalPipeline(service)                          # minimalni
-RetrievalPipeline(service, strategy=..., rewrite_service=...)  # plny
 ```
+Host: localhost:8029
+        │
+        ▼
+   api container (port 8000 intern)
+        │  http://qdrant:6333
+        ▼
+   qdrant container (6333 intern, bez expose na host)
+```
+
+Qdrant je dostupny pouze z `api` kontejneru — ne z hosta. Toto resi konflikty
+s jinym Qdrantem bezicim na hostu.
 
 ---
 
@@ -820,51 +1238,68 @@ RetrievalPipeline(service, strategy=..., rewrite_service=...)  # plny
 
 ### Scraper
 
-- zadne retries / backoff pro text_fetcher
 - zadny rate limiting
 - zadna paralelizace stahovani
 - export jen do jednoho results.json
-- neni CLI parametrizace
+- chybi deduplikace mezi bezicimi exporty / incremental sync
+- neni per-document export do samostatnych souboru
+- neni scheduler nebo batch orchestrator pro dlouhy scrape
 
 ### RAG pipeline
 
 - **MockEmbedder** — vsechny vektory jsou stejne ([0.1]*10), dense search neni semanticky
-  → pro produkcni pouziti nutno nahradit realnym embedderem (napr. sentence-transformers `paraphrase-multilingual-mpnet-base-v2`)
+  → nutno nahradit realnym embedderem (sentence-transformers `paraphrase-multilingual-mpnet-base-v2`)
 - **KeywordRetriever** — jednoduchy substring match, ne BM25
   → vhodne nahradit Qdrant sparse index nebo BM25
-- **MockLLM / MockPlannerLLM / MockTextLLM** — deterministicke stuby, ne realne LLM
-  → implementovat `BaseLLM` a `BaseTextLLM` pro zvolenou LLM API (DeepSeek, OpenAI, atd.)
-- **HybridAnswerService threshold** — pevne 2 chunks → hardcoded, ne konfigurovatelne
-- **StrategyService** — ciste deterministicke, bez ML
+- **MockPlannerLLM** — deterministicky stub, ne realni LLM planner
+  → wiring pres `get_text_llm("deepseek", api_key)` pro realny planner
+- **Seeded corpus** — jen 8 rozhodnuti
+  → pro produkcni pouziti nutno scrapovat NALUS a ingestovat plny korpus
+
+### Deployment
+
+- **zadna autentizace** API endpointu — kdo ma URL, muze posilat dotazy
+- **zadny rate limiting** na API
+- **LLM_TIMEOUT=30** — DeepSeek muze trvat 15-25s pro pravni odpovedi
 
 ---
 
 ## 10. DOPORUCENY DALSI POSTUP
 
-### Scraper
+### Priorita 1 — Realny data corpus
 
-1. CLI / env konfigurace: query, page, limit, full text on/off
-2. Retries + backoff v text_fetcher
-3. Paralelni stahovani (asyncio nebo ThreadPoolExecutor)
-4. Export do samostatnych .txt/.json souboru
+1. Spustit scraper pres vice stranek → ziskat 100-1000 rozhodnuti z NALUS
+2. Pridat per-document export (`.txt` / `.html` / `.json`)
+3. Pridat deduplikaci a incremental sync
+4. `chunk_document()` na vsechna rozhodnuti
+5. Ingestovat do Qdrantu pres `QdrantIngestor`
+6. `KeywordRetriever` corpus z textu vsech chunků
 
-### RAG pipeline
+### Priorita 2 — Realny embedder
 
-1. **Realny embedder** — sentence-transformers `paraphrase-multilingual-mpnet-base-v2`
-   - nahradit `MockEmbedder` v `DenseRetriever`
-   - reingestovat chunks s realnyma vektorama
+1. Nahradit `MockEmbedder` za sentence-transformers `paraphrase-multilingual-mpnet-base-v2`
+2. Reingestovat vsechny chunks s realnyma vektorama
+3. Dense search bude semanticky (ne jen vsechny vektory stejne)
 
-2. **Realna NALUS kolekce v Qdrantu**
-   - scraper → chunk_document() → QdrantIngestor → Qdrant
-   - keyword corpus z tekstu chunků
+### Priorita 3 — Realny LLM Planner
 
-3. **Realne LLM** pro QueryRewriteService a PlannerService
-   - implementovat `BaseTextLLM` napr. pres DeepSeek API
+```python
+# V startup.py pridat:
+planner_llm = DeepSeekTextLLM(api_key=api_key)
+planner = PlannerService(llm=planner_llm)
+```
 
-4. **BM25 keyword retrieval** misto simple substring match
+### Priorita 4 — Produkcni hardening
 
-5. **Pipeline wiring** — propojit PlannerService + ExecutionService do RetrievalPipeline
+1. API autentizace (Bearer token nebo API key header)
+2. Rate limiting (fastapi-limiter)
+3. Prometheus metriky (response time, LLM latency, search hit rate)
+4. Persistentni Qdrant (volumes uz nastaveny v docker-compose)
+5. CI/CD pipeline (GitHub Actions)
 
-6. **Konfigurace thresholds** pres env / config objekt
+### Priorita 5 — Vyssi kvalita odpovedi
 
-7. **Monitoring** — Prometheus metriky na response time a pocet results
+1. BM25 keyword retrieval misto simple substring match
+2. Realny CrossEncoder reranking (sentence-transformers)
+3. Query rewrite pres realny LLM (ne MockTextLLM)
+4. Konfigurace top_k, threshold, max_tokens pres env

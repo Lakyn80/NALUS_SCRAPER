@@ -16,7 +16,7 @@ services:
       - LLM_PROVIDER=deepseek
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_MODEL_DEEPSEEK=deepseek-chat
-      - LLM_TIMEOUT=10
+      - LLM_TIMEOUT=30
       - LLM_MAX_TOKENS=800
     depends_on:
       - qdrant

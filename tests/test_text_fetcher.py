@@ -20,7 +20,7 @@ class TestTextFetcher(unittest.TestCase):
         response.raise_for_status.assert_called_once_with()
         mock_get.assert_called_once_with(
             "https://nalus.usoud.cz/Search/GetText.aspx?sz=1-1-01",
-            timeout=60,
+            timeout=15,
         )
 
     def test_extract_plain_text_removes_script_and_style(self) -> None:
