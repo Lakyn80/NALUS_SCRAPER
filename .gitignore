@@ -11,6 +11,10 @@ data/
 !app/data/
 logs/
 results.json
+results_*.json
+batch_*.json
+batches/
+run*.log
 report.html
 test_results.txt
 vsledky_vyhledavani.txt
