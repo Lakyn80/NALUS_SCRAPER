@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "description": "Tracking ingestovaných batchů do Qdrant kolekce 'nalus'",
+  "batches": [
+    {
+      "file": "results_rodinne_pravo_1000.json",
+      "added_at": "2026-03-26T02:26:00",
+      "query": "rodinné právo",
+      "pages": "1-600",
+      "doc_count": 5000,
+      "chunk_count": 66803,
+      "ingested_at": "2026-03-26T14:56:37"
+    }
+  ]
+}

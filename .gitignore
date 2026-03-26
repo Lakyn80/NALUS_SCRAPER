@@ -13,7 +13,8 @@ logs/
 results.json
 results_*.json
 batch_*.json
-batches/
+batches/*
+!batches/manifest.json
 run*.log
 report.html
 test_results.txt

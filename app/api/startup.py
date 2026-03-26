@@ -7,14 +7,18 @@ Pokud Qdrant není dostupný, vrátí stub orchestrátor (žádná výjimka nepr
 
 from __future__ import annotations
 
+import json
 import os
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from app.core.logging import get_logger
 from app.data.runtime_corpus import (
     RuntimeCorpus,
+    build_runtime_corpus,
     build_seed_runtime_corpus,
-    load_runtime_corpus,
+    load_results_from_json,
 )
 from app.rag.execution.execution_service import ExecutionService
 from app.rag.llm.provider_factory import get_text_llm
@@ -94,16 +98,15 @@ class _QdrantUpsertAdapter:
 
 def build_live_orchestrator(qdrant_url: str | None = None) -> OrchestratorService:
     """
-    Connect to Qdrant, ingest runtime corpus if needed, return a wired OrchestratorService.
+    Connect to Qdrant, ingest new batches incrementally, return a wired OrchestratorService.
 
     Falls back to stub orchestrator (empty retrievers) on any failure so the
     API always starts successfully.
     """
     url = qdrant_url or os.getenv("QDRANT_URL", "http://qdrant:6333")
-    runtime_corpus = _load_runtime_corpus_from_env()
     strict_real_mode = _read_bool_env("RAG_STRICT_REAL_MODE", default=False)
     try:
-        return _build(url, runtime_corpus)
+        return _build(url)
     except Exception as exc:  # noqa: BLE001
         if strict_real_mode:
             logger.exception("[startup] strict real mode enabled; refusing mock fallback")
@@ -111,7 +114,7 @@ def build_live_orchestrator(qdrant_url: str | None = None) -> OrchestratorServic
         logger.warning(
             "[startup] Qdrant unavailable (%s) — starting with stub orchestrator", exc
         )
-        return _stub_orchestrator(runtime_corpus)
+        return _stub_orchestrator(build_seed_runtime_corpus())
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +122,7 @@ def build_live_orchestrator(qdrant_url: str | None = None) -> OrchestratorServic
 # ---------------------------------------------------------------------------
 
 
-def _build(qdrant_url: str, runtime_corpus: RuntimeCorpus) -> OrchestratorService:
+def _build(qdrant_url: str) -> OrchestratorService:
     from qdrant_client import QdrantClient
     from qdrant_client.models import Distance, VectorParams
 
@@ -128,16 +131,12 @@ def _build(qdrant_url: str, runtime_corpus: RuntimeCorpus) -> OrchestratorServic
     embedder = _build_embedder()
     vector_dim = _embedder_dim(embedder)
 
-    _ensure_collection_populated(
-        client=client,
-        runtime_corpus=runtime_corpus,
-        vector_dim=vector_dim,
-        distance=Distance.COSINE,
-        vector_params_factory=VectorParams,
-        embedder=embedder,
-    )
+    batches_dir = _resolve_batches_dir()
+    manifest_path = batches_dir / "manifest.json"
 
-    # Wire up retrievers
+    _ensure_collection(client, vector_dim, Distance.COSINE, VectorParams)
+    runtime_corpus = _ingest_new_batches(client, embedder, batches_dir, manifest_path)
+
     dense = DenseRetriever(
         client=_QdrantSearchAdapter(client),
         collection_name=COLLECTION,
@@ -149,10 +148,9 @@ def _build(qdrant_url: str, runtime_corpus: RuntimeCorpus) -> OrchestratorServic
     text_llm = _build_text_llm()
     synthesis_llm = text_llm if not isinstance(text_llm, MockTextLLM) else MockSynthesisLLM()
     logger.info(
-        "[startup] OrchestratorService built with real retrievers (%d docs, %d chunks, source=%s)",
+        "[startup] OrchestratorService ready (%d docs, %d chunks)",
         runtime_corpus.document_count,
         len(runtime_corpus.chunks),
-        runtime_corpus.source_label,
     )
 
     return OrchestratorService(
@@ -163,70 +161,98 @@ def _build(qdrant_url: str, runtime_corpus: RuntimeCorpus) -> OrchestratorServic
     )
 
 
-def _ensure_collection_populated(
-    client: Any,
-    runtime_corpus: RuntimeCorpus,
-    vector_dim: int,
-    distance: Any,
-    vector_params_factory: Any,
-    embedder: Any,
-) -> None:
+def _ensure_collection(client: Any, vector_dim: int, distance: Any, vector_params_factory: Any) -> None:
+    """Create the Qdrant collection if it doesn't exist. Never deletes it."""
     existing = {c.name for c in client.get_collections().collections}
-    expected_points = len(runtime_corpus.chunks)
-
     if COLLECTION not in existing:
         logger.info("[startup] creating collection '%s' (dim=%d)", COLLECTION, vector_dim)
         client.create_collection(
             collection_name=COLLECTION,
             vectors_config=vector_params_factory(size=vector_dim, distance=distance),
         )
-        _ingest(client, runtime_corpus, embedder)
-        return
-
-    count = client.count(collection_name=COLLECTION).count
-    current_vector_dim = _current_vector_dim(client)
-    logger.info("[startup] collection '%s' already exists (%d points)", COLLECTION, count)
-    if count == expected_points and current_vector_dim == vector_dim:
-        return
-
-    logger.info(
-        "[startup] recreating collection '%s' because collection shape differs"
-        " (existing_points=%d expected_points=%d existing_dim=%s expected_dim=%d)",
-        COLLECTION,
-        count,
-        expected_points,
-        current_vector_dim,
-        vector_dim,
-    )
-    client.delete_collection(collection_name=COLLECTION)
-    client.create_collection(
-        collection_name=COLLECTION,
-        vectors_config=vector_params_factory(size=vector_dim, distance=distance),
-    )
-    _ingest(client, runtime_corpus, embedder)
+    else:
+        count = client.count(collection_name=COLLECTION).count
+        logger.info("[startup] collection '%s' exists (%d points)", COLLECTION, count)
 
 
-def _ingest(client: Any, runtime_corpus: RuntimeCorpus, embedder: Any) -> None:
-    """Upsert all runtime corpus chunks into Qdrant."""
+def _ingest_new_batches(
+    client: Any,
+    embedder: Any,
+    batches_dir: Path,
+    manifest_path: Path,
+) -> RuntimeCorpus:
+    """
+    Ingest only batches not yet recorded in manifest.json.
+    Returns a RuntimeCorpus built from all batch files in the directory.
+    """
     from app.rag.ingest.qdrant_ingest import QdrantIngestor
 
-    logger.info(
-        "[startup] ingesting %d documents / %d chunks into Qdrant from %s",
-        runtime_corpus.document_count,
-        len(runtime_corpus.chunks),
-        runtime_corpus.source_label,
-    )
+    manifest = _load_manifest(manifest_path)
+    ingested_files = {b["file"] for b in manifest["batches"] if b.get("ingested_at")}
 
-    id_map = {chunk.id: idx for idx, chunk in enumerate(runtime_corpus.chunks, start=1)}
-    upsert_adapter = _QdrantUpsertAdapter(client, id_map)
-    ingestor = QdrantIngestor(
-        upsert_adapter,
-        collection_name=COLLECTION,
-        embedder=embedder,
-    )
+    all_results = []
+    for json_file in sorted(batches_dir.glob("*.json")):
+        if json_file.name == "manifest.json":
+            continue
+        results = load_results_from_json(json_file)
+        all_results.extend(results)
 
-    ingestor.ingest_chunks(runtime_corpus.chunks)
-    logger.info("[startup] ingest complete")
+        if json_file.name in ingested_files:
+            logger.info("[startup] skipping '%s' — already ingested", json_file.name)
+            continue
+
+        logger.info(
+            "[startup] ingesting new batch '%s' (%d docs)", json_file.name, len(results)
+        )
+        from app.rag.chunking.chunker import chunk_document
+        chunks = []
+        for result in results:
+            chunks.extend(chunk_document(result))
+
+        id_offset = client.count(collection_name=COLLECTION).count
+        id_map = {chunk.id: id_offset + idx for idx, chunk in enumerate(chunks, start=1)}
+        upsert_adapter = _QdrantUpsertAdapter(client, id_map)
+        ingestor = QdrantIngestor(upsert_adapter, collection_name=COLLECTION, embedder=embedder)
+        ingestor.ingest_chunks(chunks)
+
+        manifest["batches"].append({
+            "file": json_file.name,
+            "added_at": datetime.now(timezone.utc).isoformat(),
+            "doc_count": len(results),
+            "chunk_count": len(chunks),
+            "ingested_at": datetime.now(timezone.utc).isoformat(),
+        })
+        _save_manifest(manifest, manifest_path)
+        logger.info("[startup] batch '%s' ingested (%d chunks)", json_file.name, len(chunks))
+
+    if not all_results:
+        logger.warning("[startup] no batch files found in %s, using seed corpus", batches_dir)
+        return build_seed_runtime_corpus()
+
+    return build_runtime_corpus(all_results, source_label=str(batches_dir))
+
+
+def _resolve_batches_dir() -> Path:
+    batches_dir = os.getenv("NALUS_BATCHES_DIR")
+    if batches_dir:
+        return Path(batches_dir)
+    # Fallback: derive from NALUS_RESULTS_PATH (use its parent dir)
+    results_path = os.getenv("NALUS_RESULTS_PATH")
+    if results_path:
+        return Path(results_path).parent
+    return Path(__file__).resolve().parents[2] / "batches"
+
+
+def _load_manifest(path: Path) -> dict:
+    if path.exists():
+        with path.open(encoding="utf-8") as f:
+            return json.load(f)
+    return {"version": 1, "batches": []}
+
+
+def _save_manifest(manifest: dict, path: Path) -> None:
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
 
 
 def _build_text_llm():
@@ -274,32 +300,6 @@ class _EmptyClient:
     def search(self, collection_name: str, query_vector: list[float], limit: int) -> list:
         return []
 
-
-def _load_runtime_corpus_from_env() -> RuntimeCorpus:
-    results_path = os.getenv("NALUS_RESULTS_PATH")
-    chunk_size = int(os.getenv("NALUS_CHUNK_SIZE", "1500"))
-    overlap = int(os.getenv("NALUS_CHUNK_OVERLAP", "200"))
-
-    try:
-        runtime_corpus = load_runtime_corpus(
-            results_path=results_path,
-            chunk_size=chunk_size,
-            overlap=overlap,
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(
-            "[startup] failed to load runtime corpus (%s) — falling back to seed corpus",
-            exc,
-        )
-        runtime_corpus = build_seed_runtime_corpus()
-
-    logger.info(
-        "[startup] runtime corpus loaded source=%s docs=%d chunks=%d",
-        runtime_corpus.source_label,
-        runtime_corpus.document_count,
-        len(runtime_corpus.chunks),
-    )
-    return runtime_corpus
 
 
 def _read_bool_env(name: str, default: bool) -> bool:
