@@ -10,12 +10,10 @@ Why the adapter?
   The adapter converts IngestPoint → PointStruct without touching any module.
 
 ID strategy:
-  Qdrant accepts only int or UUID-string IDs.
-  We use integers 1-N.  The adapter stores the original string ID in the
-  payload so it is available to _to_chunk indirectly (though _to_chunk
-  uses point.id, which becomes str(int) = "1", "2", …).
-  KeywordRetriever corpus uses the same string IDs "1", "2", …
-  so fusion (by ID) works correctly across both retrievers.
+  QdrantIngestor now generates deterministic UUID point IDs from the logical
+  chunk ID and stores the original string ID in payload["original_id"].
+  DenseRetriever reads original_id from payload, so fusion still happens on
+  the logical chunk identity ("1", "2", …) used by KeywordRetriever.
 
 Dense retrieval is non-semantic (MockEmbedder → uniform vectors).
 Retrieval quality is driven by KeywordRetriever — intentional until a real
@@ -116,15 +114,6 @@ _CORPUS: list[tuple[int, str, str]] = [
     ),
 ]
 
-# Mapping original TextChunk string ID → Qdrant int ID
-_ID_MAP: dict[str, int] = {str_id: int_id for int_id, str_id, _ in _CORPUS}
-
-
-# ---------------------------------------------------------------------------
-# Qdrant adapter
-# ---------------------------------------------------------------------------
-
-
 class _PointStructAdapter:
     """
     Wraps the real Qdrant client so QdrantIngestor can use it unchanged.
@@ -134,18 +123,17 @@ class _PointStructAdapter:
     This adapter converts between the two — no existing module is modified.
     """
 
-    def __init__(self, client: Any, id_map: dict[str, int]) -> None:
+    def __init__(self, client: Any) -> None:
         self._client = client
-        self._id_map = id_map
 
     def upsert(self, collection_name: str, points: list[Any]) -> None:
         from qdrant_client.models import PointStruct
 
         converted = [
             PointStruct(
-                id=self._id_map[p.id],
+                id=p.id,
                 vector=p.vector,
-                payload={**p.payload, "original_id": p.id},
+                payload=p.payload,
             )
             for p in points
         ]
@@ -233,7 +221,7 @@ def seeded_collection(qdrant_client):
     ]
 
     # Use adapter so QdrantIngestor works with the real client
-    adapter = _PointStructAdapter(qdrant_client, id_map=_ID_MAP)
+    adapter = _PointStructAdapter(qdrant_client)
     ingestor = QdrantIngestor(client=adapter, collection_name=_COLLECTION)
     ingestor.ingest_chunks(chunks)
 

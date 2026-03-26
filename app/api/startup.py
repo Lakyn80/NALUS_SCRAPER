@@ -1,15 +1,20 @@
 """
-Startup logic — ingestuje runtime corpus do Qdrant a sestaví živý OrchestratorService.
+Startup logic — sestaví živý OrchestratorService nad Qdrant kolekcí.
 
-Volá se z lifespan eventu v app/api/main.py.
-Pokud Qdrant není dostupný, vrátí stub orchestrátor (žádná výjimka nepropadne).
+Runtime corpus se vždy načítá z lokálních batch JSON souborů pro keyword
+retrieval. Synchronizace do Qdrantu je oddělena:
+  - pokud je kolekce prázdná nebo už používá stabilní point ID schéma,
+    background sync je bezpečný a idempotentní
+  - pokud kolekce stále používá legacy count-based point IDs, sync se blokuje
+    a je nutné spustit jednorázovou repair/migration cestu
 """
 
 from __future__ import annotations
 
-import json
 import os
-from datetime import datetime, timezone
+import threading
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +26,11 @@ from app.data.runtime_corpus import (
     load_results_from_json,
 )
 from app.rag.execution.execution_service import ExecutionService
+from app.rag.ingest.qdrant_ingest import (
+    POINT_ID_SCHEME,
+    QdrantIngestor,
+    point_id_from_original_id,
+)
 from app.rag.llm.provider_factory import get_text_llm
 from app.rag.orchestrator.orchestrator_service import OrchestratorService
 from app.rag.planner.planner_service import MockPlannerLLM, PlannerService
@@ -33,20 +43,20 @@ from app.rag.synthesis.synthesis_service import MockSynthesisLLM, SynthesisServi
 
 logger = get_logger(__name__)
 
-COLLECTION = "nalus"
+DEFAULT_COLLECTION = "nalus"
 VECTOR_DIM = 10
 
 
-# ---------------------------------------------------------------------------
-# Qdrant search adapter
-# ---------------------------------------------------------------------------
-# New qdrant_client (>=1.9) removed .search() in favour of .query_points().
-# DenseRetriever expects the old .search() protocol.
-# This adapter bridges the two without touching DenseRetriever.
+@dataclass(frozen=True)
+class LiveOrchestratorBuild:
+    orchestrator: OrchestratorService
+    deferred_ingest: Callable[[], None] | None = None
+    ingest_status: str = "idle"
+    ingest_message: str | None = None
 
 
 class _QdrantSearchAdapter:
-    """Wraps a real QdrantClient, exposing the .search() signature DenseRetriever expects."""
+    """Wrap a real Qdrant client with the legacy .search() signature."""
 
     def __init__(self, client: Any) -> None:
         self._client = client
@@ -65,44 +75,67 @@ class _QdrantSearchAdapter:
         return result.points
 
 
-# ---------------------------------------------------------------------------
-# Qdrant upsert adapter
-# ---------------------------------------------------------------------------
-# QdrantIngestor.upsert() receives IngestPoint dataclasses.
-# Real client expects PointStruct (pydantic model).
+class _QdrantCollectionAdapter:
+    """Expose the subset of Qdrant operations the ingestor needs."""
 
-
-class _QdrantUpsertAdapter:
-    def __init__(self, client: Any, id_map: dict[str, int]) -> None:
+    def __init__(self, client: Any) -> None:
         self._client = client
-        self._id_map = id_map
 
-    def upsert(self, collection_name: str, points: list[Any]) -> None:
+    def retrieve(
+        self,
+        *,
+        collection_name: str,
+        ids: list[str],
+        with_payload: bool = True,
+        with_vectors: bool = False,
+    ) -> list[Any]:
+        return self._client.retrieve(
+            collection_name=collection_name,
+            ids=ids,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+        )
+
+    def upsert(self, *, collection_name: str, points: list[Any]) -> None:
         from qdrant_client.models import PointStruct
 
         converted = [
             PointStruct(
-                id=self._id_map[p.id],
-                vector=p.vector,
-                payload={**p.payload, "original_id": p.id},
+                id=point.id,
+                vector=point.vector,
+                payload=point.payload,
             )
-            for p in points
+            for point in points
         ]
         self._client.upsert(collection_name=collection_name, points=converted)
 
 
-# ---------------------------------------------------------------------------
-# Public entry point
-# ---------------------------------------------------------------------------
+class _LockedEmbedder:
+    """Serialize embedder access so query embedding and background sync do not race."""
+
+    def __init__(self, embedder: Any) -> None:
+        self._embedder = embedder
+        self._lock = threading.Lock()
+
+    def embed_query(self, text: str) -> list[float]:
+        with self._lock:
+            return self._embedder.embed_query(text)
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        with self._lock:
+            return self._embedder.embed_documents(texts)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._embedder, name)
 
 
-def build_live_orchestrator(qdrant_url: str | None = None) -> OrchestratorService:
+def build_live_orchestrator(qdrant_url: str | None = None) -> LiveOrchestratorBuild:
     """
-    Connect to Qdrant, ingest new batches incrementally, return a wired OrchestratorService.
+    Connect to Qdrant and build a live OrchestratorService.
 
-    Falls back to stub orchestrator (empty retrievers) on any failure so the
-    API always starts successfully.
+    In non-strict mode, any failure falls back to the stub orchestrator.
     """
+
     url = qdrant_url or os.getenv("QDRANT_URL", "http://qdrant:6333")
     strict_real_mode = _read_bool_env("RAG_STRICT_REAL_MODE", default=False)
     try:
@@ -112,34 +145,32 @@ def build_live_orchestrator(qdrant_url: str | None = None) -> OrchestratorServic
             logger.exception("[startup] strict real mode enabled; refusing mock fallback")
             raise
         logger.warning(
-            "[startup] Qdrant unavailable (%s) — starting with stub orchestrator", exc
+            "[startup] Qdrant unavailable (%s) — starting with stub orchestrator",
+            exc,
         )
-        return _stub_orchestrator(build_seed_runtime_corpus())
+        return LiveOrchestratorBuild(
+            orchestrator=_stub_orchestrator(build_seed_runtime_corpus())
+        )
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
-def _build(qdrant_url: str) -> OrchestratorService:
+def _build(qdrant_url: str) -> LiveOrchestratorBuild:
     from qdrant_client import QdrantClient
     from qdrant_client.models import Distance, VectorParams
 
+    collection_name = _collection_name()
     logger.info("[startup] connecting to Qdrant at %s", qdrant_url)
     client = QdrantClient(url=qdrant_url, timeout=10)
-    embedder = _build_embedder()
+    embedder = _LockedEmbedder(_build_embedder())
     vector_dim = _embedder_dim(embedder)
 
-    batches_dir = _resolve_batches_dir()
-    manifest_path = batches_dir / "manifest.json"
+    _ensure_collection(client, collection_name, vector_dim, Distance.COSINE, VectorParams)
 
-    _ensure_collection(client, vector_dim, Distance.COSINE, VectorParams)
-    runtime_corpus = _ingest_new_batches(client, embedder, batches_dir, manifest_path)
+    batches_dir = _resolve_batches_dir()
+    runtime_corpus = _load_runtime_corpus_from_batches(batches_dir)
 
     dense = DenseRetriever(
         client=_QdrantSearchAdapter(client),
-        collection_name=COLLECTION,
+        collection_name=collection_name,
         embedder=embedder,
     )
     keyword = KeywordRetriever(corpus=list(runtime_corpus.keyword_corpus))
@@ -153,77 +184,69 @@ def _build(qdrant_url: str) -> OrchestratorService:
         len(runtime_corpus.chunks),
     )
 
-    return OrchestratorService(
+    orchestrator = OrchestratorService(
         planner=PlannerService(llm=text_llm),
         execution=ExecutionService(retrieval_service=retrieval),
         synthesis=SynthesisService(llm=synthesis_llm),
         rewrite=QueryRewriteService(llm=text_llm),
     )
 
+    if not runtime_corpus.chunks:
+        return LiveOrchestratorBuild(orchestrator=orchestrator)
 
-def _ensure_collection(client: Any, vector_dim: int, distance: Any, vector_params_factory: Any) -> None:
-    """Create the Qdrant collection if it doesn't exist. Never deletes it."""
-    existing = {c.name for c in client.get_collections().collections}
-    if COLLECTION not in existing:
-        logger.info("[startup] creating collection '%s' (dim=%d)", COLLECTION, vector_dim)
+    if _collection_supports_stable_sync(client, collection_name):
+        return LiveOrchestratorBuild(
+            orchestrator=orchestrator,
+            deferred_ingest=_make_deferred_sync(
+                qdrant_url,
+                collection_name,
+                embedder,
+                runtime_corpus.chunks,
+            ),
+            ingest_status="pending",
+            ingest_message=(
+                f"{len(runtime_corpus.chunks)} runtime chunks scheduled for idempotent Qdrant sync."
+            ),
+        )
+
+    message = (
+        "Automatic sync blocked because the collection still uses legacy point IDs. "
+        "Run scripts/repair_qdrant_collection.py and switch QDRANT_COLLECTION_NAME "
+        "to the repaired collection before enabling append sync."
+    )
+    logger.warning("[startup] %s", message)
+    return LiveOrchestratorBuild(
+        orchestrator=orchestrator,
+        ingest_status="blocked",
+        ingest_message=message,
+    )
+
+
+def _ensure_collection(
+    client: Any,
+    collection_name: str,
+    vector_dim: int,
+    distance: Any,
+    vector_params_factory: Any,
+) -> None:
+    if not _collection_target_exists(client, collection_name):
+        logger.info("[startup] creating collection '%s' (dim=%d)", collection_name, vector_dim)
         client.create_collection(
-            collection_name=COLLECTION,
+            collection_name=collection_name,
             vectors_config=vector_params_factory(size=vector_dim, distance=distance),
         )
-    else:
-        count = client.count(collection_name=COLLECTION).count
-        logger.info("[startup] collection '%s' exists (%d points)", COLLECTION, count)
+        return
+
+    count = client.count(collection_name=collection_name).count
+    logger.info("[startup] collection '%s' exists (%d points)", collection_name, count)
 
 
-def _ingest_new_batches(
-    client: Any,
-    embedder: Any,
-    batches_dir: Path,
-    manifest_path: Path,
-) -> RuntimeCorpus:
-    """
-    Ingest only batches not yet recorded in manifest.json.
-    Returns a RuntimeCorpus built from all batch files in the directory.
-    """
-    from app.rag.ingest.qdrant_ingest import QdrantIngestor
-
-    manifest = _load_manifest(manifest_path)
-    ingested_files = {b["file"] for b in manifest["batches"] if b.get("ingested_at")}
-
+def _load_runtime_corpus_from_batches(batches_dir: Path) -> RuntimeCorpus:
     all_results = []
     for json_file in sorted(batches_dir.glob("*.json")):
         if json_file.name == "manifest.json":
             continue
-        results = load_results_from_json(json_file)
-        all_results.extend(results)
-
-        if json_file.name in ingested_files:
-            logger.info("[startup] skipping '%s' — already ingested", json_file.name)
-            continue
-
-        logger.info(
-            "[startup] ingesting new batch '%s' (%d docs)", json_file.name, len(results)
-        )
-        from app.rag.chunking.chunker import chunk_document
-        chunks = []
-        for result in results:
-            chunks.extend(chunk_document(result))
-
-        id_offset = client.count(collection_name=COLLECTION).count
-        id_map = {chunk.id: id_offset + idx for idx, chunk in enumerate(chunks, start=1)}
-        upsert_adapter = _QdrantUpsertAdapter(client, id_map)
-        ingestor = QdrantIngestor(upsert_adapter, collection_name=COLLECTION, embedder=embedder)
-        ingestor.ingest_chunks(chunks)
-
-        manifest["batches"].append({
-            "file": json_file.name,
-            "added_at": datetime.now(timezone.utc).isoformat(),
-            "doc_count": len(results),
-            "chunk_count": len(chunks),
-            "ingested_at": datetime.now(timezone.utc).isoformat(),
-        })
-        _save_manifest(manifest, manifest_path)
-        logger.info("[startup] batch '%s' ingested (%d chunks)", json_file.name, len(chunks))
+        all_results.extend(load_results_from_json(json_file))
 
     if not all_results:
         logger.warning("[startup] no batch files found in %s, using seed corpus", batches_dir)
@@ -232,31 +255,107 @@ def _ingest_new_batches(
     return build_runtime_corpus(all_results, source_label=str(batches_dir))
 
 
+def _collection_target_exists(client: Any, collection_name: str) -> bool:
+    collection_names = {collection.name for collection in client.get_collections().collections}
+    if collection_name in collection_names:
+        return True
+
+    get_aliases = getattr(client, "get_aliases", None)
+    if get_aliases is None:
+        return False
+
+    aliases = get_aliases().aliases
+    return any(alias.alias_name == collection_name for alias in aliases)
+
+
+def _collection_supports_stable_sync(
+    client: Any,
+    collection_name: str,
+    sample_size: int = 128,
+) -> bool:
+    count = client.count(collection_name=collection_name).count
+    if count == 0:
+        return True
+
+    remaining = sample_size
+    offset = None
+    while remaining > 0:
+        points, offset = client.scroll(
+            collection_name=collection_name,
+            limit=min(remaining, 64),
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        if not points:
+            break
+
+        for point in points:
+            payload = point.payload or {}
+            original_id = payload.get("original_id")
+            if not original_id:
+                return False
+            if payload.get("point_id_scheme") != POINT_ID_SCHEME:
+                return False
+            if str(point.id) != point_id_from_original_id(str(original_id)):
+                return False
+
+        remaining -= len(points)
+        if offset is None:
+            break
+
+    return True
+
+
+def _make_deferred_sync(
+    qdrant_url: str,
+    collection_name: str,
+    embedder: Any,
+    chunks: list[Any],
+) -> Callable[[], None]:
+    def _run() -> None:
+        from qdrant_client import QdrantClient
+
+        client = QdrantClient(url=qdrant_url, timeout=10)
+        adapter = _QdrantCollectionAdapter(client)
+        ingestor = QdrantIngestor(
+            adapter,
+            collection_name=collection_name,
+            batch_size=_sync_batch_size(),
+            embedder=embedder,
+        )
+        stats = ingestor.ingest_chunks(chunks)
+        logger.info(
+            "[startup] background Qdrant sync finished inserted=%d updated=%d skipped=%d",
+            stats.inserted_points,
+            stats.updated_points,
+            stats.skipped_points,
+        )
+
+    return _run
+
+
+def _collection_name() -> str:
+    return os.getenv("QDRANT_COLLECTION_NAME", DEFAULT_COLLECTION)
+
+
+def _sync_batch_size() -> int:
+    return int(os.getenv("QDRANT_SYNC_BATCH_SIZE", "100"))
+
+
 def _resolve_batches_dir() -> Path:
     batches_dir = os.getenv("NALUS_BATCHES_DIR")
     if batches_dir:
         return Path(batches_dir)
-    # Fallback: derive from NALUS_RESULTS_PATH (use its parent dir)
     results_path = os.getenv("NALUS_RESULTS_PATH")
     if results_path:
         return Path(results_path).parent
     return Path(__file__).resolve().parents[2] / "batches"
 
 
-def _load_manifest(path: Path) -> dict:
-    if path.exists():
-        with path.open(encoding="utf-8") as f:
-            return json.load(f)
-    return {"version": 1, "batches": []}
-
-
-def _save_manifest(manifest: dict, path: Path) -> None:
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(manifest, f, ensure_ascii=False, indent=2)
-
-
 def _build_text_llm():
     """Return a real BaseTextLLM when configured, otherwise a mock fallback."""
+
     provider = os.getenv("LLM_PROVIDER", "").lower()
     api_key = os.getenv("LLM_API_KEY", "")
     strict_real_mode = _read_bool_env("RAG_STRICT_REAL_MODE", default=False)
@@ -271,7 +370,10 @@ def _build_text_llm():
         )
 
     if provider and not api_key:
-        logger.warning("[startup] LLM_PROVIDER=%s but LLM_API_KEY is not set — falling back to mock text LLM", provider)
+        logger.warning(
+            "[startup] LLM_PROVIDER=%s but LLM_API_KEY is not set — falling back to mock text LLM",
+            provider,
+        )
 
     logger.info("[startup] text LLM: MockTextLLM / MockSynthesisLLM fallback")
     return MockTextLLM()
@@ -279,10 +381,11 @@ def _build_text_llm():
 
 def _stub_orchestrator(runtime_corpus: RuntimeCorpus) -> OrchestratorService:
     """Minimal working orchestrator with keyword-only fallback (no Qdrant needed)."""
+
     retrieval = RetrievalService(
         dense=DenseRetriever(
             client=_EmptyClient(),
-            collection_name=COLLECTION,
+            collection_name=_collection_name(),
             embedder=MockEmbedder(dim=VECTOR_DIM),
         ),
         keyword=KeywordRetriever(corpus=list(runtime_corpus.keyword_corpus)),
@@ -299,7 +402,6 @@ class _EmptyClient:
 
     def search(self, collection_name: str, query_vector: list[float], limit: int) -> list:
         return []
-
 
 
 def _read_bool_env(name: str, default: bool) -> bool:
@@ -336,16 +438,3 @@ def _embedder_dim(embedder: Any) -> int:
     if dim:
         return int(dim)
     return len(embedder.embed_query("dimension probe"))
-
-
-def _current_vector_dim(client: Any) -> int | None:
-    try:
-        info = client.get_collection(COLLECTION)
-    except Exception:  # noqa: BLE001
-        return None
-
-    vectors = info.config.params.vectors
-    size = getattr(vectors, "size", None)
-    if size is not None:
-        return int(size)
-    return None

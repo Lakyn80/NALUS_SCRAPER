@@ -17,7 +17,6 @@ import os
 from unittest.mock import MagicMock
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from app.core.logging import get_logger
@@ -70,10 +69,18 @@ class QueryResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 _live_orchestrator: OrchestratorService | None = None
+_live_orchestrator_status: str = "pending"
+_live_orchestrator_error: str | None = None
+_background_ingest_status: str = "idle"
+_background_ingest_error: str | None = None
 
 # ---------------------------------------------------------------------------
 # Dependency providers
 # ---------------------------------------------------------------------------
+
+
+def _collection_name() -> str:
+    return os.getenv("QDRANT_COLLECTION_NAME", "nalus")
 
 
 def get_pipeline() -> RetrievalPipeline:
@@ -94,7 +101,7 @@ def get_pipeline() -> RetrievalPipeline:
     mock_client.search.return_value = []
     dense = DenseRetriever(
         client=mock_client,
-        collection_name="nalus",
+        collection_name=_collection_name(),
         embedder=MockEmbedder(),
     )
     keyword = KeywordRetriever(corpus=[])
@@ -115,9 +122,18 @@ def get_orchestrator() -> OrchestratorService:
         return _live_orchestrator
 
     if os.getenv("RAG_STRICT_REAL_MODE", "").strip().lower() in {"1", "true", "yes", "on"}:
+        if _live_orchestrator_error:
+            detail = (
+                "Live orchestrator is unavailable in strict real mode. "
+                f"Last startup error: {_live_orchestrator_error}"
+            )
+        else:
+            detail = (
+                "Live orchestrator is still initializing in strict real mode."
+            )
         raise HTTPException(
             status_code=503,
-            detail="Live orchestrator is unavailable in strict real mode.",
+            detail=detail,
         )
 
     # Fallback stub (used when Qdrant is not available or in tests)
@@ -125,7 +141,7 @@ def get_orchestrator() -> OrchestratorService:
     mock_client.query_points.return_value = MagicMock(points=[])
     dense = DenseRetriever(
         client=mock_client,
-        collection_name="nalus",
+        collection_name=_collection_name(),
         embedder=MockEmbedder(),
     )
     keyword = KeywordRetriever(corpus=[])

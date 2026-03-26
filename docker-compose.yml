@@ -13,6 +13,7 @@ services:
       - PYTHONPATH=/app
       - LOG_LEVEL=INFO
       - QDRANT_URL=http://qdrant:6333
+      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-nalus}
       - LLM_PROVIDER=deepseek
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_MODEL_DEEPSEEK=deepseek-chat
