@@ -26,9 +26,21 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-ci.txt
 
+      - name: Check imports
+        run: |
+          python -c "import fastapi; print('fastapi OK')"
+          python -c "import httpx; print('httpx OK')"
+          python -c "import qdrant_client; print('qdrant_client OK')"
+          python -c "import pytest_asyncio; print('pytest_asyncio OK')"
+          python -c "from app.api.main import app; print('app.api.main OK')"
+        env:
+          PYTHONPATH: .
+
       - name: Run unit tests
         run: |
           pytest tests/ \
             --ignore=tests/e2e \
             --ignore=tests/test_live_full_text.py \
-            -q --tb=short
+            -v --tb=long
+        env:
+          PYTHONPATH: .
