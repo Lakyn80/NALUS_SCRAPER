@@ -1,0 +1,16 @@
+# Lightweight deps for CI — no torch/transformers/sentence-transformers needed
+# All ML components are mocked in unit tests
+
+requests
+beautifulsoup4
+lxml
+tenacity
+python-dotenv
+fastapi
+uvicorn[standard]
+httpx
+pydantic
+qdrant-client
+pytest
+pytest-asyncio
+anyio
