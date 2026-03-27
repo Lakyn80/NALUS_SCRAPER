@@ -32,15 +32,21 @@ def _strict_real_mode_enabled() -> bool:
 
 async def _initialize_orchestrator() -> None:
     from app.api.startup import build_live_orchestrator
+    from app.api.query_cache import build_query_cache
     import app.api.rag_router as rtr
     global _deferred_ingest_task
 
     rtr._live_orchestrator_status = "initializing"
     rtr._live_orchestrator_error = None
     build = await asyncio.to_thread(build_live_orchestrator)
+    cache_build = build_query_cache()
     rtr._live_orchestrator = build.orchestrator
     rtr._live_orchestrator_status = "ready"
     rtr._live_orchestrator_error = None
+    rtr._corpus_version = build.corpus_version
+    rtr._query_cache = cache_build.cache
+    rtr._query_cache_backend = cache_build.backend
+    rtr._query_cache_error = cache_build.error
     rtr._background_ingest_status = build.ingest_status
     rtr._background_ingest_error = build.ingest_message
     logger.info("[main] live orchestrator ready")
@@ -100,10 +106,19 @@ async def lifespan(app: FastAPI):
     rtr._live_orchestrator_error = None
     rtr._background_ingest_status = "idle"
     rtr._background_ingest_error = None
+    rtr._corpus_version = "unknown"
+    rtr._query_cache = None
+    rtr._query_cache_backend = "none"
+    rtr._query_cache_error = None
     _deferred_ingest_task = None
     startup_task = asyncio.create_task(_build_orchestrator_bg())
 
     yield
+
+    if rtr._query_cache is not None:
+        close = getattr(rtr._query_cache, "close", None)
+        if callable(close):
+            close()
 
     if _deferred_ingest_task is not None and not _deferred_ingest_task.done():
         _deferred_ingest_task.cancel()
@@ -141,5 +156,8 @@ def health() -> dict:
         "orchestrator_error": rtr._live_orchestrator_error,
         "background_ingest_status": rtr._background_ingest_status,
         "background_ingest_error": rtr._background_ingest_error,
+        "corpus_version": rtr._corpus_version,
+        "query_cache_backend": rtr._query_cache_backend,
+        "query_cache_error": rtr._query_cache_error,
         "strict_real_mode": _strict_real_mode_enabled(),
     }

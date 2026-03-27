@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import threading
+from hashlib import sha256
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -50,6 +51,7 @@ VECTOR_DIM = 10
 @dataclass(frozen=True)
 class LiveOrchestratorBuild:
     orchestrator: OrchestratorService
+    corpus_version: str
     deferred_ingest: Callable[[], None] | None = None
     ingest_status: str = "idle"
     ingest_message: str | None = None
@@ -149,7 +151,8 @@ def build_live_orchestrator(qdrant_url: str | None = None) -> LiveOrchestratorBu
             exc,
         )
         return LiveOrchestratorBuild(
-            orchestrator=_stub_orchestrator(build_seed_runtime_corpus())
+            orchestrator=_stub_orchestrator(build_seed_runtime_corpus()),
+            corpus_version="seed-corpus",
         )
 
 
@@ -167,6 +170,7 @@ def _build(qdrant_url: str) -> LiveOrchestratorBuild:
 
     batches_dir = _resolve_batches_dir()
     runtime_corpus = _load_runtime_corpus_from_batches(batches_dir)
+    corpus_version = _runtime_corpus_version(batches_dir)
 
     dense = DenseRetriever(
         client=_QdrantSearchAdapter(client),
@@ -192,11 +196,15 @@ def _build(qdrant_url: str) -> LiveOrchestratorBuild:
     )
 
     if not runtime_corpus.chunks:
-        return LiveOrchestratorBuild(orchestrator=orchestrator)
+        return LiveOrchestratorBuild(
+            orchestrator=orchestrator,
+            corpus_version=corpus_version,
+        )
 
     if _collection_supports_stable_sync(client, collection_name):
         return LiveOrchestratorBuild(
             orchestrator=orchestrator,
+            corpus_version=corpus_version,
             deferred_ingest=_make_deferred_sync(
                 qdrant_url,
                 collection_name,
@@ -217,6 +225,7 @@ def _build(qdrant_url: str) -> LiveOrchestratorBuild:
     logger.warning("[startup] %s", message)
     return LiveOrchestratorBuild(
         orchestrator=orchestrator,
+        corpus_version=corpus_version,
         ingest_status="blocked",
         ingest_message=message,
     )
@@ -253,6 +262,21 @@ def _load_runtime_corpus_from_batches(batches_dir: Path) -> RuntimeCorpus:
         return build_seed_runtime_corpus()
 
     return build_runtime_corpus(all_results, source_label=str(batches_dir))
+
+
+def _runtime_corpus_version(batches_dir: Path) -> str:
+    hasher = sha256()
+    files = sorted(path for path in batches_dir.glob("*.json") if path.name != "manifest.json")
+    if not files:
+        return "seed-corpus"
+
+    for path in files:
+        stat = path.stat()
+        hasher.update(path.name.encode("utf-8"))
+        hasher.update(str(stat.st_size).encode("ascii"))
+        hasher.update(str(stat.st_mtime_ns).encode("ascii"))
+
+    return hasher.hexdigest()[:16]
 
 
 def _collection_target_exists(client: Any, collection_name: str) -> bool:

@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from app.api.query_cache import CachedQueryResponse, build_cache_key, query_cache_ttl_seconds
 from app.core.logging import get_logger
 from app.core.tracing import trace_event
 from app.rag.answer.answer_service import AnswerService
@@ -73,6 +74,10 @@ _live_orchestrator_status: str = "pending"
 _live_orchestrator_error: str | None = None
 _background_ingest_status: str = "idle"
 _background_ingest_error: str | None = None
+_corpus_version: str = "unknown"
+_query_cache = None
+_query_cache_backend: str = "none"
+_query_cache_error: str | None = None
 
 # ---------------------------------------------------------------------------
 # Dependency providers
@@ -187,6 +192,22 @@ def query(
     logger.info("[api] query received query=%s", req.query)
     trace_event(logger, "api.query.start", query=req.query)
 
+    cache_key = None
+    if _query_cache is not None:
+        cache_key = build_cache_key(req.query, corpus_version=_corpus_version)
+        try:
+            cached = _query_cache.get(cache_key)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[api] query cache read failed (%s)", exc)
+            cached = None
+        if cached is not None:
+            logger.info("[api] query cache hit backend=%s", _query_cache_backend)
+            return QueryResponse(
+                answer=cached.answer,
+                sources=cached.sources,
+                plan_steps=cached.plan_steps,
+            )
+
     try:
         result: OrchestratorResult = orchestrator.run(req.query)
     except Exception as exc:  # noqa: BLE001
@@ -204,6 +225,20 @@ def query(
         answer_length=len(result.answer),
         sources=len(result.sources),
     )
+
+    if _query_cache is not None and cache_key is not None:
+        try:
+            _query_cache.set(
+                cache_key,
+                CachedQueryResponse(
+                    answer=result.answer,
+                    sources=result.sources,
+                    plan_steps=result.plan_steps,
+                ),
+                ttl_seconds=query_cache_ttl_seconds(),
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[api] query cache write failed (%s)", exc)
 
     return QueryResponse(
         answer=result.answer,

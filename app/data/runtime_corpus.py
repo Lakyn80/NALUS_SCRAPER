@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.core.logging import get_logger
 from app.data.corpus import CORPUS
 from app.models.search_result import NalusResult
 from app.rag.chunking.chunker import TextChunk, chunk_document
@@ -13,6 +15,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESULTS_PATH = "results_rodinne_pravo_1000.json"
 DEFAULT_CHUNK_SIZE = 1500
 DEFAULT_CHUNK_OVERLAP = 200
+
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -62,8 +66,9 @@ def build_runtime_corpus(
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     overlap: int = DEFAULT_CHUNK_OVERLAP,
 ) -> RuntimeCorpus:
+    deduplicated_results = _deduplicate_results(results)
     chunks: list[TextChunk] = []
-    for result in results:
+    for result in deduplicated_results:
         chunks.extend(
             chunk_document(
                 result,
@@ -76,7 +81,7 @@ def build_runtime_corpus(
 
     return RuntimeCorpus(
         source_label=source_label,
-        document_count=len(results),
+        document_count=len(deduplicated_results),
         chunks=chunks,
         keyword_corpus=[(chunk.id, chunk.text) for chunk in chunks],
     )
@@ -143,3 +148,73 @@ def _raise_on_duplicate_chunk_ids(chunks: list[TextChunk]) -> None:
         if chunk.id in seen:
             raise ValueError(f"Duplicate chunk id detected: {chunk.id}")
         seen.add(chunk.id)
+
+
+def _deduplicate_results(results: Iterable[NalusResult]) -> list[NalusResult]:
+    best_by_identity: dict[str, NalusResult] = {}
+    duplicate_count = 0
+
+    for result in results:
+        identity = _result_identity(result)
+        current = best_by_identity.get(identity)
+        if current is None:
+            best_by_identity[identity] = result
+            continue
+
+        duplicate_count += 1
+        if _result_rank(result) > _result_rank(current):
+            best_by_identity[identity] = result
+
+    if duplicate_count:
+        logger.info(
+            "[runtime_corpus] deduplicated %d overlapping decisions into %d unique records",
+            duplicate_count,
+            len(best_by_identity),
+        )
+
+    return list(best_by_identity.values())
+
+
+def _result_identity(result: NalusResult) -> str:
+    for value in (
+        result.ecli,
+        result.case_reference,
+        result.detail_url,
+        result.text_url,
+        str(result.result_id) if result.result_id is not None else None,
+    ):
+        normalized = (value or "").strip()
+        if normalized:
+            return normalized
+
+    raise ValueError("Decision is missing any stable identity field.")
+
+
+def _result_rank(result: NalusResult) -> tuple[int, int, int, int, str]:
+    return (
+        int(bool((result.full_text or "").strip())),
+        _metadata_completeness(result),
+        len((result.full_text or "").strip()),
+        len(result.related_regulations) + len(result.topics_and_keywords),
+        _result_identity(result),
+    )
+
+
+def _metadata_completeness(result: NalusResult) -> int:
+    values = (
+        result.case_reference,
+        result.ecli,
+        result.judge_rapporteur,
+        result.petitioner,
+        result.popular_name,
+        result.decision_date,
+        result.announcement_date,
+        result.filing_date,
+        result.publication_date,
+        result.decision_form,
+        result.importance,
+        result.verdict,
+        result.detail_url,
+        result.text_url,
+    )
+    return sum(1 for value in values if (value or "").strip())

@@ -5,6 +5,10 @@ services:
       - qdrant_storage:/qdrant/storage
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
   api:
     build: .
     ports:
@@ -14,6 +18,10 @@ services:
       - LOG_LEVEL=INFO
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-nalus}
+      - RAG_QUERY_CACHE_BACKEND=${RAG_QUERY_CACHE_BACKEND:-none}
+      - RAG_QUERY_CACHE_URL=${RAG_QUERY_CACHE_URL:-redis://redis:6379/0}
+      - RAG_QUERY_CACHE_TTL_SECONDS=${RAG_QUERY_CACHE_TTL_SECONDS:-604800}
+      - RAG_QUERY_CACHE_PROMPT_VERSION=${RAG_QUERY_CACHE_PROMPT_VERSION:-v1}
       - LLM_PROVIDER=deepseek
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_MODEL_DEEPSEEK=deepseek-chat
@@ -26,6 +34,7 @@ services:
       - EMBEDDING_NORMALIZE=1
     depends_on:
       - qdrant
+      - redis
     volumes:
       - huggingface_cache:/root/.cache/huggingface
       - ./batches:/app/batches:ro

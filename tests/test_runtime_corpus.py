@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from app.data.corpus import CORPUS
 from app.data.runtime_corpus import (
     build_runtime_corpus,
@@ -83,7 +81,7 @@ def test_load_runtime_corpus_falls_back_to_seed_when_file_missing(tmp_path: Path
     assert len(runtime_corpus.keyword_corpus) == len(CORPUS)
 
 
-def test_build_runtime_corpus_rejects_duplicate_chunk_ids() -> None:
+def test_build_runtime_corpus_deduplicates_overlapping_decisions() -> None:
     results = [
         NalusResult(
             result_id=1,
@@ -111,9 +109,15 @@ def test_build_runtime_corpus_rejects_duplicate_chunk_ids() -> None:
             filing_date=None,
             publication_date=None,
             text_url="https://nalus.usoud.cz/2",
-            full_text="B" * 20,
+            full_text="B" * 80,
         ),
     ]
 
-    with pytest.raises(ValueError, match="Duplicate chunk id detected"):
-        build_runtime_corpus(results, source_label="test", chunk_size=50, overlap=10)
+    runtime_corpus = build_runtime_corpus(results, source_label="test", chunk_size=50, overlap=10)
+
+    assert runtime_corpus.document_count == 1
+    assert len(runtime_corpus.chunks) == 2
+    assert all(chunk.case_reference == "I.ÚS 1/24" for chunk in runtime_corpus.chunks)
+    assert runtime_corpus.keyword_corpus == [
+        (chunk.id, chunk.text) for chunk in runtime_corpus.chunks
+    ]

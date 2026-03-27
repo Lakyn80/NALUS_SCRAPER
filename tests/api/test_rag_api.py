@@ -16,6 +16,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import app.api.rag_router as rtr
+from app.api.query_cache import CachedQueryResponse
 from app.api.rag_router import QueryResponse, get_orchestrator, router
 from app.rag.orchestrator.orchestrator_service import OrchestratorResult, OrchestratorService
 
@@ -68,6 +70,31 @@ class _ExplodingOrchestrator:
         raise RuntimeError("orchestrator exploded")
 
 
+class _MemoryCache:
+    def __init__(self) -> None:
+        self.store: dict[str, CachedQueryResponse] = {}
+        self.reads = 0
+        self.writes = 0
+
+    def get(self, key: str) -> CachedQueryResponse | None:
+        self.reads += 1
+        return self.store.get(key)
+
+    def set(
+        self,
+        key: str,
+        value: CachedQueryResponse,
+        *,
+        ttl_seconds: int | None = None,
+    ) -> None:
+        del ttl_seconds
+        self.writes += 1
+        self.store[key] = value
+
+    def close(self) -> None:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -87,6 +114,23 @@ def fake_orchestrator() -> _FakeOrchestrator:
 @pytest.fixture()
 def client_with_fake(fake_orchestrator: _FakeOrchestrator) -> TestClient:
     return TestClient(_make_app(fake_orchestrator))
+
+
+@pytest.fixture(autouse=True)
+def _reset_router_cache_state() -> None:
+    original_cache = rtr._query_cache
+    original_backend = rtr._query_cache_backend
+    original_error = rtr._query_cache_error
+    original_corpus_version = rtr._corpus_version
+    rtr._query_cache = None
+    rtr._query_cache_backend = "none"
+    rtr._query_cache_error = None
+    rtr._corpus_version = "test-corpus"
+    yield
+    rtr._query_cache = original_cache
+    rtr._query_cache_backend = original_backend
+    rtr._query_cache_error = original_error
+    rtr._corpus_version = original_corpus_version
 
 
 # ---------------------------------------------------------------------------
@@ -264,3 +308,21 @@ class TestLogging:
             client.post("/api/rag/query", json={"query": "dotaz"})
         msgs = [r.getMessage() for r in caplog.records]
         assert any("[api]" in m and "orchestrator" in m for m in msgs)
+
+
+class TestQueryCache:
+    def test_repeated_query_uses_cache(self, fake_orchestrator: _FakeOrchestrator) -> None:
+        cache = _MemoryCache()
+        rtr._query_cache = cache
+        rtr._query_cache_backend = "memory"
+        client = TestClient(_make_app(fake_orchestrator))
+
+        first = client.post("/api/rag/query", json={"query": "dotaz"})
+        second = client.post("/api/rag/query", json={"query": "dotaz"})
+
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert first.json() == second.json()
+        assert fake_orchestrator.calls == ["dotaz"]
+        assert cache.reads == 2
+        assert cache.writes == 1

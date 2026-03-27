@@ -26,6 +26,10 @@ def _reset_live_orchestrator(monkeypatch) -> None:
     rtr._live_orchestrator_error = None
     rtr._background_ingest_status = "idle"
     rtr._background_ingest_error = None
+    rtr._corpus_version = "unknown"
+    rtr._query_cache = None
+    rtr._query_cache_backend = "none"
+    rtr._query_cache_error = None
     yield
     main._deferred_ingest_task = None
     rtr._live_orchestrator = None
@@ -33,6 +37,10 @@ def _reset_live_orchestrator(monkeypatch) -> None:
     rtr._live_orchestrator_error = None
     rtr._background_ingest_status = "idle"
     rtr._background_ingest_error = None
+    rtr._corpus_version = "unknown"
+    rtr._query_cache = None
+    rtr._query_cache_backend = "none"
+    rtr._query_cache_error = None
 
 
 def test_docs_are_available_while_orchestrator_initializes(monkeypatch) -> None:
