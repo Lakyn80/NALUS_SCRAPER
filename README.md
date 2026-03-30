@@ -1,92 +1,144 @@
 # NALUS Scraper -> RAG Pipeline
 
-## 1. Ucel projektu
+## 1. Purpose
 
-Cilem projektu je vytvorit plne automatizovany pipeline pro:
+A fully automated pipeline for downloading and indexing all decisions of the Czech Constitutional Court (NALUS) for use in legal AI systems.
 
-- vyhledavani rozhodnuti Ustavniho soudu v NALUS
-- extrakci strukturovanych metadat
-- stazeni plneho textu rozhodnuti
-- ulozeni dat ve formatu vhodnem pro RAG (Retrieval-Augmented Generation)
+- Scrapes all decisions from NALUS (1993–present) year by year
+- Extracts structured metadata and full decision text
+- Ingests data into Qdrant vector database for RAG
 
-Projekt slouzi jako datovy zdroj pro:
+Data source for:
+- Legal AI systems
+- Case law search
+- Embedding + vector DB
+- LLM queries over legal documents
 
-- pravni AI systemy
-- vyhledavani judikatury
-- embedding + vector DB
-- LLM dotazovani nad pravnimi dokumenty
-
-## 2. Architektura
-
-Projekt je rozdelen do techto casti:
+## 2. Architecture
 
 ```text
 app/
 ├── crawler/
-│   ├── playwright_crawler.py   # ziskani HTML vysledku z NALUS search
-│   ├── extractor.py            # parsovani vysledku do strukturovanych dat
-│   ├── text_fetcher.py         # stazeni a cisteni plneho textu rozhodnuti
-│   └── paginator.py            # nacitani dalsich stranek vysledku
+│   ├── playwright_crawler.py   # POST-based HTML retrieval from NALUS search
+│   ├── extractor.py            # HTML parsing into structured data
+│   ├── text_fetcher.py         # Full decision text download and cleaning
+│   └── paginator.py            # Results pagination
 │
 ├── models/
-│   └── search_result.py        # datove modely NalusResult / NalusSearchPage
+│   └── search_result.py        # NalusResult / NalusSearchPage data models
 │
 ├── services/
-│   └── decision_service.py     # enrichovani vysledku o plny text rozhodnuti
+│   └── decision_service.py     # Enriches results with full decision text
 │
-└── main.py                     # orchestrace cele pipeline
+├── rag/
+│   └── ingest/
+│       └── qdrant_ingest.py    # Chunking + idempotent Qdrant ingestion
+│
+├── data/
+│   └── runtime_corpus.py       # Builds in-memory corpus from JSON batches
+│
+└── main.py                     # Pipeline orchestration
+
+scripts/
+├── scrape_all_nalus.py         # Year-by-year full corpus download with resume
+└── ingest_batch.py             # Standalone Qdrant ingest for batch JSON files
+
+batches/
+├── manifest.json               # Tracks completed years and ingested batches
+└── year_YYYY_*.json            # Downloaded decisions per year
 ```
 
-## 3. Jak pipeline funguje
+## 3. How the pipeline works
 
-### Krok 1 - Search (NALUS)
+### Step 1 — Search (NALUS)
 
-- provede se dotaz, napr. `rodinne pravo`
-- pouziva se WebForms POST, ne scraping UI
-- vysledkem je HTML stranky `/Search/Results.aspx`
+- Submits a WebForms POST request to `/Search/Search.aspx`
+- Uses `decidedFrom` / `decidedTo` date filters to scope by year
+- Empty text query = all decisions in a given year
 
-### Krok 2 - Parsovani vysledku
+### Step 2 — Parse results
 
-Z HTML se extrahuji:
+Extracted per decision:
+- `case_reference` — e.g. `III.ÚS 255/26`
+- `decision_date`
+- `verdict`
+- `ecli` — e.g. `ECLI:CZ:US:2026:3.US.255.26.1`
+- `judge_rapporteur`
+- `detail_url`
+- `text_url` — link to `GetText.aspx`
 
-- `case_reference`, napr. `III.ÚS 255/26`
-- datum rozhodnuti
-- vysledek rizeni
-- `ECLI`
-- soudce zpravodaj
-- URL na detail
-- URL na plny text (`GetText.aspx`)
+### Step 3 — Full text download
 
-Vystup:
-
-- list objektu `NalusResult`
-- obaleny v `NalusSearchPage`
-
-### Krok 3 - Stazeni plneho textu
-
-Pro kazdy vysledek:
-
-```text
+```
 https://nalus.usoud.cz/Search/GetText.aspx?sz=...
 ```
 
-se stahne cely text rozhodnuti.
-
-Ulozi se do:
-
+Stored in:
 ```json
 "full_text": "..."
 ```
 
-### Krok 4 - Ulozeni
+Timeout: 30s, retry: 3x with 2s delay, 0.5s pause between requests.
 
-Vysledky se ukladaji do:
+### Step 4 — Save & ingest
 
-```text
-results.json
+- JSON saved to `batches/year_YYYY_*.json`
+- Automatically ingested into Qdrant after each completed year
+- `manifest.json` tracks progress — safe to interrupt and resume
+
+## 4. Key technical notes
+
+### NALUS is not a standard web app
+
+NALUS runs on ASP.NET WebForms and requires:
+- `__VIEWSTATE`
+- `__VIEWSTATEGENERATOR`
+- `__EVENTVALIDATION`
+- POST-back pattern
+
+A simple `requests.get(..., params=...)` does not work.
+
+### What NOT to use
+
+- `klicove_slovo` — read-only UI field tied to a popup, not the actual search backend input
+
+## 5. Scripts
+
+### Download all of NALUS
+
+```bash
+python scripts/scrape_all_nalus.py                  # all years 1993–present
+python scripts/scrape_all_nalus.py --resume         # resume from last incomplete year
+python scripts/scrape_all_nalus.py --year 2020      # single year
+python scripts/scrape_all_nalus.py --from-year 2010 # from year 2010 onward
+python scripts/scrape_all_nalus.py --no-ingest      # save JSON only, skip Qdrant
+python scripts/scrape_all_nalus.py --dry-run        # show what would be downloaded
 ```
 
-Priklad struktury:
+### Ingest existing batches
+
+```bash
+python scripts/ingest_batch.py                      # ingest all batches/
+python scripts/ingest_batch.py batches/foo.json     # ingest single file
+python scripts/ingest_batch.py --url http://host:6333
+```
+
+### Single query scrape (main.py)
+
+```bash
+NALUS_QUERY="rodinné právo" NALUS_MAX_RESULTS=1000 python -m app.main
+```
+
+Environment variables:
+- `NALUS_QUERY` — search query (default: `rodinné právo`)
+- `NALUS_MAX_RESULTS` — max results
+- `NALUS_PAGE_START` / `NALUS_PAGE_END` — page range
+- `NALUS_FETCH_FULL_TEXT` — `true`/`false`
+- `NALUS_AUTO_INGEST` — auto-ingest to Qdrant after scrape (default: `true`)
+- `QDRANT_URL` — Qdrant URL (default: `http://localhost:6333`)
+- `QDRANT_COLLECTION_NAME` — collection name (default: `nalus`)
+
+## 6. Output format
 
 ```json
 {
@@ -101,134 +153,49 @@ Priklad struktury:
 }
 ```
 
-## 4. Klicove technicke poznatky
-
-### NALUS neni klasicky web
-
-NALUS bezi na:
-
-- ASP.NET WebForms
-
-Pouziva:
-
-- `__VIEWSTATE`
-- `__EVENTVALIDATION`
-- POST back
-
-Proto:
-
-- nefunguje jednoduche `requests.get(..., params=...)` jako u bezneho vyhledavani
-- UI scraping neni idealni primarni reseni
-
-### Spravne reseni
-
-- simulovat WebForms POST
-- pouzivat spravne pole:
-  - `ctl00$MainContent$text`
-
-### Co nepouzivat
-
-- `klicove_slovo`
-  - to je readonly pole navazane na popup a neni to spravny vstup pro backend search flow
-
-## 5. Vystup projektu
-
-Po spusteni:
-
-```powershell
-docker run --rm nalus-scraper
-```
-
-dostanes:
-
-- parsovane vysledky
-- ulozeny JSON
-- plne texty rozhodnuti
-
-## 6. Pouziti pro RAG
-
-Tento projekt slouzi jako ingest layer.
-
-Dalsi krok typicky vypada takto:
-
-1. Chunking
-   - rozdelit `full_text` na casti, napr. 500-1000 tokenu
-2. Embedding
-   - `sentence-transformers`, OpenAI, Jina apod.
-3. Ulozeni
-   - FAISS, Chroma, Qdrant
-4. Query
-   - semantic search
-   - LLM odpovedi nad relevantnimi chunky
-
-## 7. Mozna rozsireni
-
-1. Pagination
-   - iterace pres vsechny stranky, napr. `1 -> 771`
-
-2. Ukladani per dokument
-
-   Misto jednoho JSON:
-
-   ```text
-   data/
-   ├── 136232.txt
-   ├── 136087.txt
-   ```
-
-3. Metadata DB
-   - SQLite / Postgres
-   - indexace podle:
-     - ECLI
-     - data
-     - soudce
-
-4. Filtrace
-   - podle typu rozhodnuti
-   - podle roku
-   - podle vysledku
-
-5. Scheduler
-   - pravidelne scrapovani, napr. cron / worker
-
-## 8. Limity
-
-- NALUS neni API, zmeny HTML mohou rozbit parser
-- rate limiting je potreba resit pres delay / retry / backoff
-- nektere dokumenty maji nekonzistentni strukturu
-
-## 9. Stav projektu
-
-- search funguje
-- parsovani funguje
-- full text funguje
-- Docker funguje
-- JSON export funguje
-
-## 10. Co projekt realne je
-
-Toto neni scraper UI.
-
-Je to:
-
-- data ingestion layer pro pravni AI system
-
-## 11. Finalni pipeline
+## 7. RAG pipeline
 
 ```text
 NALUS
-  ↓
-Search (POST)
-  ↓
-HTML
-  ↓
-Parser
-  ↓
-Structured data
-  ↓
-Full text fetch
-  ↓
-results.json
-  ↓
-RAG (embedding + vector DB + LLM)
+  |
+Search POST (by year)
+  |
+HTML -> Parser -> NalusResult
+  |
+Full text fetch (GetText.aspx)
+  |
+batches/year_YYYY_*.json
+  |
+Chunking (runtime_corpus.py)
+  |
+Qdrant (idempotent upsert)
+  |
+Semantic search + LLM
 ```
+
+## 8. Deduplication
+
+- On startup, all existing ECLIs/case references from `batches/` are loaded into memory
+- Before fetching full text, each result is checked against this set
+- Duplicates are skipped — no redundant HTTP requests
+- Qdrant ingestion is idempotent (deterministic UUID point IDs)
+
+## 9. Limits
+
+- NALUS has no public API — HTML changes can break the parser
+- Rate limiting handled via delay + retry + backoff
+- Some documents have inconsistent structure
+- ~33,000 total decisions across 1993–2025 (~400 per year average)
+
+## 10. Project status
+
+| Component | Status |
+|-----------|--------|
+| Search (WebForms POST) | working |
+| HTML parsing | working |
+| Full text download | working |
+| Year-by-year bulk scrape | working |
+| Resume / manifest tracking | working |
+| Qdrant ingest (idempotent) | working |
+| JSON export | working |
+| Real embeddings | pending |
