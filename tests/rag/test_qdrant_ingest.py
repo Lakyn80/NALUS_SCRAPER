@@ -38,6 +38,7 @@ def _make_chunk(
     judge: str | None = "Jan Novák",
     text_url: str | None = "https://nalus.usoud.cz/text/255",
     text: str = "Ústavní soud rozhodl takto.",
+    document_id: int | None = 136186,
 ) -> TextChunk:
     return TextChunk(
         id=chunk_id or f"III.ÚS_255_26_{index}",
@@ -48,6 +49,7 @@ def _make_chunk(
         judge=judge,
         text_url=text_url,
         chunk_index=index,
+        document_id=document_id,
     )
 
 
@@ -135,6 +137,7 @@ class TestMakePayload:
             "judge",
             "text_url",
             "chunk_index",
+            "document_id",
             "source",
             "point_id_scheme",
             "content_checksum",
@@ -159,6 +162,7 @@ class TestMakePayload:
         assert payload["decision_date"] == chunk.decision_date
         assert payload["judge"] == chunk.judge
         assert payload["text_url"] == chunk.text_url
+        assert payload["document_id"] == chunk.document_id
 
 
 class TestMakePoint:

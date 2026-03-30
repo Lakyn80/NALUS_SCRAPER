@@ -120,6 +120,26 @@ class TestRetrievalServiceTopK:
         assert len(result) <= 5
 
 
+class TestRetrievalServiceDenseOnly:
+    def test_dense_only_calls_dense_retriever(self) -> None:
+        service, dense, keyword = _make_service(dense_results=[_chunk("a", 0.9)])
+
+        result = service.search_dense("ÚNOS DÍTĚTE", top_k=3)
+
+        assert len(result) == 1
+        dense.retrieve.assert_called_once()
+        keyword.retrieve.assert_not_called()
+
+    def test_dense_only_uses_normalized_query(self) -> None:
+        service, dense, _ = _make_service(dense_results=[_chunk("a", 0.9)])
+
+        service.search_dense("ÚNOS DÍTĚTE", top_k=3)
+
+        call_args = dense.retrieve.call_args
+        query_arg = call_args[0][0] if call_args[0] else call_args[1]["query"]
+        assert query_arg == "únos dítěte"
+
+
 # ---------------------------------------------------------------------------
 # Fusion behaviour
 # ---------------------------------------------------------------------------

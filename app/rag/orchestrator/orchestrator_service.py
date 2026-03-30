@@ -34,6 +34,7 @@ from app.core.logging import get_logger
 from app.core.tracing import trace_event
 from app.rag.execution.execution_service import ExecutionResult, ExecutionService
 from app.rag.planner.planner_service import Plan, PlanStep, PlannerService
+from app.rag.retrieval.models import RetrievedChunk
 from app.rag.rewrite.query_rewrite_service import QueryRewriteService
 from app.rag.synthesis.synthesis_service import SynthesisService
 
@@ -71,6 +72,27 @@ class OrchestratorService:
         self._execution = execution
         self._synthesis = synthesis
         self._rewrite = rewrite
+
+    def retrieve(self, query: str, top_k: int = 10) -> list[RetrievedChunk]:
+        """Return raw dense retrieval hits without planner or synthesis."""
+        trace_event(logger, "orchestrator.retrieve.start", query=query, top_k=top_k)
+
+        effective_query = query
+        if self._rewrite is not None:
+            try:
+                effective_query = self._rewrite.rewrite(query)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[orchestrator] rewrite failed (%s); using original query", exc)
+                effective_query = query
+
+        results = self._execution.retrieve_dense(effective_query, top_k=top_k)
+        trace_event(
+            logger,
+            "orchestrator.retrieve.done",
+            query=effective_query,
+            total_chunks=len(results),
+        )
+        return results
 
     def run(self, query: str) -> OrchestratorResult:
         trace_event(logger, "orchestrator.start", query=query)

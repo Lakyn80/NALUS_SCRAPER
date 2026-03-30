@@ -86,10 +86,11 @@ class DenseRetriever(BaseRetriever):
 
 def _to_chunk(point: Any) -> RetrievedChunk:
     """Map a Qdrant ScoredPoint (or any duck-typed equivalent) to RetrievedChunk."""
-    payload: dict[str, Any] = point.payload or {}
+    payload: dict[str, Any] = dict(point.payload or {})
     return RetrievedChunk(
         id=str(payload.get("original_id") or point.id),
         text=payload.get("text", ""),
         score=float(point.score),
         source="dense",
+        metadata=payload,
     )

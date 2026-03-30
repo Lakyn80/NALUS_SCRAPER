@@ -14,10 +14,11 @@ or test injection.
 """
 
 import os
+from typing import Any
 from unittest.mock import MagicMock
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.api.query_cache import CachedQueryResponse, build_cache_key, query_cache_ttl_seconds
 from app.core.logging import get_logger
@@ -65,6 +66,30 @@ class QueryResponse(BaseModel):
     plan_steps: list[str]
 
 
+class RetrieveRequest(BaseModel):
+    query: str
+    top_k: int = 10
+    sources: list[str] | None = None
+
+
+class RetrievedResult(BaseModel):
+    chunk_id: str
+    text: str
+    score: float
+    source: str | None = None
+    reference: str | None = None
+    case_reference: str | None = None
+    court_name: str | None = None
+    date: str | None = None
+    document_id: int | str | None = None
+    chunk_index: int | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class RetrieveResponse(BaseModel):
+    results: list[RetrievedResult]
+
+
 # ---------------------------------------------------------------------------
 # Live orchestrator — set by startup lifespan, None until Qdrant is ready
 # ---------------------------------------------------------------------------
@@ -78,6 +103,11 @@ _corpus_version: str = "unknown"
 _query_cache = None
 _query_cache_backend: str = "none"
 _query_cache_error: str | None = None
+_SOURCE_FILTER_ALIASES: dict[str, set[str]] = {
+    "constitutional": {"constitutional", "nalus"},
+    "supreme": {"supreme"},
+    "administrative": {"administrative"},
+}
 
 # ---------------------------------------------------------------------------
 # Dependency providers
@@ -158,6 +188,99 @@ def get_orchestrator() -> OrchestratorService:
     )
 
 
+def _normalize_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _normalize_filter_values(values: list[str] | None) -> set[str]:
+    normalized: set[str] = set()
+    for value in values or []:
+        text = _normalize_text(value)
+        if text:
+            normalized.add(text.lower())
+    return normalized
+
+
+def _chunk_source_tags(chunk) -> set[str]:
+    metadata = chunk.metadata or {}
+    tags: set[str] = set()
+
+    raw_source = _normalize_text(metadata.get("source"))
+    if raw_source:
+        tags.add(raw_source.lower())
+        if raw_source.lower() == "nalus":
+            tags.add("constitutional")
+
+    court_name = _normalize_text(metadata.get("court_name"))
+    if court_name:
+        normalized_court = court_name.lower()
+        tags.add(normalized_court)
+        if "ústavní" in normalized_court or "ustavni" in normalized_court:
+            tags.add("constitutional")
+        elif "nejvyšší správní" in normalized_court or "nejvyssi spravni" in normalized_court:
+            tags.add("administrative")
+        elif "nejvyšší" in normalized_court or "nejvyssi" in normalized_court:
+            tags.add("supreme")
+
+    return tags
+
+
+def _matches_source_filters(chunk, requested_sources: set[str]) -> bool:
+    if not requested_sources:
+        return True
+
+    tags = _chunk_source_tags(chunk)
+    if not tags:
+        return False
+
+    for requested in requested_sources:
+        allowed = _SOURCE_FILTER_ALIASES.get(requested, {requested})
+        if tags.intersection(allowed):
+            return True
+    return False
+
+
+def _raw_retrieve_limit(top_k: int, requested_sources: set[str]) -> int:
+    if not requested_sources:
+        return top_k
+    return max(top_k, top_k * 5)
+
+
+def _to_retrieved_result(chunk) -> RetrievedResult:
+    metadata = dict(chunk.metadata or {})
+    reference = _normalize_text(
+        metadata.get("case_reference")
+        or metadata.get("reference")
+        or metadata.get("sp_zn")
+    )
+    source = _normalize_text(metadata.get("source"))
+    court_name = _normalize_text(metadata.get("court_name"))
+    date = _normalize_text(metadata.get("decision_date") or metadata.get("date"))
+    chunk_index = metadata.get("chunk_index")
+    if chunk_index is not None:
+        try:
+            chunk_index = int(chunk_index)
+        except (TypeError, ValueError):
+            chunk_index = None
+
+    return RetrievedResult(
+        chunk_id=chunk.id,
+        text=chunk.text,
+        score=chunk.score,
+        source=source,
+        reference=reference,
+        case_reference=reference,
+        court_name=court_name,
+        date=date,
+        document_id=metadata.get("document_id"),
+        chunk_index=chunk_index,
+        metadata=metadata,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -182,6 +305,45 @@ def search(
         top_cases=answer.top_cases,
         excerpts=answer.excerpts,
     )
+
+
+@router.post("/retrieve", response_model=RetrieveResponse)
+def retrieve(
+    req: RetrieveRequest,
+    orchestrator: OrchestratorService = Depends(get_orchestrator),
+) -> RetrieveResponse:
+    logger.info("[api] retrieve received query=%s", req.query)
+
+    requested_sources = _normalize_filter_values(req.sources)
+    fetch_limit = _raw_retrieve_limit(req.top_k, requested_sources)
+
+    trace_event(
+        logger,
+        "api.retrieve.start",
+        query=req.query,
+        top_k=req.top_k,
+        fetch_limit=fetch_limit,
+        sources=sorted(requested_sources),
+    )
+
+    try:
+        chunks = orchestrator.retrieve(req.query, top_k=fetch_limit)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[api] retrieve raised unexpectedly (%s); returning empty response", exc)
+        return RetrieveResponse(results=[])
+
+    filtered = [
+        chunk for chunk in chunks
+        if _matches_source_filters(chunk, requested_sources)
+    ]
+    if req.top_k >= 0:
+        filtered = filtered[:req.top_k]
+
+    results = [_to_retrieved_result(chunk) for chunk in filtered]
+
+    logger.info("[api] retrieve completed results=%d", len(results))
+    trace_event(logger, "api.retrieve.done", results=len(results))
+    return RetrieveResponse(results=results)
 
 
 @router.post("/query", response_model=QueryResponse)

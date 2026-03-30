@@ -47,6 +47,27 @@ class RetrievalService:
         self._keyword: BaseRetriever = keyword
         self._reranker = reranker
 
+    def search_dense(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
+        """Find the top_k most relevant dense vector hits for a free-text query."""
+        trace_event(logger, "retrieval.raw.start", query=query, top_k=top_k)
+
+        processed = process_query(query)
+        trace_event(
+            logger,
+            "retrieval.raw.processed",
+            normalized_query=processed.normalized_query,
+        )
+
+        if not processed.normalized_query:
+            trace_event(logger, "retrieval.raw.done", count=0)
+            return []
+
+        dense_results = self._dense.retrieve(
+            processed.normalized_query, top_k=top_k
+        )
+        trace_event(logger, "retrieval.raw.done", count=len(dense_results))
+        return dense_results
+
     def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
         """Find the top_k most relevant chunks for a free-text query."""
         trace_event(logger, "retrieval.start", query=query, top_k=top_k)

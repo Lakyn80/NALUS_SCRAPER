@@ -30,6 +30,7 @@ class TextChunk:
     judge: str | None
     text_url: str | None
     chunk_index: int
+    document_id: int | None = None
 
 
 def chunk_document(
@@ -80,6 +81,7 @@ def chunk_document(
                 judge=result.judge_rapporteur,
                 text_url=result.text_url,
                 chunk_index=len(chunks),
+                document_id=result.result_id,
             )
         )
 

@@ -48,6 +48,7 @@ _CHECKSUM_KEYS = (
     "judge",
     "text_url",
     "chunk_index",
+    "document_id",
     "source",
     "point_id_scheme",
 )
@@ -264,6 +265,7 @@ def _make_payload(chunk: TextChunk) -> dict[str, Any]:
         "judge": chunk.judge,
         "text_url": chunk.text_url,
         "chunk_index": chunk.chunk_index,
+        "document_id": chunk.document_id,
         "source": "nalus",
         "point_id_scheme": POINT_ID_SCHEME,
     }

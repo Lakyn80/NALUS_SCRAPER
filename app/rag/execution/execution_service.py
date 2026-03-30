@@ -51,6 +51,11 @@ class ExecutionService:
         self._retrieval = retrieval_service
         self._top_k = top_k
 
+    def retrieve_dense(self, query: str, top_k: int | None = None) -> list[RetrievedChunk]:
+        """Return raw dense retrieval hits for a single query."""
+        effective_top_k = self._top_k if top_k is None else top_k
+        return self._retrieval.search_dense(query, top_k=effective_top_k)
+
     def execute(self, plan: Plan) -> ExecutionResult:
         logger.info("[execution] steps=%d", len(plan.steps))
 

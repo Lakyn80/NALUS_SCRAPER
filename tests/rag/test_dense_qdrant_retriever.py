@@ -72,6 +72,7 @@ def _full_payload(
     judge: str = "Jan Novák",
     text_url: str = "https://nalus.usoud.cz/text/255",
     chunk_index: int = 0,
+    document_id: int = 136186,
 ) -> dict[str, Any]:
     return {
         "text": text,
@@ -81,6 +82,7 @@ def _full_payload(
         "judge": judge,
         "text_url": text_url,
         "chunk_index": chunk_index,
+        "document_id": document_id,
         "source": "nalus",
     }
 
@@ -128,6 +130,11 @@ class TestToChunk:
             payload={"text": "Haagská úmluva.", "original_id": "III.ÚS_255_22_0"},
         )
         assert _to_chunk(point).id == "III.ÚS_255_22_0"
+
+    def test_payload_metadata_preserved(self) -> None:
+        payload = _full_payload()
+        point = _FakePoint(id="doc-1", score=0.5, payload=payload)
+        assert _to_chunk(point).metadata == payload
 
 
 # ---------------------------------------------------------------------------
@@ -255,6 +262,8 @@ class TestDenseRetrieverResults:
         assert chunk.text == "Rozhodnutí Ústavního soudu."
         assert chunk.score == pytest.approx(0.88)
         assert chunk.id == "doc-1"
+        assert chunk.metadata["case_reference"] == "III.ÚS 255/26"
+        assert chunk.metadata["document_id"] == 136186
 
     def test_missing_text_field_gives_empty_string(self) -> None:
         points = [_FakePoint("id-1", 0.8, {"case_reference": "I.ÚS 1/24"})]
