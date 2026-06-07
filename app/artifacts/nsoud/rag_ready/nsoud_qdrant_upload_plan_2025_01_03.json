@@ -1,0 +1,35 @@
+{
+  "collection_name": "nsoud_chunks_test_2025_01_03",
+  "vector_size": 768,
+  "distance": "Cosine",
+  "total_points": 1785,
+  "batch_size_recommendation": 128,
+  "input_path": "app/artifacts/nsoud/rag_ready/nsoud_embeddings_2025_01_03.parquet",
+  "required_payload_fields": [
+    "provider",
+    "source",
+    "court",
+    "authority_level",
+    "case_number",
+    "document_id",
+    "chunk_id",
+    "chunk_index",
+    "url"
+  ],
+  "optional_payload_fields": [
+    "ecli",
+    "decision_date",
+    "publication_date",
+    "document_type",
+    "legal_area",
+    "title",
+    "source_attribution",
+    "content_hash",
+    "chunk_text_length",
+    "paragraph_count",
+    "chunk_warning",
+    "ns_section_hint"
+  ],
+  "created_at": "2026-06-06T23:45:54.213212+00:00",
+  "dry_run": true
+}

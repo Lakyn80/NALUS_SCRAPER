@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-06-06T15:51:45.978559+00:00",
+  "runner_args": {
+    "year": 2025,
+    "start_month": 1,
+    "end_month": 3,
+    "limit_per_month": 50,
+    "max_pages": 5,
+    "delay": 1.0,
+    "out_dir": "app\\artifacts\\nsoud\\monthly"
+  },
+  "batches": [
+    {
+      "year": 2025,
+      "month": 1,
+      "date_from": "2025-01-01",
+      "date_to": "2025-01-31",
+      "output_path": "app\\artifacts\\nsoud\\monthly\\nsoud_2025_01.jsonl",
+      "records_written": 50,
+      "duplicates_skipped": 0,
+      "pages_visited": 5,
+      "status": "success",
+      "error_message": null
+    },
+    {
+      "year": 2025,
+      "month": 2,
+      "date_from": "2025-02-01",
+      "date_to": "2025-02-28",
+      "output_path": "app\\artifacts\\nsoud\\monthly\\nsoud_2025_02.jsonl",
+      "records_written": 50,
+      "duplicates_skipped": 0,
+      "pages_visited": 5,
+      "status": "success",
+      "error_message": null
+    },
+    {
+      "year": 2025,
+      "month": 3,
+      "date_from": "2025-03-01",
+      "date_to": "2025-03-31",
+      "output_path": "app\\artifacts\\nsoud\\monthly\\nsoud_2025_03.jsonl",
+      "records_written": 50,
+      "duplicates_skipped": 0,
+      "pages_visited": 5,
+      "status": "success",
+      "error_message": null
+    }
+  ]
+}

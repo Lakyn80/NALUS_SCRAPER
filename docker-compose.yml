@@ -37,6 +37,7 @@ services:
       - redis
     volumes:
       - huggingface_cache:/root/.cache/huggingface
+      - ./app/artifacts:/app/app/artifacts
       - ./batches:/app/batches:ro
     restart: unless-stopped
 

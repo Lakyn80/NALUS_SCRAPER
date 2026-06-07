@@ -1,0 +1,14 @@
+{
+  "input_manifest": "app\\artifacts\\nsoud\\monthly\\nsoud_monthly_manifest.json",
+  "output_path": "app\\artifacts\\nsoud\\nsoud_consolidated_2025_01_03.jsonl",
+  "total_input_records": 150,
+  "total_output_records": 150,
+  "duplicate_content_hash_skipped": 0,
+  "duplicate_url_skipped": 0,
+  "source_months": [
+    "2025-01",
+    "2025-02",
+    "2025-03"
+  ],
+  "created_at": "2026-06-06T16:16:18.158119+00:00"
+}
