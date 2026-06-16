@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean
@@ -16,6 +18,9 @@ try:
     import pyarrow  # noqa: F401
 except ImportError:
     pyarrow = None
+
+from app.nsoud.structure.confidence import calculate_structure_confidence
+from app.nsoud.structure.section_detector import detect_ns_document_structure
 
 
 METADATA_FIELDS = [
@@ -54,10 +59,7 @@ NUMBERED_DOT_RE = re.compile(r"\d{1,3}\.")
 NUMBERED_SLASH_RE = re.compile(r"\d{1,3}/")
 BRACKETED_NUMBER_RE = re.compile(r"\[\d{1,3}\]")
 NUMBERED_PAREN_RE = re.compile(r"\d{1,3}\)")
-ROMAN_SECTION_RE = re.compile(r"(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\.")
-DOCUMENT_TYPE_MARKERS = ["ROZSUDEK", "USNESENÍ", "STANOVISKO"]
-SECTION_MARKERS = ["takto:", "Odůvodnění:", "I.", "II.", "III.", "IV.", "V.", "Poučení:", "V Brně dne"]
-CLOSING_MARKERS = ["Poučení:", "V Brně dne", "předseda senátu", "předsedkyně senátu"]
+ROMAN_SECTION_RE = re.compile(r"(?:XX|XIX|XVIII|XVII|XVI|XV|XIV|XIII|XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)\.")
 ALLOWED_BOUNDARY_PREVIOUS_CHARS = ".:;!?)]}\"'"
 ALLOWED_PARAGRAPH_NEXT_CHARS = set("ABCDEFGHIJKLMNOPQRSTUVWXYZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0123456789§„\"'([{")
 DISALLOWED_PRECEDING_SUFFIXES = (
@@ -69,9 +71,22 @@ DISALLOWED_PRECEDING_SUFFIXES = (
     "bodem",
     "bodu",
     "bodech",
-    "bodu",
     "body",
 )
+SECTION_TYPE_MAP = {
+    "header": "header",
+    "vyrok": "operative_part",
+    "oduvodneni": "reasoning",
+    "pouceni": "appeal_instruction",
+    "closing/signature": "signature",
+}
+SECTION_HINT_MAP = {
+    "header": "header",
+    "vyrok": "vyrok",
+    "oduvodneni": "oduvodneni",
+    "pouceni": "pouceni",
+    "closing/signature": "closing",
+}
 
 
 @dataclass(frozen=True)
@@ -85,11 +100,12 @@ class ParagraphSpan:
 @dataclass(frozen=True)
 class StructureAnalysisSummary:
     total_documents: int
-    header_counts: dict[str, int]
-    section_marker_counts: dict[str, int]
-    closing_marker_counts: dict[str, int]
-    numbered_paragraph_doc_count: int
-    top_paragraph_start_patterns: list[tuple[str, int]]
+    marker_counts: dict[str, int]
+    section_order_counts: dict[str, int]
+    strong_count: int
+    medium_count: int
+    weak_count: int
+    needs_review_count: int
     report_path: Path
 
 
@@ -100,9 +116,22 @@ class ChunkingSummary:
     validation_status: str
     total_documents: int
     total_chunks: int
-    overlong_paragraph_chunk_count: int
-    structure_report_path: Path
+    documents_with_zero_chunks: int
+    empty_chunk_count: int
+    duplicate_chunk_id_count: int
+    paragraph_preservation_passed: int
+    paragraph_preservation_failed: int
+    reconstruction_validation_passed: int
+    reconstruction_validation_failed: int
+    section_reconstruction_passed: int
+    section_reconstruction_failed: int
+    unresolved_boundary_issue_count: int
+    strong_structure_count: int
+    medium_structure_count: int
+    weak_structure_count: int
+    needs_review_count: int
     output_parquet_path: Path
+    output_jsonl_path: Path
     validation_report_path: Path
 
 
@@ -124,8 +153,16 @@ def normalize_text(value: Any) -> str:
     return str(value)
 
 
+def normalize_whitespace(text: str) -> str:
+    return " ".join(normalize_text(text).split())
+
+
 def validation_path_for_output(out_path: Path) -> Path:
     return out_path.with_name(f"{out_path.stem}_validation.md")
+
+
+def jsonl_path_for_output(out_path: Path) -> Path:
+    return out_path.with_suffix(".jsonl")
 
 
 def structure_report_path_for_input(input_path: Path) -> Path:
@@ -180,9 +217,6 @@ def previous_context(text: str, start: int, width: int = 24) -> str:
 
 
 def has_valid_boundary_prefix(text: str, marker_start: int) -> bool:
-    # NS one-line exports still preserve real paragraph starts as "space + marker".
-    # We require a sentence/section ending before that space to avoid splitting dates,
-    # citations, and inline statutory references such as "odst. 1".
     if marker_start == 0:
         return True
     if not text[marker_start - 1].isspace():
@@ -215,7 +249,7 @@ def is_probable_numbered_paragraph_boundary(text: str, marker_start: int, marker
     marker_value = marker_text.rstrip("./")
     if not marker_value.isdigit():
         return False
-    if not 1 <= int(marker_value) <= 150:
+    if not 1 <= int(marker_value) <= 200:
         return False
 
     next_index = next_non_space_index(text, marker_end)
@@ -245,9 +279,6 @@ def is_probable_bracketed_paragraph_boundary(text: str, marker_start: int, marke
 
 
 def is_probable_parenthesized_paragraph_boundary(text: str, marker_start: int, marker_end: int, marker_text: str) -> bool:
-    # NS decisions often inline list legal issues as "že: 1) ... 2) ...".
-    # We only split these markers after a sentence/list separator, never after a word
-    # like "povinný 1)", which keeps party labels and citations intact.
     if not has_valid_boundary_prefix(text, marker_start):
         return False
 
@@ -290,14 +321,12 @@ def is_probable_section_label_boundary(text: str, marker_start: int) -> bool:
 def detect_ns_structural_boundaries(text: str) -> list[tuple[int, str]]:
     boundaries: dict[int, str] = {0: "header"}
 
-    # Explicit NS section labels are the safest anchors and should win early.
     for label, pattern in SECTION_LABEL_PATTERNS.items():
         for match in pattern.finditer(text):
             marker_start = match.start()
             if marker_start > 0 and marker_start not in boundaries and is_probable_section_label_boundary(text, marker_start):
                 boundaries[marker_start] = match.group(0)
 
-    # Roman sections and numbered paragraphs are added only after context checks.
     for match in ROMAN_SECTION_RE.finditer(text):
         marker_start = match.start()
         marker_end = match.end()
@@ -333,13 +362,12 @@ def detect_ns_structural_boundaries(text: str) -> list[tuple[int, str]]:
     for match in BRACKETED_NUMBER_RE.finditer(text):
         marker_start = match.start()
         marker_end = match.end()
-        marker_text = match.group(0)
         if marker_start > 0 and marker_start not in boundaries and is_probable_bracketed_paragraph_boundary(
             text,
             marker_start,
             marker_end,
         ):
-            boundaries[marker_start] = marker_text
+            boundaries[marker_start] = match.group(0)
 
     return sorted(boundaries.items(), key=lambda item: item[0])
 
@@ -385,16 +413,6 @@ def extract_ns_paragraphs(text: str) -> list[ParagraphSpan]:
     return split_text_by_ns_boundaries(normalized)
 
 
-def should_append_paragraph(current_start: int, current_end: int, next_paragraph: ParagraphSpan) -> bool:
-    current_length = current_end - current_start
-    prospective_length = next_paragraph.end - current_start
-    if prospective_length <= TARGET_CHUNK_SIZE:
-        return True
-    if current_length < TARGET_CHUNK_SIZE and prospective_length <= SOFT_MAX_CHUNK_SIZE:
-        return True
-    return False
-
-
 def deduplicate_messages(messages: list[str]) -> list[str]:
     deduplicated: list[str] = []
     seen: set[str] = set()
@@ -406,212 +424,277 @@ def deduplicate_messages(messages: list[str]) -> list[str]:
     return deduplicated
 
 
-def infer_section_zone(text: str) -> dict[str, int]:
-    marker_positions = {
-        "takto": normalize_text(text).find("takto:"),
-        "oduvodneni": normalize_text(text).find("Odůvodnění:"),
-        "pouceni": normalize_text(text).find("Poučení:"),
-        "closing": normalize_text(text).find("V Brně dne"),
-    }
-    return marker_positions
+def sanitize_label(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9]+", "_", value).strip("_").lower() or "section"
 
 
-def classify_paragraph_section(start: int, start_pattern: str, zone_positions: dict[str, int]) -> str:
-    if start_pattern == "header":
-        takto_pos = zone_positions.get("takto", -1)
-        oduvodneni_pos = zone_positions.get("oduvodneni", -1)
-        if takto_pos > 0 and start < takto_pos:
-            return "header"
-        if oduvodneni_pos > 0 and start < oduvodneni_pos:
-            return "header"
-        return "unknown"
-
-    if start_pattern == "V Brně dne":
-        return "closing"
-    if start_pattern == "Poučení:":
-        return "pouceni"
-    if start_pattern == "Odůvodnění:":
-        return "oduvodneni"
-    if start_pattern == "takto:":
-        return "vyrok"
-
-    normalized_pattern = start_pattern.strip()
-    if normalized_pattern.startswith("[") and normalized_pattern.endswith("]"):
-        normalized_pattern = normalized_pattern[1:-1]
-    normalized_pattern = normalized_pattern.rstrip("./")
-
-    if normalized_pattern.isdigit():
-        oduvodneni_pos = zone_positions.get("oduvodneni", -1)
-        pouceni_pos = zone_positions.get("pouceni", -1)
-        closing_pos = zone_positions.get("closing", -1)
-        if oduvodneni_pos >= 0 and start >= oduvodneni_pos and (pouceni_pos < 0 or start < pouceni_pos):
-            return "oduvodneni"
-        if pouceni_pos >= 0 and start >= pouceni_pos and (closing_pos < 0 or start < closing_pos):
-            return "pouceni"
-
-    if re.fullmatch(r"[IVXLCDM]+\.", start_pattern):
-        takto_pos = zone_positions.get("takto", -1)
-        oduvodneni_pos = zone_positions.get("oduvodneni", -1)
-        pouceni_pos = zone_positions.get("pouceni", -1)
-        closing_pos = zone_positions.get("closing", -1)
-        if takto_pos >= 0 and start >= takto_pos and (oduvodneni_pos < 0 or start < oduvodneni_pos):
-            return "vyrok"
-        if oduvodneni_pos >= 0 and start >= oduvodneni_pos and (pouceni_pos < 0 or start < pouceni_pos):
-            return "oduvodneni"
-        if pouceni_pos >= 0 and start >= pouceni_pos and (closing_pos < 0 or start < closing_pos):
-            return "pouceni"
-
-    takto_pos = zone_positions.get("takto", -1)
-    pouceni_pos = zone_positions.get("pouceni", -1)
-    closing_pos = zone_positions.get("closing", -1)
-    oduvodneni_pos = zone_positions.get("oduvodneni", -1)
-    if closing_pos >= 0 and start >= closing_pos:
-        return "closing"
-    if pouceni_pos >= 0 and start >= pouceni_pos:
-        return "pouceni"
-    if oduvodneni_pos >= 0 and start >= oduvodneni_pos:
-        return "oduvodneni"
-    if takto_pos >= 0 and start >= takto_pos:
-        return "vyrok"
-    if takto_pos > 0 or oduvodneni_pos > 0:
-        return "header"
-    return "unknown"
+def section_type_from_raw(raw_section: str) -> str:
+    return SECTION_TYPE_MAP.get(raw_section, "unknown")
 
 
-def build_document_chunks(full_text: str) -> list[dict[str, Any]]:
-    text = normalize_text(full_text)
-    paragraphs = extract_ns_paragraphs(text)
-    chunks: list[dict[str, Any]] = []
-    zone_positions = infer_section_zone(text)
+def ns_section_hint_from_raw(raw_section: str) -> str:
+    return SECTION_HINT_MAP.get(raw_section, "unknown")
 
-    if not paragraphs:
-        return chunks
 
-    current_indices: list[int] = []
-    current_start = 0
-    current_end = 0
-    current_section = ""
+def should_append_unit(current_start: int, current_end: int, next_unit: dict[str, Any]) -> bool:
+    current_length = current_end - current_start
+    prospective_length = int(next_unit["end"]) - current_start
+    if prospective_length <= TARGET_CHUNK_SIZE:
+        return True
+    if current_length < TARGET_CHUNK_SIZE and prospective_length <= SOFT_MAX_CHUNK_SIZE:
+        return True
+    return False
 
-    def finalize_current_chunk() -> None:
-        nonlocal current_indices, current_start, current_end, current_section
-        if not current_indices:
-            return
 
-        first_paragraph = paragraphs[current_indices[0]]
-        last_paragraph = paragraphs[current_indices[-1]]
-        chunk_text = text[first_paragraph.start:last_paragraph.end]
-        chunk_warning = ""
-        if len(current_indices) == 1 and len(first_paragraph.text) > HARD_MAX_CHUNK_SIZE:
-            chunk_warning = "overlong_ns_paragraph"
-
-        chunks.append(
+def build_exact_structural_spans(text: str, *, absolute_offset: int = 0) -> list[dict[str, Any]]:
+    boundaries = detect_ns_structural_boundaries(text)
+    spans: list[dict[str, Any]] = []
+    for index, (boundary_start, pattern_name) in enumerate(boundaries):
+        next_start = boundaries[index + 1][0] if index + 1 < len(boundaries) else len(text)
+        if boundary_start >= next_start:
+            continue
+        spans.append(
             {
-                "chunk_text": chunk_text,
-                "chunk_char_start": first_paragraph.start,
-                "chunk_char_end": last_paragraph.end,
-                "paragraph_count": len(current_indices),
-                "chunk_warning": chunk_warning,
-                "ns_section_hint": current_section or classify_paragraph_section(
-                    first_paragraph.start,
-                    first_paragraph.start_pattern,
-                    zone_positions,
-                ),
+                "start": absolute_offset + boundary_start,
+                "end": absolute_offset + next_start,
+                "start_pattern": pattern_name,
             }
         )
-        current_indices = []
+    if not spans and text:
+        spans.append({"start": absolute_offset, "end": absolute_offset + len(text), "start_pattern": "header"})
+    return spans
+
+
+def build_section_spans(full_text: str, structure: dict[str, Any]) -> list[dict[str, Any]]:
+    candidates = list(structure.get("section_candidates") or [{"section": "header", "position": 0}])
+    if not candidates:
+        candidates = [{"section": "header", "position": 0}]
+
+    spans: list[dict[str, Any]] = []
+    for index, candidate in enumerate(candidates):
+        start = int(candidate["position"])
+        end = int(candidates[index + 1]["position"]) if index + 1 < len(candidates) else len(full_text)
+        if start >= end:
+            continue
+        raw_section = str(candidate["section"])
+        spans.append(
+            {
+                "section_raw": raw_section,
+                "section_type": section_type_from_raw(raw_section),
+                "ns_section_hint": ns_section_hint_from_raw(raw_section),
+                "start": start,
+                "end": end,
+            }
+        )
+    return spans
+
+
+def build_document_chunks(record: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
+    full_text = normalize_text(record.get("full_text"))
+    metadata = {
+        "case_number": normalize_text(record.get("case_number")),
+        "ecli": normalize_text(record.get("ecli")),
+        "document_type": normalize_text(record.get("document_type")),
+        "legal_area": normalize_text(record.get("legal_area")),
+    }
+    structure = detect_ns_document_structure(full_text=full_text, metadata=metadata)
+    confidence = calculate_structure_confidence(structure)
+    document_id = compute_document_id(record)
+
+    section_spans = build_section_spans(full_text, structure)
+    section_chunks: list[list[dict[str, Any]]] = []
+
+    for section_index, section in enumerate(section_spans):
+        units = build_exact_structural_spans(
+            full_text[section["start"] : section["end"]],
+            absolute_offset=int(section["start"]),
+        )
+        if not units:
+            units = [
+                {
+                    "start": int(section["start"]),
+                    "end": int(section["end"]),
+                    "start_pattern": section["ns_section_hint"],
+                }
+            ]
+
+        raw_section_chunks: list[dict[str, Any]] = []
+        current_units: list[dict[str, Any]] = []
         current_start = 0
         current_end = 0
-        current_section = ""
 
-    for paragraph_index, paragraph in enumerate(paragraphs):
-        paragraph_length = len(paragraph.text)
-        paragraph_section = classify_paragraph_section(paragraph.start, paragraph.start_pattern, zone_positions)
+        def finalize_current_chunk() -> None:
+            nonlocal current_units, current_start, current_end
+            if not current_units:
+                return
 
-        if paragraph_length > HARD_MAX_CHUNK_SIZE:
+            chunk_start = int(current_units[0]["start"])
+            chunk_end = int(current_units[-1]["end"])
+            chunk_text = full_text[chunk_start:chunk_end]
+            chunk_warning = ""
+            if len(current_units) == 1 and len(chunk_text) > HARD_MAX_CHUNK_SIZE:
+                chunk_warning = "overlong_ns_paragraph"
+
+            raw_section_chunks.append(
+                {
+                    "chunk_text": chunk_text,
+                    "chunk_char_start": chunk_start,
+                    "chunk_char_end": chunk_end,
+                    "chunk_text_length": len(chunk_text),
+                    "paragraph_count": len(current_units),
+                    "chunk_warning": chunk_warning,
+                    "section_char_start": int(section["start"]),
+                    "section_char_end": int(section["end"]),
+                    "section_type": section["section_type"],
+                    "section_raw": section["section_raw"],
+                    "ns_section_hint": section["ns_section_hint"],
+                }
+            )
+            current_units = []
+            current_start = 0
+            current_end = 0
+
+        for unit in units:
+            unit_length = int(unit["end"]) - int(unit["start"])
+            if unit_length > HARD_MAX_CHUNK_SIZE:
+                finalize_current_chunk()
+                current_units = [unit]
+                current_start = int(unit["start"])
+                current_end = int(unit["end"])
+                finalize_current_chunk()
+                continue
+
+            if not current_units:
+                current_units = [unit]
+                current_start = int(unit["start"])
+                current_end = int(unit["end"])
+                continue
+
+            if should_append_unit(current_start, current_end, unit):
+                current_units.append(unit)
+                current_end = int(unit["end"])
+                continue
+
             finalize_current_chunk()
-            current_indices = [paragraph_index]
-            current_start = paragraph.start
-            current_end = paragraph.end
-            current_section = paragraph_section
-            finalize_current_chunk()
-            continue
-
-        if not current_indices:
-            current_indices = [paragraph_index]
-            current_start = paragraph.start
-            current_end = paragraph.end
-            current_section = paragraph_section
-            continue
-
-        if paragraph_section != current_section:
-            finalize_current_chunk()
-            current_indices = [paragraph_index]
-            current_start = paragraph.start
-            current_end = paragraph.end
-            current_section = paragraph_section
-            continue
-
-        if should_append_paragraph(current_start, current_end, paragraph):
-            current_indices.append(paragraph_index)
-            current_end = paragraph.end
-            continue
+            current_units = [unit]
+            current_start = int(unit["start"])
+            current_end = int(unit["end"])
 
         finalize_current_chunk()
-        current_indices = [paragraph_index]
-        current_start = paragraph.start
-        current_end = paragraph.end
-        current_section = paragraph_section
 
-    finalize_current_chunk()
-    return chunks
+        section_id = f"{document_id}__section_{section_index:02d}_{sanitize_label(section['ns_section_hint'])}"
+        total_chunks_in_section = len(raw_section_chunks)
+        width_in_section = max(2, len(str(max(0, total_chunks_in_section - 1))))
+        for chunk_index_in_section, chunk in enumerate(raw_section_chunks):
+            chunk["section_id"] = section_id
+            chunk["section_index"] = section_index
+            chunk["chunk_index_in_section"] = chunk_index_in_section
+            chunk["total_chunks_in_section"] = total_chunks_in_section
+            chunk["previous_section_chunk_id"] = None
+            chunk["next_section_chunk_id"] = None
+            chunk["section_width"] = width_in_section
+        section_chunks.append(raw_section_chunks)
+
+    flat_chunks = [chunk for chunk_group in section_chunks for chunk in chunk_group]
+    total_chunks_in_document = len(flat_chunks)
+    width = max(4, len(str(max(0, total_chunks_in_document - 1))))
+    detected_markers_json = json.dumps(structure["detected_markers"], ensure_ascii=False)
+    detected_section_order_json = json.dumps(structure["detected_section_order"], ensure_ascii=False)
+
+    for chunk_index, chunk in enumerate(flat_chunks):
+        chunk_id = f"{document_id}__chunk_{chunk_index:0{width}d}"
+        chunk["document_id"] = document_id
+        chunk["chunk_id"] = chunk_id
+        chunk["chunk_index"] = chunk_index
+        chunk["total_chunks_in_document"] = total_chunks_in_document
+        chunk["previous_chunk_id"] = None
+        chunk["next_chunk_id"] = None
+        chunk["structure_confidence"] = float(confidence["structure_confidence"])
+        chunk["structure_status"] = str(confidence["structure_status"])
+        chunk["structure_needs_review"] = bool(confidence["needs_review"])
+        chunk["detected_markers"] = detected_markers_json
+        chunk["detected_section_order"] = detected_section_order_json
+        chunk["section_source"] = "nsoud.structure"
+        chunk["chunking_strategy"] = "document_section_aware"
+
+    for chunk_index, chunk in enumerate(flat_chunks):
+        if chunk_index > 0:
+            chunk["previous_chunk_id"] = flat_chunks[chunk_index - 1]["chunk_id"]
+        if chunk_index + 1 < len(flat_chunks):
+            chunk["next_chunk_id"] = flat_chunks[chunk_index + 1]["chunk_id"]
+
+    for chunk_group in section_chunks:
+        for index, chunk in enumerate(chunk_group):
+            if index > 0:
+                chunk["previous_section_chunk_id"] = chunk_group[index - 1]["chunk_id"]
+            if index + 1 < len(chunk_group):
+                chunk["next_section_chunk_id"] = chunk_group[index + 1]["chunk_id"]
+
+    return flat_chunks, structure, confidence
 
 
-def build_chunk_records(documents_df: pd.DataFrame) -> tuple[pd.DataFrame, list[str], list[str]]:
+def build_chunk_records(documents_df: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, Any]], list[str], list[str]]:
     failures: list[str] = []
     warnings: list[str] = []
     chunk_rows: list[dict[str, Any]] = []
+    document_analyses: list[dict[str, Any]] = []
 
     for _, row in documents_df.iterrows():
         record = row.to_dict()
         document_id = compute_document_id(record)
         full_text = normalize_text(record.get("full_text"))
-        produced_chunks = build_document_chunks(full_text)
+        produced_chunks, structure, confidence = build_document_chunks(record)
+
+        document_analyses.append(
+            {
+                "document_id": document_id,
+                "case_number": normalize_text(record.get("case_number")),
+                "full_text": full_text,
+                "structure": structure,
+                "confidence": confidence,
+            }
+        )
 
         if full_text and not produced_chunks:
             failures.append(f"Document `{document_id}` has non-empty full_text but produced zero chunks.")
+        if confidence["needs_review"]:
+            failures.append(f"Document `{document_id}` has weak structure confidence and needs review.")
 
-        width = max(4, len(str(max(0, len(produced_chunks) - 1))))
-        for chunk_index, chunk in enumerate(produced_chunks):
-            chunk_text_value = str(chunk["chunk_text"])
-            chunk_id = f"{document_id}__chunk_{chunk_index:0{width}d}"
+        for chunk in produced_chunks:
             row_payload = {field: record.get(field) for field in METADATA_FIELDS}
-            row_payload.update(
-                {
-                    "document_id": document_id,
-                    "chunk_id": chunk_id,
-                    "chunk_index": chunk_index,
-                    "chunk_text": chunk_text_value,
-                    "chunk_text_length": len(chunk_text_value),
-                    "chunk_char_start": int(chunk["chunk_char_start"]),
-                    "chunk_char_end": int(chunk["chunk_char_end"]),
-                    "paragraph_count": int(chunk["paragraph_count"]),
-                    "chunk_warning": str(chunk["chunk_warning"]),
-                    "ns_section_hint": str(chunk["ns_section_hint"]),
-                }
-            )
+            row_payload.update(chunk)
             chunk_rows.append(row_payload)
 
     ordered_columns = METADATA_FIELDS + [
         "document_id",
         "chunk_id",
         "chunk_index",
+        "total_chunks_in_document",
+        "section_id",
+        "section_type",
+        "section_index",
+        "chunk_index_in_section",
+        "total_chunks_in_section",
+        "previous_chunk_id",
+        "next_chunk_id",
+        "previous_section_chunk_id",
+        "next_section_chunk_id",
         "chunk_text",
         "chunk_text_length",
         "chunk_char_start",
         "chunk_char_end",
+        "section_char_start",
+        "section_char_end",
         "paragraph_count",
         "chunk_warning",
         "ns_section_hint",
+        "structure_confidence",
+        "structure_status",
+        "structure_needs_review",
+        "detected_section_order",
+        "detected_markers",
+        "section_source",
+        "chunking_strategy",
     ]
     chunk_df = pd.DataFrame(chunk_rows)
     if chunk_df.empty:
@@ -623,7 +706,7 @@ def build_chunk_records(documents_df: pd.DataFrame) -> tuple[pd.DataFrame, list[
     if overlong_count > 0:
         warnings.append("Overlong NS paragraphs were preserved as standalone chunks.")
 
-    return chunk_df, failures, warnings
+    return chunk_df, document_analyses, failures, warnings
 
 
 def distribution_counts(df: pd.DataFrame, column_name: str) -> dict[str, int]:
@@ -645,118 +728,76 @@ def render_distribution_table(title: str, counts: dict[str, int]) -> list[str]:
     return lines
 
 
-def analyze_structure(documents_df: pd.DataFrame, report_path: Path) -> StructureAnalysisSummary:
-    header_counts = {
-        "case_number_at_beginning": 0,
-        "ecli_in_metadata": 0,
-        "ROZSUDEK": 0,
-        "USNESENÍ": 0,
-        "STANOVISKO": 0,
-    }
-    section_marker_counts = {marker: 0 for marker in SECTION_MARKERS}
-    closing_marker_counts = {marker: 0 for marker in CLOSING_MARKERS}
-    paragraph_start_counts: dict[str, int] = {}
-    numbered_paragraph_doc_count = 0
+def analyze_structure(
+    documents_df: pd.DataFrame,
+    document_analyses: list[dict[str, Any]],
+    report_path: Path,
+) -> StructureAnalysisSummary:
+    marker_counts = {label: 0 for label in detect_ns_document_structure(full_text="", metadata={}).get("detected_markers", {}).keys()}
+    section_order_counts: Counter[str] = Counter()
+    strong_count = 0
+    medium_count = 0
+    weak_count = 0
+    needs_review_count = 0
 
-    for _, row in documents_df.iterrows():
-        record = row.to_dict()
-        text = normalize_text(record.get("full_text"))
-        if CASE_NUMBER_START_RE.search(text):
-            header_counts["case_number_at_beginning"] += 1
-        if normalize_text(record.get("ecli")).strip():
-            header_counts["ecli_in_metadata"] += 1
+    for analysis in document_analyses:
+        structure = analysis["structure"]
+        confidence = analysis["confidence"]
+        for label, marker_data in structure["detected_markers"].items():
+            if marker_data["present"]:
+                marker_counts[label] = marker_counts.get(label, 0) + 1
+        section_order_counts[" > ".join(structure["detected_section_order"]["observed_sections"])] += 1
 
-        for marker in DOCUMENT_TYPE_MARKERS:
-            if marker in text:
-                header_counts[marker] += 1
-
-        has_numbered_paragraph = False
-        for marker in SECTION_MARKERS:
-            if marker in text:
-                section_marker_counts[marker] += 1
-
-        lowered_text = text.lower()
-        for marker in CLOSING_MARKERS:
-            if marker.lower() in lowered_text:
-                closing_marker_counts[marker] += 1
-
-        for paragraph in extract_ns_paragraphs(text):
-            paragraph_start_counts[paragraph.start_pattern] = paragraph_start_counts.get(paragraph.start_pattern, 0) + 1
-            normalized_pattern = paragraph.start_pattern.strip()
-            if normalized_pattern.startswith("[") and normalized_pattern.endswith("]"):
-                normalized_pattern = normalized_pattern[1:-1]
-            normalized_pattern = normalized_pattern.rstrip("./")
-            if normalized_pattern.isdigit():
-                has_numbered_paragraph = True
-
-        if has_numbered_paragraph:
-            numbered_paragraph_doc_count += 1
-
-    top_paragraph_start_patterns = sorted(
-        paragraph_start_counts.items(),
-        key=lambda item: (-item[1], item[0]),
-    )[:15]
+        status = confidence["structure_status"]
+        if status == "strong":
+            strong_count += 1
+        elif status == "medium":
+            medium_count += 1
+        else:
+            weak_count += 1
+        if confidence["needs_review"]:
+            needs_review_count += 1
 
     lines = [
         "# NSoud Structure Pattern Analysis",
         "",
         f"- Total documents: **{len(documents_df)}**",
-        f"- Numbered paragraph documents: **{numbered_paragraph_doc_count}**",
+        f"- Strong structure count: **{strong_count}**",
+        f"- Medium structure count: **{medium_count}**",
+        f"- Weak structure count: **{weak_count}**",
+        f"- Needs review count: **{needs_review_count}**",
         "",
-        "## Header Patterns",
+        "## Marker Coverage",
         "",
-        "| Pattern | Document Count |",
+        "| Marker | Document Count |",
         "| --- | ---: |",
     ]
-    for pattern_name, count in header_counts.items():
-        lines.append(f"| {pattern_name} | {count} |")
+    for label, count in marker_counts.items():
+        lines.append(f"| {label} | {count} |")
 
     lines.extend(
         [
             "",
-            "## Section Markers",
+            "## Detected Section Order",
             "",
-            "| Marker | Document Count |",
+            "| Order | Document Count |",
             "| --- | ---: |",
         ]
     )
-    for marker, count in section_marker_counts.items():
-        lines.append(f"| {marker} | {count} |")
-
-    lines.extend(
-        [
-            "",
-            "## Closing and Signature Patterns",
-            "",
-            "| Marker | Document Count |",
-            "| --- | ---: |",
-        ]
-    )
-    for marker, count in closing_marker_counts.items():
-        lines.append(f"| {marker} | {count} |")
-
-    lines.extend(
-        [
-            "",
-            "## Top Paragraph-Start Patterns",
-            "",
-            "| Pattern | Count |",
-            "| --- | ---: |",
-        ]
-    )
-    for pattern_name, count in top_paragraph_start_patterns:
-        lines.append(f"| {pattern_name} | {count} |")
+    for order, count in section_order_counts.most_common(15):
+        lines.append(f"| {order} | {count} |")
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text("\n".join(lines), encoding="utf-8")
 
     return StructureAnalysisSummary(
         total_documents=len(documents_df),
-        header_counts=header_counts,
-        section_marker_counts=section_marker_counts,
-        closing_marker_counts=closing_marker_counts,
-        numbered_paragraph_doc_count=numbered_paragraph_doc_count,
-        top_paragraph_start_patterns=top_paragraph_start_patterns,
+        marker_counts=marker_counts,
+        section_order_counts=dict(section_order_counts),
+        strong_count=strong_count,
+        medium_count=medium_count,
+        weak_count=weak_count,
+        needs_review_count=needs_review_count,
         report_path=report_path,
     )
 
@@ -785,21 +826,43 @@ def validate_paragraph_preservation(
             passed_documents += 1
             continue
 
-        original_paragraphs = [
-            normalize_paragraph_for_compare(paragraph.text)
-            for paragraph in extract_ns_paragraphs(full_text)
-        ]
         chunk_group = grouped_chunks.get(document_id)
-        reconstructed_paragraphs: list[str] = []
+        if chunk_group is None or chunk_group.empty:
+            failed_documents += 1
+            failures.append(f"Paragraph preservation failed for document `{document_id}`.")
+            continue
 
-        if chunk_group is not None:
-            for chunk_text in chunk_group["chunk_text"].tolist():
-                reconstructed_paragraphs.extend(
-                    normalize_paragraph_for_compare(paragraph.text)
-                    for paragraph in extract_ns_paragraphs(normalize_text(chunk_text))
+        structure = detect_ns_document_structure(
+            full_text=full_text,
+            metadata={
+                "case_number": normalize_text(record.get("case_number")),
+                "ecli": normalize_text(record.get("ecli")),
+                "document_type": normalize_text(record.get("document_type")),
+                "legal_area": normalize_text(record.get("legal_area")),
+            },
+        )
+        section_spans = build_section_spans(full_text, structure)
+        structural_units: list[tuple[int, int]] = []
+        for section in section_spans:
+            structural_units.extend(
+                (int(unit["start"]), int(unit["end"]))
+                for unit in build_exact_structural_spans(
+                    full_text[int(section["start"]) : int(section["end"])],
+                    absolute_offset=int(section["start"]),
                 )
+            )
 
-        if original_paragraphs != reconstructed_paragraphs:
+        allowed_starts = {start for start, _ in structural_units}
+        allowed_ends = {end for _, end in structural_units}
+        boundary_violation = False
+        for _, chunk_row in chunk_group.iterrows():
+            chunk_start = int(chunk_row["chunk_char_start"])
+            chunk_end = int(chunk_row["chunk_char_end"])
+            if chunk_start not in allowed_starts or chunk_end not in allowed_ends:
+                boundary_violation = True
+                break
+
+        if boundary_violation:
             failed_documents += 1
             failures.append(f"Paragraph preservation failed for document `{document_id}`.")
             continue
@@ -807,6 +870,183 @@ def validate_paragraph_preservation(
         passed_documents += 1
 
     return failures, passed_documents, failed_documents
+
+
+def validate_document_reconstruction(
+    documents_df: pd.DataFrame,
+    chunk_df: pd.DataFrame,
+) -> tuple[list[str], int, int]:
+    failures: list[str] = []
+    passed_documents = 0
+    failed_documents = 0
+    grouped_chunks = {
+        str(document_id): group.sort_values("chunk_index")
+        for document_id, group in chunk_df.groupby("document_id", sort=False)
+    }
+
+    for _, row in documents_df.iterrows():
+        record = row.to_dict()
+        document_id = compute_document_id(record)
+        full_text = normalize_text(record.get("full_text"))
+        if not full_text:
+            passed_documents += 1
+            continue
+
+        chunk_group = grouped_chunks.get(document_id)
+        if chunk_group is None or chunk_group.empty:
+            failed_documents += 1
+            failures.append(f"Document reconstruction failed for `{document_id}` because no chunks were found.")
+            continue
+
+        reconstructed = "".join(normalize_text(value) for value in chunk_group["chunk_text"].tolist())
+        if normalize_whitespace(full_text) != normalize_whitespace(reconstructed):
+            failed_documents += 1
+            failures.append(f"Document reconstruction failed for `{document_id}`.")
+            continue
+
+        expected_start = 0
+        contiguous = True
+        for _, chunk_row in chunk_group.iterrows():
+            start = int(chunk_row["chunk_char_start"])
+            end = int(chunk_row["chunk_char_end"])
+            if start != expected_start:
+                contiguous = False
+                break
+            expected_start = end
+        if not contiguous or expected_start != len(full_text):
+            failed_documents += 1
+            failures.append(f"Document span continuity failed for `{document_id}`.")
+            continue
+
+        passed_documents += 1
+
+    return failures, passed_documents, failed_documents
+
+
+def validate_section_reconstruction(
+    documents_df: pd.DataFrame,
+    chunk_df: pd.DataFrame,
+) -> tuple[list[str], int, int]:
+    failures: list[str] = []
+    passed_sections = 0
+    failed_sections = 0
+    text_by_document = {
+        compute_document_id(row.to_dict()): normalize_text(row.to_dict().get("full_text"))
+        for _, row in documents_df.iterrows()
+    }
+
+    if chunk_df.empty:
+        return failures, 0, 0
+
+    for (_, _), group in chunk_df.groupby(["document_id", "section_id"], sort=False):
+        sorted_group = group.sort_values("chunk_index_in_section")
+        first_row = sorted_group.iloc[0]
+        document_id = normalize_text(first_row["document_id"])
+        full_text = text_by_document.get(document_id, "")
+        section_start = int(first_row["section_char_start"])
+        section_end = int(first_row["section_char_end"])
+        original_section_text = full_text[section_start:section_end]
+        reconstructed = "".join(normalize_text(value) for value in sorted_group["chunk_text"].tolist())
+
+        if normalize_whitespace(original_section_text) != normalize_whitespace(reconstructed):
+            failed_sections += 1
+            failures.append(
+                f"Section reconstruction failed for `{normalize_text(first_row['section_id'])}` in document `{document_id}`."
+            )
+            continue
+
+        expected_start = section_start
+        contiguous = True
+        for _, chunk_row in sorted_group.iterrows():
+            start = int(chunk_row["chunk_char_start"])
+            end = int(chunk_row["chunk_char_end"])
+            if start != expected_start:
+                contiguous = False
+                break
+            expected_start = end
+        if not contiguous or expected_start != section_end:
+            failed_sections += 1
+            failures.append(
+                f"Section span continuity failed for `{normalize_text(first_row['section_id'])}` in document `{document_id}`."
+            )
+            continue
+
+        passed_sections += 1
+
+    return failures, passed_sections, failed_sections
+
+
+def validate_chunk_metadata(chunk_df: pd.DataFrame) -> tuple[list[str], list[str]]:
+    failures: list[str] = []
+    warnings: list[str] = []
+    if chunk_df.empty:
+        return failures, warnings
+
+    required_nonempty_fields = [
+        "document_id",
+        "chunk_id",
+        "case_number",
+        "document_type",
+        "section_id",
+        "section_type",
+        "chunk_text",
+        "section_source",
+        "chunking_strategy",
+    ]
+    for field_name in required_nonempty_fields:
+        if int(chunk_df[field_name].map(lambda value: normalize_text(value).strip() == "").sum()) > 0:
+            failures.append(f"Required field `{field_name}` contains empty values.")
+
+    for document_id, group in chunk_df.groupby("document_id", sort=False):
+        sorted_group = group.sort_values("chunk_index").reset_index(drop=True)
+        expected_sequence = list(range(len(sorted_group)))
+        actual_sequence = sorted_group["chunk_index"].astype(int).tolist()
+        if actual_sequence != expected_sequence:
+            failures.append(f"Document `{document_id}` has a non-continuous chunk_index sequence.")
+
+        total_chunks_values = sorted_group["total_chunks_in_document"].astype(int).unique().tolist()
+        if total_chunks_values != [len(sorted_group)]:
+            failures.append(f"Document `{document_id}` has inconsistent total_chunks_in_document metadata.")
+
+        for index, row in sorted_group.iterrows():
+            expected_previous = sorted_group.iloc[index - 1]["chunk_id"] if index > 0 else None
+            expected_next = sorted_group.iloc[index + 1]["chunk_id"] if index + 1 < len(sorted_group) else None
+            actual_previous = row["previous_chunk_id"] if pd.notna(row["previous_chunk_id"]) else None
+            actual_next = row["next_chunk_id"] if pd.notna(row["next_chunk_id"]) else None
+            if expected_previous != actual_previous:
+                failures.append(f"Document `{document_id}` has invalid previous_chunk_id metadata.")
+                break
+            if expected_next != actual_next:
+                failures.append(f"Document `{document_id}` has invalid next_chunk_id metadata.")
+                break
+
+    for (document_id, section_id), group in chunk_df.groupby(["document_id", "section_id"], sort=False):
+        sorted_group = group.sort_values("chunk_index_in_section").reset_index(drop=True)
+        expected_sequence = list(range(len(sorted_group)))
+        actual_sequence = sorted_group["chunk_index_in_section"].astype(int).tolist()
+        if actual_sequence != expected_sequence:
+            failures.append(f"Section `{section_id}` in document `{document_id}` has a non-continuous chunk_index_in_section sequence.")
+
+        total_chunks_values = sorted_group["total_chunks_in_section"].astype(int).unique().tolist()
+        if total_chunks_values != [len(sorted_group)]:
+            failures.append(f"Section `{section_id}` in document `{document_id}` has inconsistent total_chunks_in_section metadata.")
+
+        if len(sorted_group["section_type"].astype(str).unique().tolist()) != 1:
+            failures.append(f"Section `{section_id}` in document `{document_id}` mixes multiple section_type values.")
+
+        for index, row in sorted_group.iterrows():
+            expected_previous = sorted_group.iloc[index - 1]["chunk_id"] if index > 0 else None
+            expected_next = sorted_group.iloc[index + 1]["chunk_id"] if index + 1 < len(sorted_group) else None
+            actual_previous = row["previous_section_chunk_id"] if pd.notna(row["previous_section_chunk_id"]) else None
+            actual_next = row["next_section_chunk_id"] if pd.notna(row["next_section_chunk_id"]) else None
+            if expected_previous != actual_previous:
+                failures.append(f"Section `{section_id}` in document `{document_id}` has invalid previous_section_chunk_id metadata.")
+                break
+            if expected_next != actual_next:
+                failures.append(f"Section `{section_id}` in document `{document_id}` has invalid next_section_chunk_id metadata.")
+                break
+
+    return deduplicate_messages(failures), warnings
 
 
 def validate_chunks(
@@ -840,6 +1080,9 @@ def validate_chunks(
     if documents_with_zero_chunks:
         failures.append("One or more documents with non-empty full_text produced zero chunks.")
 
+    if structure_summary.weak_count > 0 or structure_summary.needs_review_count > 0:
+        failures.append("One or more documents have weak structure confidence or need review.")
+
     if not chunk_df.empty:
         for field_name, expected_value in FIXED_VALUES.items():
             invalid_count = int((chunk_df[field_name].fillna("").map(str) != expected_value).sum())
@@ -854,11 +1097,34 @@ def validate_chunks(
         documents_df,
         chunk_df,
     )
+    reconstruction_failures, reconstruction_passed, reconstruction_failed = validate_document_reconstruction(
+        documents_df,
+        chunk_df,
+    )
+    section_failures, section_reconstruction_passed, section_reconstruction_failed = validate_section_reconstruction(
+        documents_df,
+        chunk_df,
+    )
+    metadata_failures, metadata_warnings = validate_chunk_metadata(chunk_df)
+
     failures.extend(paragraph_failures)
+    failures.extend(reconstruction_failures)
+    failures.extend(section_failures)
+    failures.extend(metadata_failures)
+    warnings.extend(metadata_warnings)
 
     overlong_paragraph_chunk_count = int((chunk_df["chunk_warning"] == "overlong_ns_paragraph").sum()) if not chunk_df.empty else 0
     if overlong_paragraph_chunk_count > 0:
         warnings.append("Overlong NS paragraphs were preserved as standalone chunks.")
+
+    unresolved_boundary_issue_count = 0
+    if not chunk_df.empty:
+        overlong_texts = chunk_df.loc[chunk_df["chunk_warning"] == "overlong_ns_paragraph", "chunk_text"].tolist()
+        for chunk_text in overlong_texts:
+            if len(detect_ns_structural_boundaries(normalize_text(chunk_text))) > 1:
+                unresolved_boundary_issue_count += 1
+    if unresolved_boundary_issue_count > 0:
+        failures.append("One or more overlong chunks still contain unresolved internal structural boundaries.")
 
     failures = deduplicate_messages(failures)
     warnings = deduplicate_messages(warnings)
@@ -872,11 +1138,6 @@ def validate_chunks(
 
     chunk_lengths = chunk_df["chunk_text_length"].tolist() if not chunk_df.empty else []
     chunks_per_document = list(chunk_counts.values()) if chunk_counts else []
-    overlong_lengths = (
-        chunk_df.loc[chunk_df["chunk_warning"] == "overlong_ns_paragraph", "chunk_text_length"].tolist()
-        if not chunk_df.empty
-        else []
-    )
     metrics = {
         "non_empty_document_count": non_empty_document_count,
         "total_chunks": int(len(chunk_df)),
@@ -890,10 +1151,18 @@ def validate_chunks(
         "duplicate_chunk_id_count": duplicate_chunk_id_count,
         "documents_with_zero_chunks": documents_with_zero_chunks,
         "overlong_paragraph_chunk_count": overlong_paragraph_chunk_count,
-        "max_overlong_paragraph_length": max(overlong_lengths) if overlong_lengths else 0,
         "paragraph_preservation_passed": paragraph_preservation_passed,
         "paragraph_preservation_failed": paragraph_preservation_failed,
-        "section_marker_coverage": structure_summary.section_marker_counts,
+        "reconstruction_validation_passed": reconstruction_passed,
+        "reconstruction_validation_failed": reconstruction_failed,
+        "section_reconstruction_passed": section_reconstruction_passed,
+        "section_reconstruction_failed": section_reconstruction_failed,
+        "unresolved_boundary_issue_count": unresolved_boundary_issue_count,
+        "strong_structure_count": structure_summary.strong_count,
+        "medium_structure_count": structure_summary.medium_count,
+        "weak_structure_count": structure_summary.weak_count,
+        "needs_review_count": structure_summary.needs_review_count,
+        "marker_coverage": structure_summary.marker_counts,
     }
     return status, failures, warnings, metrics
 
@@ -901,10 +1170,11 @@ def validate_chunks(
 def build_validation_report(
     *,
     input_path: Path,
-    output_path: Path,
+    output_parquet_path: Path,
+    output_jsonl_path: Path,
+    structure_report_path: Path,
     documents_df: pd.DataFrame,
     chunk_df: pd.DataFrame,
-    structure_summary: StructureAnalysisSummary,
     validation_status: str,
     failures: list[str],
     warnings: list[str],
@@ -915,8 +1185,9 @@ def build_validation_report(
         "# NSoud Chunk Validation",
         "",
         f"- Input: `{input_path}`",
-        f"- Output Parquet: `{output_path}`",
-        f"- Structure report: `{structure_summary.report_path}`",
+        f"- Output Parquet: `{output_parquet_path}`",
+        f"- Output JSONL: `{output_jsonl_path}`",
+        f"- Structure report: `{structure_report_path}`",
         f"- Validation status: **{validation_status}**",
         f"- Total documents: **{len(documents_df)}**",
         f"- Total chunks: **{len(chunk_df)}**",
@@ -938,19 +1209,26 @@ def build_validation_report(
             f"- duplicate chunk_id count: {metrics['duplicate_chunk_id_count']}",
             f"- documents with zero chunks: {len(metrics['documents_with_zero_chunks'])}",
             f"- overlong NS paragraph chunk count: {metrics['overlong_paragraph_chunk_count']}",
-            f"- max overlong paragraph length: {metrics['max_overlong_paragraph_length']}",
             "",
-            "## Paragraph Preservation Check",
-            f"- documents passed: {metrics['paragraph_preservation_passed']}",
-            f"- documents failed: {metrics['paragraph_preservation_failed']}",
+            "## Reconstruction Validation",
+            f"- paragraph preservation passed/failed: {metrics['paragraph_preservation_passed']}/{metrics['paragraph_preservation_failed']}",
+            f"- document reconstruction passed/failed: {metrics['reconstruction_validation_passed']}/{metrics['reconstruction_validation_failed']}",
+            f"- section reconstruction passed/failed: {metrics['section_reconstruction_passed']}/{metrics['section_reconstruction_failed']}",
+            f"- unresolved boundary issue count: {metrics['unresolved_boundary_issue_count']}",
             "",
-            "## Section Marker Coverage",
+            "## Structure Confidence Summary",
+            f"- strong structure count: {metrics['strong_structure_count']}",
+            f"- medium structure count: {metrics['medium_structure_count']}",
+            f"- weak structure count: {metrics['weak_structure_count']}",
+            f"- needs_review count: {metrics['needs_review_count']}",
+            "",
+            "## Marker Coverage",
             "",
             "| Marker | Document Count |",
             "| --- | ---: |",
         ]
     )
-    for marker, count in metrics["section_marker_coverage"].items():
+    for marker, count in metrics["marker_coverage"].items():
         lines.append(f"| {marker} | {count} |")
 
     lines.extend(["", "## Documents With Zero Chunks"])
@@ -963,12 +1241,22 @@ def build_validation_report(
     lines.extend(render_distribution_table("Source Distribution", distribution_counts(chunk_df, "source")))
     lines.extend(render_distribution_table("Document Type Distribution", distribution_counts(chunk_df, "document_type")))
     lines.extend(render_distribution_table("Legal Area Distribution", distribution_counts(chunk_df, "legal_area")))
+    lines.extend(render_distribution_table("Section Type Distribution", distribution_counts(chunk_df, "section_type")))
+    lines.extend(render_distribution_table("NS Section Hint Distribution", distribution_counts(chunk_df, "ns_section_hint")))
     return "\n".join(lines)
 
 
 def write_parquet(df: pd.DataFrame, out_path: Path) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out_path, engine="pyarrow", index=False)
+
+
+def write_jsonl(df: pd.DataFrame, out_path: Path) -> None:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as handle:
+        for record in df.to_dict(orient="records"):
+            handle.write(json.dumps(record, ensure_ascii=False))
+            handle.write("\n")
 
 
 def main() -> int:
@@ -982,6 +1270,7 @@ def main() -> int:
         return 1
 
     validation_path = validation_path_for_output(args.out)
+    output_jsonl_path = jsonl_path_for_output(args.out)
     structure_report_path = structure_report_path_for_input(args.input)
 
     try:
@@ -993,21 +1282,14 @@ def main() -> int:
         return 1
 
     try:
-        structure_summary = analyze_structure(documents_df, structure_report_path)
+        chunk_df, document_analyses, build_failures, build_warnings = build_chunk_records(documents_df)
+        structure_summary = analyze_structure(documents_df, document_analyses, structure_report_path)
+        write_parquet(chunk_df, args.out)
+        write_jsonl(chunk_df, output_jsonl_path)
     except Exception as exc:
         print("structure analysis status: FAIL")
         print("chunking status: FAIL")
         print(f"error: {exc}")
-        return 1
-
-    try:
-        chunk_df, build_failures, build_warnings = build_chunk_records(documents_df)
-        write_parquet(chunk_df, args.out)
-    except Exception as exc:
-        print("structure analysis status: PASS")
-        print("chunking status: FAIL")
-        print(f"error: {exc}")
-        print(f"structure report path: {structure_report_path}")
         return 1
 
     validation_status, validation_failures, validation_warnings, metrics = validate_chunks(
@@ -1026,10 +1308,11 @@ def main() -> int:
 
     report = build_validation_report(
         input_path=args.input,
-        output_path=args.out,
+        output_parquet_path=args.out,
+        output_jsonl_path=output_jsonl_path,
+        structure_report_path=structure_report_path,
         documents_df=documents_df,
         chunk_df=chunk_df,
-        structure_summary=structure_summary,
         validation_status=validation_status,
         failures=failures,
         warnings=warnings,
@@ -1043,20 +1326,52 @@ def main() -> int:
         validation_status=validation_status,
         total_documents=len(documents_df),
         total_chunks=len(chunk_df),
-        overlong_paragraph_chunk_count=metrics["overlong_paragraph_chunk_count"],
-        structure_report_path=structure_report_path,
+        documents_with_zero_chunks=len(metrics["documents_with_zero_chunks"]),
+        empty_chunk_count=metrics["empty_chunk_count"],
+        duplicate_chunk_id_count=metrics["duplicate_chunk_id_count"],
+        paragraph_preservation_passed=metrics["paragraph_preservation_passed"],
+        paragraph_preservation_failed=metrics["paragraph_preservation_failed"],
+        reconstruction_validation_passed=metrics["reconstruction_validation_passed"],
+        reconstruction_validation_failed=metrics["reconstruction_validation_failed"],
+        section_reconstruction_passed=metrics["section_reconstruction_passed"],
+        section_reconstruction_failed=metrics["section_reconstruction_failed"],
+        unresolved_boundary_issue_count=metrics["unresolved_boundary_issue_count"],
+        strong_structure_count=metrics["strong_structure_count"],
+        medium_structure_count=metrics["medium_structure_count"],
+        weak_structure_count=metrics["weak_structure_count"],
+        needs_review_count=metrics["needs_review_count"],
         output_parquet_path=args.out,
+        output_jsonl_path=output_jsonl_path,
         validation_report_path=validation_path,
     )
     print(f"structure analysis status: {summary.structure_analysis_status}")
     print(f"chunking status: {summary.chunking_status}")
+    print(f"validation status: {summary.validation_status}")
     print(f"total documents: {summary.total_documents}")
     print(f"total chunks: {summary.total_chunks}")
-    print(f"overlong NS paragraph chunk count: {summary.overlong_paragraph_chunk_count}")
-    print(f"structure report path: {summary.structure_report_path}")
+    print(f"documents with zero chunks: {summary.documents_with_zero_chunks}")
+    print(f"empty chunk count: {summary.empty_chunk_count}")
+    print(f"duplicate chunk_id count: {summary.duplicate_chunk_id_count}")
+    print(
+        f"paragraph preservation passed/failed: {summary.paragraph_preservation_passed}/{summary.paragraph_preservation_failed}"
+    )
+    print(
+        "reconstruction validation passed/failed: "
+        f"{summary.reconstruction_validation_passed}/{summary.reconstruction_validation_failed}"
+    )
+    print(
+        "section reconstruction passed/failed: "
+        f"{summary.section_reconstruction_passed}/{summary.section_reconstruction_failed}"
+    )
+    print(f"unresolved boundary issue count: {summary.unresolved_boundary_issue_count}")
+    print(f"strong structure count: {summary.strong_structure_count}")
+    print(f"medium structure count: {summary.medium_structure_count}")
+    print(f"weak structure count: {summary.weak_structure_count}")
+    print(f"needs_review count: {summary.needs_review_count}")
+    print(f"structure report path: {structure_report_path}")
     print(f"output parquet path: {summary.output_parquet_path}")
+    print(f"output jsonl path: {summary.output_jsonl_path}")
     print(f"validation report path: {summary.validation_report_path}")
-    print(f"validation status: {summary.validation_status}")
     return 1 if summary.validation_status == "FAIL" else 0
 
 
