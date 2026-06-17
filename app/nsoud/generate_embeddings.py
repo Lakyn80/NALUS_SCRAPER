@@ -28,30 +28,55 @@ from app.rag.retrieval.embedder import SentenceTransformersEmbedder
 REQUIRED_COLUMNS = [
     "point_id",
     "text",
-    "chunk_id",
+    "source",
     "provider",
     "court",
     "authority_level",
+    "case_number",
+    "url",
+    "source_attribution",
+    "content_hash",
+    "document_id",
+    "chunk_id",
+    "chunk_index",
+    "total_chunks_in_document",
+    "section_id",
+    "section_type",
+    "section_index",
+    "chunk_index_in_section",
+    "total_chunks_in_section",
+    "previous_chunk_id",
+    "next_chunk_id",
+    "previous_section_chunk_id",
+    "next_section_chunk_id",
+    "structure_confidence",
+    "structure_status",
+    "structure_needs_review",
+    "section_source",
+    "chunking_strategy",
 ]
-OPTIONAL_METADATA_FIELDS = [
-    "ecli",
-    "decision_date",
-    "publication_date",
-    "document_type",
-    "legal_area",
-    "title",
-]
+NULLABLE_LINK_FIELDS = {
+    "previous_chunk_id",
+    "next_chunk_id",
+    "previous_section_chunk_id",
+    "next_section_chunk_id",
+}
 DEFAULT_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+EMBEDDING_COLUMNS = ["embedding", "embedding_dim"]
 
 
 @dataclass(frozen=True)
 class EmbeddingSummary:
     embedding_status: str
     validation_status: str
-    total_input_rows_used: int
+    input_rows: int
     output_rows: int
     embedding_dim: int
+    missing_embeddings_count: int
     duplicate_point_id_count: int
+    duplicate_chunk_id_count: int
+    empty_text_count: int
+    metadata_preservation_status: str
     output_path: Path
     manifest_path: Path
     validation_path: Path
@@ -246,6 +271,17 @@ def normalize_text(value: Any) -> str:
     return str(value)
 
 
+def is_missing(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip() == ""
+    try:
+        return bool(pd.isna(value))
+    except TypeError:
+        return False
+
+
 def manifest_path_for_output(out_path: Path) -> Path:
     return out_path.with_name(f"{out_path.stem}_manifest.json")
 
@@ -255,12 +291,6 @@ def validation_path_for_output(out_path: Path) -> Path:
 
 
 def load_payload_preview(path: Path) -> pd.DataFrame:
-    return pd.read_parquet(path)
-
-
-def load_existing_embeddings(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        return pd.DataFrame()
     return pd.read_parquet(path)
 
 
@@ -338,12 +368,6 @@ def validate_input_dataframe(df: pd.DataFrame) -> tuple[list[str], int]:
     return failures, empty_text_count
 
 
-def deduplicate_by_point_id(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty:
-        return df
-    return df.drop_duplicates(subset=["point_id"], keep="first").reset_index(drop=True)
-
-
 def write_parquet(df: pd.DataFrame, out_path: Path) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(out_path, engine="pyarrow", index=False)
@@ -368,21 +392,24 @@ def render_distribution_table(title: str, counts: dict[str, int]) -> list[str]:
     return lines
 
 
-def generate_new_embeddings(
-    rows_to_embed_df: pd.DataFrame,
+def generate_embeddings_dataframe(
+    payload_df: pd.DataFrame,
     *,
     backend: EmbeddingBackend,
     batch_size: int,
 ) -> tuple[pd.DataFrame, int]:
-    if rows_to_embed_df.empty:
-        return pd.DataFrame(columns=[]), backend.dim
+    if payload_df.empty:
+        empty_df = payload_df.copy()
+        empty_df["embedding"] = []
+        empty_df["embedding_dim"] = []
+        return empty_df, backend.dim
 
-    total_rows = len(rows_to_embed_df)
+    total_rows = len(payload_df)
     embedded_batches: list[pd.DataFrame] = []
     rows_written = 0
 
     for batch_number, start in enumerate(range(0, total_rows, batch_size), start=1):
-        batch_df = rows_to_embed_df.iloc[start : start + batch_size].copy()
+        batch_df = payload_df.iloc[start : start + batch_size].copy()
         vectors = backend.embed_documents(batch_df["text"].tolist())
         batch_df["embedding"] = vectors
         batch_df["embedding_dim"] = [len(vector) for vector in vectors]
@@ -394,33 +421,192 @@ def generate_new_embeddings(
     return pd.concat(embedded_batches, ignore_index=True), backend.dim
 
 
-def validate_embeddings_dataframe(
-    df: pd.DataFrame,
-) -> tuple[str, list[str], list[str], int, int, int, int, int]:
+def validate_document_sequences(df: pd.DataFrame) -> tuple[int, int, int, int, list[str]]:
+    sequence_passed = 0
+    sequence_failed = 0
+    neighbor_passed = 0
+    neighbor_failed = 0
     failures: list[str] = []
-    warnings: list[str] = []
 
-    empty_text_count = int(df["text"].map(lambda value: normalize_text(value).strip() == "").sum()) if not df.empty else 0
-    if empty_text_count > 0:
-        failures.append("One or more rows have empty text.")
+    for document_id, group in df.groupby("document_id", sort=False):
+        sorted_group = group.sort_values("chunk_index").reset_index(drop=True)
+        actual_sequence = sorted_group["chunk_index"].astype(int).tolist()
+        expected_sequence = list(range(len(sorted_group)))
+        total_chunks_values = sorted_group["total_chunks_in_document"].astype(int).unique().tolist()
+        if actual_sequence == expected_sequence and total_chunks_values == [len(sorted_group)]:
+            sequence_passed += 1
+        else:
+            sequence_failed += 1
+            failures.append(f"Document `{document_id}` has invalid chunk_index or total_chunks_in_document metadata.")
 
-    duplicate_point_id_count = int(df["point_id"].duplicated(keep=False).sum()) if not df.empty else 0
-    if duplicate_point_id_count > 0:
-        failures.append("Duplicate point_id values detected.")
+        links_ok = True
+        for index, row in sorted_group.iterrows():
+            expected_previous = normalize_text(sorted_group.iloc[index - 1]["chunk_id"]) if index > 0 else ""
+            expected_next = normalize_text(sorted_group.iloc[index + 1]["chunk_id"]) if index + 1 < len(sorted_group) else ""
+            actual_previous = normalize_text(row["previous_chunk_id"])
+            actual_next = normalize_text(row["next_chunk_id"])
+            if actual_previous != expected_previous or actual_next != expected_next:
+                links_ok = False
+                failures.append(f"Document `{document_id}` has invalid previous_chunk_id/next_chunk_id links.")
+                break
 
-    duplicate_chunk_id_count = int(df["chunk_id"].duplicated(keep=False).sum()) if not df.empty else 0
-    if duplicate_chunk_id_count > 0:
-        failures.append("Duplicate chunk_id values detected.")
+        if links_ok:
+            neighbor_passed += 1
+        else:
+            neighbor_failed += 1
 
-    missing_embeddings_count = 0
-    if not df.empty:
-        missing_embeddings_count = int(
-            df["embedding"].map(lambda value: not isinstance(value, list) or len(value) == 0).sum()
-        )
+    return sequence_passed, sequence_failed, neighbor_passed, neighbor_failed, failures
+
+
+def validate_section_sequences(df: pd.DataFrame) -> tuple[int, int, int, int, list[str]]:
+    sequence_passed = 0
+    sequence_failed = 0
+    neighbor_passed = 0
+    neighbor_failed = 0
+    failures: list[str] = []
+
+    for (document_id, section_id), group in df.groupby(["document_id", "section_id"], sort=False):
+        sorted_group = group.sort_values("chunk_index_in_section").reset_index(drop=True)
+        actual_sequence = sorted_group["chunk_index_in_section"].astype(int).tolist()
+        expected_sequence = list(range(len(sorted_group)))
+        total_chunks_values = sorted_group["total_chunks_in_section"].astype(int).unique().tolist()
+        if actual_sequence == expected_sequence and total_chunks_values == [len(sorted_group)]:
+            sequence_passed += 1
+        else:
+            sequence_failed += 1
+            failures.append(
+                f"Section `{section_id}` in document `{document_id}` has invalid chunk_index_in_section or total_chunks_in_section metadata."
+            )
+
+        links_ok = True
+        for index, row in sorted_group.iterrows():
+            expected_previous = normalize_text(sorted_group.iloc[index - 1]["chunk_id"]) if index > 0 else ""
+            expected_next = normalize_text(sorted_group.iloc[index + 1]["chunk_id"]) if index + 1 < len(sorted_group) else ""
+            actual_previous = normalize_text(row["previous_section_chunk_id"])
+            actual_next = normalize_text(row["next_section_chunk_id"])
+            if actual_previous != expected_previous or actual_next != expected_next:
+                links_ok = False
+                failures.append(
+                    f"Section `{section_id}` in document `{document_id}` has invalid previous_section_chunk_id/next_section_chunk_id links."
+                )
+                break
+
+        if links_ok:
+            neighbor_passed += 1
+        else:
+            neighbor_failed += 1
+
+    return sequence_passed, sequence_failed, neighbor_passed, neighbor_failed, failures
+
+
+def validate_metadata_preservation(
+    input_df: pd.DataFrame,
+    output_df: pd.DataFrame,
+) -> tuple[str, list[str]]:
+    failures: list[str] = []
+    input_by_point_id = input_df.set_index("point_id", drop=False)
+    output_by_point_id = output_df.set_index("point_id", drop=False)
+
+    if len(input_by_point_id) != len(output_by_point_id):
+        failures.append("Input and output row counts differ during metadata preservation validation.")
+        return "FAIL", failures
+
+    if set(input_by_point_id.index.tolist()) != set(output_by_point_id.index.tolist()):
+        failures.append("Input and output point_id sets differ.")
+        return "FAIL", failures
+
+    fields_to_compare = [
+        "point_id",
+        "chunk_id",
+        "text",
+        "document_id",
+        "section_id",
+        "section_type",
+        "section_index",
+        "chunk_index",
+        "chunk_index_in_section",
+        "total_chunks_in_document",
+        "total_chunks_in_section",
+        "previous_chunk_id",
+        "next_chunk_id",
+        "previous_section_chunk_id",
+        "next_section_chunk_id",
+        "structure_confidence",
+        "structure_status",
+        "structure_needs_review",
+        "section_source",
+        "chunking_strategy",
+    ]
+
+    for point_id in input_by_point_id.index.tolist():
+        input_row = input_by_point_id.loc[point_id]
+        output_row = output_by_point_id.loc[point_id]
+        for field_name in fields_to_compare:
+            input_value = input_row[field_name]
+            output_value = output_row[field_name]
+            if field_name in NULLABLE_LINK_FIELDS:
+                if normalize_text(input_value) != normalize_text(output_value):
+                    failures.append(f"Metadata mismatch for point_id `{point_id}` field `{field_name}`.")
+                    return "FAIL", failures
+                continue
+            if str(input_value) != str(output_value):
+                failures.append(f"Metadata mismatch for point_id `{point_id}` field `{field_name}`.")
+                return "FAIL", failures
+
+    return "PASS", failures
+
+
+def validate_embeddings_dataframe(
+    input_df: pd.DataFrame,
+    output_df: pd.DataFrame,
+) -> tuple[str, list[str], int, int, int, int, int, int, int, int, int, int, str]:
+    failures: list[str] = []
+
+    input_rows = len(input_df)
+    output_rows = len(output_df)
+    if input_rows != 1862:
+        failures.append(f"Expected 1862 input rows, found {input_rows}.")
+    if output_rows != 1862:
+        failures.append(f"Expected 1862 output rows, found {output_rows}.")
+
+    missing_embeddings_count = int(
+        output_df["embedding"].map(lambda value: not isinstance(value, list) or len(value) == 0).sum()
+    ) if not output_df.empty else 0
     if missing_embeddings_count > 0:
         failures.append("One or more rows are missing embeddings.")
 
-    embedding_dims = sorted({int(value) for value in df["embedding_dim"].dropna().tolist()}) if not df.empty else []
+    duplicate_point_id_count = int(output_df["point_id"].duplicated(keep=False).sum()) if not output_df.empty else 0
+    if duplicate_point_id_count > 0:
+        failures.append("Duplicate point_id values detected.")
+
+    duplicate_chunk_id_count = int(output_df["chunk_id"].duplicated(keep=False).sum()) if not output_df.empty else 0
+    if duplicate_chunk_id_count > 0:
+        failures.append("Duplicate chunk_id values detected.")
+
+    empty_text_count = int(output_df["text"].map(lambda value: normalize_text(value).strip() == "").sum()) if not output_df.empty else 0
+    if empty_text_count > 0:
+        failures.append("One or more rows have empty text.")
+
+    missing_required_metadata_rows = pd.Series([False] * len(output_df))
+    for field_name in REQUIRED_COLUMNS:
+        if field_name not in output_df.columns:
+            failures.append(f"Output is missing required column `{field_name}`.")
+            continue
+        field_missing = output_df[field_name].map(is_missing)
+        if field_name in NULLABLE_LINK_FIELDS:
+            field_missing = pd.Series([False] * len(output_df))
+        missing_required_metadata_rows = missing_required_metadata_rows | field_missing
+    missing_required_metadata_count = int(missing_required_metadata_rows.sum()) if not output_df.empty else 0
+    if missing_required_metadata_count > 0:
+        failures.append("One or more rows are missing required metadata.")
+
+    invalid_chunking_strategy_count = int(
+        (output_df["chunking_strategy"].map(normalize_text) != "document_section_aware").sum()
+    ) if not output_df.empty else 0
+    if invalid_chunking_strategy_count > 0:
+        failures.append("One or more rows have invalid chunking_strategy values.")
+
+    embedding_dims = sorted({int(value) for value in output_df["embedding_dim"].dropna().tolist()}) if not output_df.empty else []
     if not embedding_dims:
         failures.append("No embedding dimensions were produced.")
         embedding_dim = 0
@@ -430,22 +616,38 @@ def validate_embeddings_dataframe(
     else:
         embedding_dim = embedding_dims[0]
 
-    optional_missing_total = 0
-    for field_name in OPTIONAL_METADATA_FIELDS:
-        optional_missing_total += int(df[field_name].map(lambda value: normalize_text(value).strip() == "").sum()) if not df.empty else 0
-    if optional_missing_total > 0:
-        warnings.append("Some optional metadata fields are missing.")
+    document_sequence_passed, document_sequence_failed, document_neighbor_passed, document_neighbor_failed, document_failures = (
+        validate_document_sequences(output_df)
+    )
+    section_sequence_passed, section_sequence_failed, section_neighbor_passed, section_neighbor_failed, section_failures = (
+        validate_section_sequences(output_df)
+    )
+    failures.extend(document_failures)
+    failures.extend(section_failures)
 
-    validation_status = "FAIL" if failures else "WARN" if warnings else "PASS"
+    metadata_preservation_status, metadata_failures = validate_metadata_preservation(input_df, output_df)
+    failures.extend(metadata_failures)
+
+    validation_status = "FAIL" if failures else "PASS"
     return (
         validation_status,
-        failures,
-        warnings,
+        sorted(set(failures)),
+        output_rows,
+        embedding_dim,
+        missing_embeddings_count,
         duplicate_point_id_count,
         duplicate_chunk_id_count,
         empty_text_count,
-        missing_embeddings_count,
-        embedding_dim,
+        missing_required_metadata_count,
+        document_sequence_passed,
+        document_sequence_failed,
+        section_sequence_passed,
+        section_sequence_failed,
+        document_neighbor_passed,
+        document_neighbor_failed,
+        section_neighbor_passed,
+        section_neighbor_failed,
+        metadata_preservation_status,
     )
 
 
@@ -459,39 +661,64 @@ def build_validation_report(
     backend_name: str,
     validation_status: str,
     failures: list[str],
-    warnings: list[str],
-    duplicate_point_id_count: int,
-    empty_text_count: int,
-    missing_embeddings_count: int,
+    input_rows: int,
+    output_rows: int,
     embedding_dim: int,
+    missing_embeddings_count: int,
+    duplicate_point_id_count: int,
+    duplicate_chunk_id_count: int,
+    empty_text_count: int,
+    missing_required_metadata_count: int,
+    document_sequence_validation_passed: int,
+    document_sequence_validation_failed: int,
+    section_sequence_validation_passed: int,
+    section_sequence_validation_failed: int,
+    document_neighbor_validation_passed: int,
+    document_neighbor_validation_failed: int,
+    section_neighbor_validation_passed: int,
+    section_neighbor_validation_failed: int,
+    metadata_preservation_status: str,
 ) -> str:
-    status_items = failures + warnings if failures or warnings else ["Embedding validation passed."]
-    legal_area_missing_count = int(df["legal_area"].map(lambda value: normalize_text(value).strip() == "").sum()) if not df.empty else 0
+    status_items = failures if failures else ["Embedding validation passed."]
     lines = [
         "# NSoud Embeddings Validation",
         "",
         f"- Input: `{input_path}`",
         f"- Output: `{output_path}`",
         f"- Validation status: **{validation_status}**",
-        f"- Total rows: **{len(df)}**",
+        f"- Input rows: **{input_rows}**",
+        f"- Output rows: **{output_rows}**",
         f"- Embedding dim: **{embedding_dim}**",
         f"- Missing embeddings count: **{missing_embeddings_count}**",
         f"- Duplicate point_id count: **{duplicate_point_id_count}**",
+        f"- Duplicate chunk_id count: **{duplicate_chunk_id_count}**",
         f"- Empty text count: **{empty_text_count}**",
+        f"- Missing required metadata count: **{missing_required_metadata_count}**",
+        f"- Metadata preservation status: **{metadata_preservation_status}**",
+        f"- Document sequence validation passed/failed: **{document_sequence_validation_passed}/{document_sequence_validation_failed}**",
+        f"- Section sequence validation passed/failed: **{section_sequence_validation_passed}/{section_sequence_validation_failed}**",
+        f"- Document neighbor validation passed/failed: **{document_neighbor_validation_passed}/{document_neighbor_validation_failed}**",
+        f"- Section neighbor validation passed/failed: **{section_neighbor_validation_passed}/{section_neighbor_validation_failed}**",
         f"- Model name: `{model_name}`",
         f"- Device: `{device}`",
         f"- Backend: `{backend_name}`",
-        f"- Legal area missing count: **{legal_area_missing_count}**",
         "",
         "## Status",
     ]
     lines.extend(f"- {item}" for item in status_items)
     lines.append("")
-    lines.extend(render_distribution_table("Source Distribution", distribution_counts(df, "provider")))
+    lines.extend(render_distribution_table("Provider Distribution", distribution_counts(df, "provider")))
     lines.extend(render_distribution_table("Document Type Distribution", distribution_counts(df, "document_type")))
     lines.extend(render_distribution_table("Legal Area Distribution", distribution_counts(df, "legal_area")))
+    lines.extend(render_distribution_table("Section Type Distribution", distribution_counts(df, "section_type")))
     lines.extend(
         [
+            "## Text Lengths",
+            "",
+            f"- min: {min(df['chunk_text_length'].astype(int).tolist()) if not df.empty else 0}",
+            f"- max: {max(df['chunk_text_length'].astype(int).tolist()) if not df.empty else 0}",
+            f"- avg: {mean(df['chunk_text_length'].astype(int).tolist()):.2f}" if not df.empty else "- avg: 0.00",
+            "",
             "## Recommended Docker Command",
             "",
             f"`docker compose exec api python app/nsoud/generate_embeddings.py --input {input_path.as_posix()} --out {output_path.as_posix()} --batch-size 32 --device auto`",
@@ -508,26 +735,32 @@ def write_manifest(
     output_path: Path,
     model_name: str,
     device: str,
+    backend_name: str,
     embedding_dim: int,
     total_input_rows: int,
     total_output_rows: int,
-    skipped_existing_rows: int,
-    newly_embedded_rows: int,
+    missing_embeddings_count: int,
     duplicate_point_id_count: int,
+    duplicate_chunk_id_count: int,
     empty_text_count: int,
+    missing_required_metadata_count: int,
+    metadata_preservation_status: str,
 ) -> None:
     payload = {
         "input_path": str(input_path),
         "output_path": str(output_path),
         "model_name": model_name,
         "device": device,
+        "backend_name": backend_name,
         "embedding_dim": embedding_dim,
         "total_input_rows": total_input_rows,
         "total_output_rows": total_output_rows,
-        "skipped_existing_rows": skipped_existing_rows,
-        "newly_embedded_rows": newly_embedded_rows,
+        "missing_embeddings_count": missing_embeddings_count,
         "duplicate_point_id_count": duplicate_point_id_count,
+        "duplicate_chunk_id_count": duplicate_chunk_id_count,
         "empty_text_count": empty_text_count,
+        "missing_required_metadata_count": missing_required_metadata_count,
+        "metadata_preservation_status": metadata_preservation_status,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -571,39 +804,35 @@ def main() -> int:
         return 1
 
     try:
-        existing_df = load_existing_embeddings(args.out)
-        existing_point_ids = set(existing_df["point_id"].tolist()) if not existing_df.empty and "point_id" in existing_df.columns else set()
-        rows_to_embed_df = payload_df.loc[~payload_df["point_id"].isin(existing_point_ids)].copy()
-
-        print(f"total input rows: {len(payload_df)}")
-        print(f"existing embedded rows: {len(existing_point_ids)}")
-        print(f"rows to embed: {len(rows_to_embed_df)}")
-
-        newly_embedded_df, embedding_dim = generate_new_embeddings(
-            rows_to_embed_df,
+        print(f"input rows: {len(payload_df)}")
+        embedded_df, embedding_dim = generate_embeddings_dataframe(
+            payload_df,
             backend=backend,
             batch_size=args.batch_size,
         )
-
-        if existing_df.empty:
-            final_df = newly_embedded_df.copy()
-        else:
-            final_df = pd.concat([existing_df, newly_embedded_df], ignore_index=True)
-        final_df = deduplicate_by_point_id(final_df)
-        final_df = final_df.sort_values(["chunk_id"]).reset_index(drop=True) if not final_df.empty else final_df
-
+        final_df = embedded_df.sort_values(["chunk_id"]).reset_index(drop=True) if not embedded_df.empty else embedded_df
         write_parquet(final_df, args.out)
 
         (
             validation_status,
             failures,
-            warnings,
+            output_rows,
+            final_embedding_dim,
+            missing_embeddings_count,
             duplicate_point_id_count,
             duplicate_chunk_id_count,
             empty_text_count,
-            missing_embeddings_count,
-            final_embedding_dim,
-        ) = validate_embeddings_dataframe(final_df)
+            missing_required_metadata_count,
+            document_sequence_passed,
+            document_sequence_failed,
+            section_sequence_passed,
+            section_sequence_failed,
+            document_neighbor_passed,
+            document_neighbor_failed,
+            section_neighbor_passed,
+            section_neighbor_failed,
+            metadata_preservation_status,
+        ) = validate_embeddings_dataframe(payload_df, final_df)
 
         write_manifest(
             manifest_path,
@@ -611,13 +840,16 @@ def main() -> int:
             output_path=args.out,
             model_name=args.model_name,
             device=backend.device,
+            backend_name=backend.backend_name,
             embedding_dim=final_embedding_dim or embedding_dim,
             total_input_rows=len(payload_df),
-            total_output_rows=len(final_df),
-            skipped_existing_rows=len(existing_point_ids.intersection(set(payload_df["point_id"].tolist()))),
-            newly_embedded_rows=len(newly_embedded_df),
+            total_output_rows=output_rows,
+            missing_embeddings_count=missing_embeddings_count,
             duplicate_point_id_count=duplicate_point_id_count,
+            duplicate_chunk_id_count=duplicate_chunk_id_count,
             empty_text_count=empty_text_count or input_empty_text_count,
+            missing_required_metadata_count=missing_required_metadata_count,
+            metadata_preservation_status=metadata_preservation_status,
         )
 
         report = build_validation_report(
@@ -629,11 +861,23 @@ def main() -> int:
             backend_name=backend.backend_name,
             validation_status=validation_status,
             failures=failures,
-            warnings=warnings,
-            duplicate_point_id_count=duplicate_point_id_count,
-            empty_text_count=empty_text_count or input_empty_text_count,
-            missing_embeddings_count=missing_embeddings_count,
+            input_rows=len(payload_df),
+            output_rows=output_rows,
             embedding_dim=final_embedding_dim or embedding_dim,
+            missing_embeddings_count=missing_embeddings_count,
+            duplicate_point_id_count=duplicate_point_id_count,
+            duplicate_chunk_id_count=duplicate_chunk_id_count,
+            empty_text_count=empty_text_count or input_empty_text_count,
+            missing_required_metadata_count=missing_required_metadata_count,
+            document_sequence_validation_passed=document_sequence_passed,
+            document_sequence_validation_failed=document_sequence_failed,
+            section_sequence_validation_passed=section_sequence_passed,
+            section_sequence_validation_failed=section_sequence_failed,
+            document_neighbor_validation_passed=document_neighbor_passed,
+            document_neighbor_validation_failed=document_neighbor_failed,
+            section_neighbor_validation_passed=section_neighbor_passed,
+            section_neighbor_validation_failed=section_neighbor_failed,
+            metadata_preservation_status=metadata_preservation_status,
         )
         validation_path.write_text(report, encoding="utf-8")
     except Exception as exc:
@@ -646,20 +890,32 @@ def main() -> int:
     summary = EmbeddingSummary(
         embedding_status="PASS",
         validation_status=validation_status,
-        total_input_rows_used=len(payload_df),
-        output_rows=len(final_df),
+        input_rows=len(payload_df),
+        output_rows=output_rows,
         embedding_dim=final_embedding_dim or embedding_dim,
+        missing_embeddings_count=missing_embeddings_count,
         duplicate_point_id_count=duplicate_point_id_count,
+        duplicate_chunk_id_count=duplicate_chunk_id_count,
+        empty_text_count=empty_text_count or input_empty_text_count,
+        metadata_preservation_status=metadata_preservation_status,
         output_path=args.out,
         manifest_path=manifest_path,
         validation_path=validation_path,
     )
-    print(f"test embedding status: {summary.embedding_status}")
-    print(f"total input rows used: {summary.total_input_rows_used}")
+    print(f"embedding status: {summary.embedding_status}")
+    print(f"validation status: {summary.validation_status}")
+    print(f"input rows: {summary.input_rows}")
     print(f"output rows: {summary.output_rows}")
     print(f"embedding_dim: {summary.embedding_dim}")
+    print(f"missing embeddings count: {summary.missing_embeddings_count}")
     print(f"duplicate point_id count: {summary.duplicate_point_id_count}")
-    print(f"validation status: {summary.validation_status}")
+    print(f"duplicate chunk_id count: {summary.duplicate_chunk_id_count}")
+    print(f"empty text count: {summary.empty_text_count}")
+    print(f"metadata preservation status: {summary.metadata_preservation_status}")
+    print(f"output parquet path: {summary.output_path}")
+    print(f"manifest path: {summary.manifest_path}")
+    print(f"validation report path: {summary.validation_path}")
+    print("changed files: app/nsoud/generate_embeddings.py")
     return 1 if summary.validation_status == "FAIL" else 0
 
 
