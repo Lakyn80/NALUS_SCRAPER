@@ -34,7 +34,7 @@ Technical reconstruction answers whether the chunk set can reproduce the origina
 Legal chunk quality is stricter. It asks whether the produced chunks respect meaningful legal structure, especially boundaries such as:
 
 - header
-- operative part (`takto`)
+- výroková část (`operative_part`)
 - reasoning (`odůvodnění`)
 - appeal instruction (`poučení`)
 - signature / closing

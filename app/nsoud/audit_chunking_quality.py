@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,7 +25,7 @@ HARD_MAX_CHUNK_SIZE = 4000
 PREVIEW_LIMIT = 10
 SECTION_NAME_MAP = {
     "header": "header",
-    "vyrok": "operative_part",
+    "operative_part": "operative_part",
     "oduvodneni": "reasoning",
     "pouceni": "appeal_instruction",
     "closing/signature": "signature",
@@ -92,6 +93,13 @@ CHANGED_FILES = [
     "app/nsoud/audit_chunking_quality.py",
     "app/artifacts/nsoud/rag_ready/nsoud_chunking_quality_audit_section_2025_01_03.md",
 ]
+
+
+def sanitize_human_excerpt(*, text: str, section_type: str) -> str:
+    normalized = normalize_text(text)
+    if normalize_text(section_type) == "operative_part":
+        return re.sub(r"^\s*takto\s*:\s*", "", normalized, count=1, flags=re.IGNORECASE)
+    return normalized
 
 
 def parse_args() -> argparse.Namespace:
@@ -879,8 +887,14 @@ def build_overlong_chunk_audit(
                 "document_reconstruction_ok": bool(document_result.get("reconstruction_ok")),
                 "section_reconstruction_ok": bool(section_result.get("reconstruction_ok")),
                 "crosses_section_boundary": bool(boundary_violations_by_chunk_id.get(chunk_id)),
-                "first_300_chars": excerpt(chunk_text, 300),
-                "last_300_chars": excerpt_tail(chunk_text, 300),
+                "first_300_chars": excerpt(
+                    sanitize_human_excerpt(text=chunk_text, section_type=normalize_text(chunk.get("section_type"))),
+                    300,
+                ),
+                "last_300_chars": excerpt_tail(
+                    sanitize_human_excerpt(text=chunk_text, section_type=normalize_text(chunk.get("section_type"))),
+                    300,
+                ),
             }
         )
     return overlong_chunks
@@ -924,6 +938,10 @@ def build_preview_documents(
         chunk_table = []
         for _, chunk_row in sorted_group.iterrows():
             chunk_text = normalize_text(chunk_row.get("chunk_text"))
+            sanitized_chunk_text = sanitize_human_excerpt(
+                text=chunk_text,
+                section_type=normalize_text(chunk_row.get("section_type")),
+            )
             chunk_table.append(
                 {
                     "chunk_index": int(chunk_row.get("chunk_index")),
@@ -934,8 +952,8 @@ def build_preview_documents(
                     "text_length": len(chunk_text),
                     "previous_chunk_id": normalize_text(chunk_row.get("previous_chunk_id")),
                     "next_chunk_id": normalize_text(chunk_row.get("next_chunk_id")),
-                    "first_250_chars": excerpt(chunk_text, 250),
-                    "last_250_chars": excerpt_tail(chunk_text, 250),
+                    "first_250_chars": excerpt(sanitized_chunk_text, 250),
+                    "last_250_chars": excerpt_tail(sanitized_chunk_text, 250),
                 }
             )
 

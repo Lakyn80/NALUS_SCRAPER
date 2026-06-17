@@ -8,7 +8,7 @@ def calculate_structure_confidence(structure: dict) -> dict[str, float | str | b
         score += 0.15
     if marker_flags.get("nejvyssi_soud_rozhodl"):
         score += 0.15
-    if marker_flags.get("takto"):
+    if marker_flags.get("operative_part"):
         score += 0.15
     if marker_flags.get("oduvodneni"):
         score += 0.20

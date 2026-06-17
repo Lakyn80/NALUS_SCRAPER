@@ -1,7 +1,7 @@
 {
   "status": "PASS",
-  "created_at": "2026-06-15T22:33:07.053552+00:00",
-  "input_path": "app/artifacts/nsoud/rag_ready/nsoud_documents_2025_01_03.parquet",
+  "created_at": "2026-06-16T22:56:50.412139+00:00",
+  "input_path": "app\\artifacts\\nsoud\\rag_ready\\nsoud_documents_2025_01_03.parquet",
   "total_documents": 150,
   "summary": {
     "total_documents": 150,
@@ -52,7 +52,7 @@
         "pct": 72.0
       },
       {
-        "marker": "takto:",
+        "marker": "operative_part",
         "count": 135,
         "pct": 90.0
       },
@@ -109,20 +109,20 @@
       "needs_review_count": 0,
       "avg_confidence": 0.912
     },
-    "most_common_marker_combination": "DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE + ROMAN + NUM",
+    "most_common_marker_combination": "DTYPE + NSR + OPER + ODUV + POUC + CLOSE + ROMAN + NUM",
     "top_marker_combinations": [
       {
-        "combination": "DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE + ROMAN + NUM",
+        "combination": "DTYPE + NSR + OPER + ODUV + POUC + CLOSE + ROMAN + NUM",
         "count": 60,
         "pct": 40.0
       },
       {
-        "combination": "DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE + NUM",
+        "combination": "DTYPE + NSR + OPER + ODUV + POUC + CLOSE + NUM",
         "count": 24,
         "pct": 16.0
       },
       {
-        "combination": "DTYPE + TAKTO + ODUV + POUC + CLOSE + ROMAN + NUM",
+        "combination": "DTYPE + OPER + ODUV + POUC + CLOSE + ROMAN + NUM",
         "count": 15,
         "pct": 10.0
       },
@@ -132,32 +132,32 @@
         "pct": 6.0
       },
       {
-        "combination": "DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE + ROMAN",
+        "combination": "DTYPE + NSR + OPER + ODUV + POUC + CLOSE + ROMAN",
         "count": 8,
         "pct": 5.33
       },
       {
-        "combination": "DTYPE + TAKTO + ODUV + POUC + CLOSE",
+        "combination": "DTYPE + OPER + ODUV + POUC + CLOSE",
         "count": 8,
         "pct": 5.33
       },
       {
-        "combination": "DTYPE + TAKTO + ODUV + POUC + CLOSE + NUM",
+        "combination": "DTYPE + OPER + ODUV + POUC + CLOSE + NUM",
         "count": 8,
         "pct": 5.33
       },
       {
-        "combination": "DTYPE + TAKTO + POUC + CLOSE + ROMAN + NUM",
+        "combination": "DTYPE + OPER + POUC + CLOSE + ROMAN + NUM",
         "count": 4,
         "pct": 2.67
       },
       {
-        "combination": "DTYPE + TAKTO + ODUV + POUC + CLOSE + ROMAN",
+        "combination": "DTYPE + OPER + ODUV + POUC + CLOSE + ROMAN",
         "count": 4,
         "pct": 2.67
       },
       {
-        "combination": "DTYPE + NSR + TAKTO + POUC + CLOSE + ROMAN + NUM",
+        "combination": "DTYPE + NSR + OPER + POUC + CLOSE + ROMAN + NUM",
         "count": 2,
         "pct": 1.33
       },
@@ -172,7 +172,7 @@
         "pct": 1.33
       },
       {
-        "combination": "DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE",
+        "combination": "DTYPE + NSR + OPER + ODUV + POUC + CLOSE",
         "count": 2,
         "pct": 1.33
       },
@@ -189,17 +189,17 @@
     ],
     "top_structural_marker_patterns": [
       {
-        "pattern": "DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE + ROMAN + NUM",
+        "pattern": "DTYPE + NSR + OPER + ODUV + POUC + CLOSE + ROMAN + NUM",
         "count": 60,
         "pct": 40.0
       },
       {
-        "pattern": "DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE + NUM",
+        "pattern": "DTYPE + NSR + OPER + ODUV + POUC + CLOSE + NUM",
         "count": 24,
         "pct": 16.0
       },
       {
-        "pattern": "DTYPE + TAKTO + ODUV + POUC + CLOSE + ROMAN + NUM",
+        "pattern": "DTYPE + OPER + ODUV + POUC + CLOSE + ROMAN + NUM",
         "count": 15,
         "pct": 10.0
       },
@@ -209,32 +209,32 @@
         "pct": 6.0
       },
       {
-        "pattern": "DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE + ROMAN",
+        "pattern": "DTYPE + NSR + OPER + ODUV + POUC + CLOSE + ROMAN",
         "count": 8,
         "pct": 5.33
       },
       {
-        "pattern": "DTYPE + TAKTO + ODUV + POUC + CLOSE",
+        "pattern": "DTYPE + OPER + ODUV + POUC + CLOSE",
         "count": 8,
         "pct": 5.33
       },
       {
-        "pattern": "DTYPE + TAKTO + ODUV + POUC + CLOSE + NUM",
+        "pattern": "DTYPE + OPER + ODUV + POUC + CLOSE + NUM",
         "count": 8,
         "pct": 5.33
       },
       {
-        "pattern": "DTYPE + TAKTO + POUC + CLOSE + ROMAN + NUM",
+        "pattern": "DTYPE + OPER + POUC + CLOSE + ROMAN + NUM",
         "count": 4,
         "pct": 2.67
       },
       {
-        "pattern": "DTYPE + TAKTO + ODUV + POUC + CLOSE + ROMAN",
+        "pattern": "DTYPE + OPER + ODUV + POUC + CLOSE + ROMAN",
         "count": 4,
         "pct": 2.67
       },
       {
-        "pattern": "DTYPE + NSR + TAKTO + POUC + CLOSE + ROMAN + NUM",
+        "pattern": "DTYPE + NSR + OPER + POUC + CLOSE + ROMAN + NUM",
         "count": 2,
         "pct": 1.33
       },
@@ -249,7 +249,7 @@
         "pct": 1.33
       },
       {
-        "pattern": "DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE",
+        "pattern": "DTYPE + NSR + OPER + ODUV + POUC + CLOSE",
         "count": 2,
         "pct": 1.33
       },
@@ -267,7 +267,7 @@
     "weak_examples": [],
     "section_order_examples": [
       {
-        "order": "header > vyrok > oduvodneni > pouceni > closing/signature",
+        "order": "header > operative_part > oduvodneni > pouceni > closing/signature",
         "count": 119,
         "pct": 79.33
       },
@@ -277,12 +277,12 @@
         "pct": 9.33
       },
       {
-        "order": "header > vyrok > oduvodneni > closing/signature > pouceni",
+        "order": "header > operative_part > oduvodneni > closing/signature > pouceni",
         "count": 10,
         "pct": 6.67
       },
       {
-        "order": "header > vyrok > pouceni > closing/signature",
+        "order": "header > operative_part > pouceni > closing/signature",
         "count": 6,
         "pct": 4.0
       },
@@ -293,9 +293,9 @@
       }
     ],
     "chunking_recommendations": [
-      "Prefer a first-pass split around `takto:` and `Odůvodnění` markers before any token-length chunking.",
+      "Prefer a first-pass split between the operative part (`výroková část`) and `Odůvodnění` before any token-length chunking.",
       "Preserve numbered legal paragraphs as atomic boundaries whenever possible.",
-      "Preserve Roman numeral verdict sections (`I.` to `XX.`) inside the `takto` block.",
+      "Preserve Roman numeral subdivisions (`I.` to `XX.`) inside the operative part (`výroková část`).",
       "Treat `Poučení` as a late-document boundary and avoid merging it into substantive reasoning chunks.",
       "Use `V Brně dne` as a deterministic closing/signature boundary for trimming footer-only tails.",
       "Support both regular and spaced marker spellings (`Odůvodnění` / `O d ů v o d n ě n í`, `Poučení` / `P o u č e n í`)."
@@ -331,7 +331,7 @@
           "present": true,
           "position": 46
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 846
         },
@@ -367,7 +367,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -500,7 +500,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 846
         },
         {
@@ -519,7 +519,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -558,7 +558,7 @@
           "present": true,
           "position": 62
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 621
         },
@@ -594,7 +594,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -761,7 +761,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 621
         },
         {
@@ -780,7 +780,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -819,7 +819,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 569
         },
@@ -855,7 +855,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -933,7 +933,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 569
         },
         {
@@ -952,7 +952,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -991,7 +991,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 833
         },
@@ -1027,7 +1027,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -1188,7 +1188,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 833
         },
         {
@@ -1207,7 +1207,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -1246,7 +1246,7 @@
           "present": true,
           "position": 26
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 557
         },
@@ -1282,7 +1282,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -1312,7 +1312,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 557
         },
         {
@@ -1331,7 +1331,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -1370,7 +1370,7 @@
           "present": true,
           "position": 63
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 842
         },
@@ -1406,7 +1406,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -1556,7 +1556,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 842
         },
         {
@@ -1575,7 +1575,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -1614,7 +1614,7 @@
           "present": true,
           "position": 62
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 623
         },
@@ -1650,7 +1650,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -1803,7 +1803,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 623
         },
         {
@@ -1822,7 +1822,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -1861,7 +1861,7 @@
           "present": true,
           "position": 62
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 638
         },
@@ -1897,7 +1897,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -2152,7 +2152,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 638
         },
         {
@@ -2171,7 +2171,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -2210,7 +2210,7 @@
           "present": true,
           "position": 63
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 642
         },
@@ -2246,7 +2246,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -2384,7 +2384,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 642
         },
         {
@@ -2403,7 +2403,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -2442,7 +2442,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 642
         },
@@ -2478,7 +2478,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "closing/signature",
           "pouceni"
@@ -2601,7 +2601,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 642
         },
         {
@@ -2620,7 +2620,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -2659,7 +2659,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 346
         },
@@ -2695,7 +2695,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -2916,7 +2916,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 346
         },
         {
@@ -2935,7 +2935,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -2974,7 +2974,7 @@
           "present": true,
           "position": 62
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 835
         },
@@ -3010,7 +3010,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -3421,7 +3421,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 835
         },
         {
@@ -3440,7 +3440,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -3479,7 +3479,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -3664,7 +3664,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -3703,7 +3703,7 @@
           "present": true,
           "position": 49
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 735
         },
@@ -3739,7 +3739,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -3820,7 +3820,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 735
         },
         {
@@ -3839,7 +3839,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -3878,7 +3878,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 347
         },
@@ -3914,7 +3914,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -4217,7 +4217,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 347
         },
         {
@@ -4236,7 +4236,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -4275,7 +4275,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 387
         },
@@ -4311,7 +4311,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "closing/signature",
           "pouceni"
@@ -4542,7 +4542,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 387
         },
         {
@@ -4561,7 +4561,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -4600,7 +4600,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 835
         },
@@ -4636,7 +4636,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -4741,7 +4741,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 835
         },
         {
@@ -4760,7 +4760,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -4799,7 +4799,7 @@
           "present": true,
           "position": 47
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 733
         },
@@ -4835,7 +4835,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "pouceni",
           "closing/signature"
         ],
@@ -4933,7 +4933,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 733
         },
         {
@@ -4948,7 +4948,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": false,
         "pouceni": true,
         "closing": true,
@@ -4987,7 +4987,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 798
         },
@@ -5023,7 +5023,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "pouceni",
           "closing/signature"
         ],
@@ -5109,7 +5109,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 798
         },
         {
@@ -5124,7 +5124,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": false,
         "pouceni": true,
         "closing": true,
@@ -5163,7 +5163,7 @@
           "present": true,
           "position": 64
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 824
         },
@@ -5199,7 +5199,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -5325,7 +5325,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 824
         },
         {
@@ -5344,7 +5344,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -5383,7 +5383,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 616
         },
@@ -5419,7 +5419,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -5584,7 +5584,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 616
         },
         {
@@ -5603,7 +5603,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -5642,7 +5642,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 762
         },
@@ -5678,7 +5678,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -5783,7 +5783,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 762
         },
         {
@@ -5802,7 +5802,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -5841,7 +5841,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 649
         },
@@ -5877,7 +5877,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -5986,7 +5986,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 649
         },
         {
@@ -6005,7 +6005,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -6044,7 +6044,7 @@
           "present": true,
           "position": 27
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 393
         },
@@ -6080,7 +6080,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -6152,7 +6152,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 393
         },
         {
@@ -6171,7 +6171,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -6210,7 +6210,7 @@
           "present": true,
           "position": 27
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 567
         },
@@ -6246,7 +6246,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -6288,7 +6288,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 567
         },
         {
@@ -6307,7 +6307,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -6346,7 +6346,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 533
         },
@@ -6382,7 +6382,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -6447,7 +6447,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 533
         },
         {
@@ -6466,7 +6466,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -6505,7 +6505,7 @@
           "present": true,
           "position": 27
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -6609,7 +6609,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -6648,7 +6648,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 317
         },
@@ -6684,7 +6684,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -7001,7 +7001,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 317
         },
         {
@@ -7020,7 +7020,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -7059,7 +7059,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 1650
         },
@@ -7095,7 +7095,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "closing/signature",
           "pouceni"
@@ -7296,7 +7296,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 1650
         },
         {
@@ -7315,7 +7315,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -7354,7 +7354,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 319
         },
@@ -7390,7 +7390,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -7973,7 +7973,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 319
         },
         {
@@ -7992,7 +7992,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -8031,7 +8031,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 485
         },
@@ -8067,7 +8067,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -8442,7 +8442,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 485
         },
         {
@@ -8461,7 +8461,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -8500,7 +8500,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 689
         },
@@ -8536,7 +8536,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -8627,7 +8627,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 689
         },
         {
@@ -8646,7 +8646,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -8685,7 +8685,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 1198
         },
@@ -8721,7 +8721,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -8946,7 +8946,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 1198
         },
         {
@@ -8965,7 +8965,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -9004,7 +9004,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -9177,7 +9177,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -9216,7 +9216,7 @@
           "present": true,
           "position": 27
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 669
         },
@@ -9252,7 +9252,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -9323,7 +9323,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 669
         },
         {
@@ -9342,7 +9342,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -9381,7 +9381,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 703
         },
@@ -9417,7 +9417,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -9546,7 +9546,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 703
         },
         {
@@ -9565,7 +9565,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -9604,7 +9604,7 @@
           "present": true,
           "position": 26
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 514
         },
@@ -9640,7 +9640,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -9742,7 +9742,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 514
         },
         {
@@ -9761,7 +9761,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -9800,7 +9800,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 354
         },
@@ -9836,7 +9836,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -10043,7 +10043,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 354
         },
         {
@@ -10062,7 +10062,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -10101,7 +10101,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 735
         },
@@ -10137,7 +10137,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "pouceni",
           "closing/signature"
         ],
@@ -10241,7 +10241,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 735
         },
         {
@@ -10256,7 +10256,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": false,
         "pouceni": true,
         "closing": true,
@@ -10295,7 +10295,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 475
         },
@@ -10331,7 +10331,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -10357,7 +10357,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 475
         },
         {
@@ -10376,7 +10376,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -10415,7 +10415,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 504
         },
@@ -10451,7 +10451,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -10554,7 +10554,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 504
         },
         {
@@ -10573,7 +10573,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -10612,7 +10612,7 @@
           "present": true,
           "position": 27
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 702
         },
@@ -10648,7 +10648,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -10714,7 +10714,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 702
         },
         {
@@ -10733,7 +10733,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -10772,7 +10772,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 855
         },
@@ -10808,7 +10808,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -10841,7 +10841,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 855
         },
         {
@@ -10860,7 +10860,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -10899,7 +10899,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 611
         },
@@ -10935,7 +10935,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -10952,7 +10952,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 611
         },
         {
@@ -10971,7 +10971,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -11010,7 +11010,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 608
         },
@@ -11046,7 +11046,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -11063,7 +11063,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 608
         },
         {
@@ -11082,7 +11082,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -11121,7 +11121,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 334
         },
@@ -11157,7 +11157,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -11211,7 +11211,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 334
         },
         {
@@ -11230,7 +11230,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -11269,7 +11269,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 282
         },
@@ -11305,7 +11305,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -11479,7 +11479,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 282
         },
         {
@@ -11498,7 +11498,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -11537,7 +11537,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 389
         },
@@ -11573,7 +11573,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -11590,7 +11590,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 389
         },
         {
@@ -11609,7 +11609,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -11648,7 +11648,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 313
         },
@@ -11684,7 +11684,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -11987,7 +11987,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 313
         },
         {
@@ -12006,7 +12006,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -12045,7 +12045,7 @@
           "present": true,
           "position": 63
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 857
         },
@@ -12081,7 +12081,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -12177,7 +12177,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 857
         },
         {
@@ -12196,7 +12196,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -12235,7 +12235,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 632
         },
@@ -12271,7 +12271,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -12421,7 +12421,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 632
         },
         {
@@ -12440,7 +12440,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -12479,7 +12479,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -12721,7 +12721,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -12760,7 +12760,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 361
         },
@@ -12796,7 +12796,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -13165,7 +13165,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 361
         },
         {
@@ -13184,7 +13184,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -13223,7 +13223,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 832
         },
@@ -13259,7 +13259,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -13652,7 +13652,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 832
         },
         {
@@ -13671,7 +13671,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -13710,7 +13710,7 @@
           "present": true,
           "position": 31
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 335
         },
@@ -13746,7 +13746,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -13835,7 +13835,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 335
         },
         {
@@ -13854,7 +13854,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -13893,7 +13893,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 680
         },
@@ -13929,7 +13929,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -14109,7 +14109,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 680
         },
         {
@@ -14128,7 +14128,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -14167,7 +14167,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -14268,7 +14268,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -14307,7 +14307,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 811
         },
@@ -14343,7 +14343,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -14360,7 +14360,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 811
         },
         {
@@ -14379,7 +14379,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -14418,7 +14418,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 845
         },
@@ -14454,7 +14454,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -14658,7 +14658,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 845
         },
         {
@@ -14677,7 +14677,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -14716,7 +14716,7 @@
           "present": true,
           "position": 63
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 648
         },
@@ -14752,7 +14752,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -14895,7 +14895,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 648
         },
         {
@@ -14914,7 +14914,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -14953,7 +14953,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -15408,7 +15408,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -15447,7 +15447,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 295
         },
@@ -15483,7 +15483,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -15710,7 +15710,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 295
         },
         {
@@ -15729,7 +15729,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -15768,7 +15768,7 @@
           "present": true,
           "position": 27
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 563
         },
@@ -15804,7 +15804,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -15857,7 +15857,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 563
         },
         {
@@ -15876,7 +15876,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -15915,7 +15915,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 620
         },
@@ -15951,7 +15951,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -16090,7 +16090,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 620
         },
         {
@@ -16109,7 +16109,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -16148,7 +16148,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 829
         },
@@ -16184,7 +16184,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "pouceni",
           "closing/signature"
         ],
@@ -16332,7 +16332,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 829
         },
         {
@@ -16347,7 +16347,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": false,
         "pouceni": true,
         "closing": true,
@@ -16386,7 +16386,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 926
         },
@@ -16422,7 +16422,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -16533,7 +16533,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 926
         },
         {
@@ -16552,7 +16552,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -16591,7 +16591,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 992
         },
@@ -16627,7 +16627,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -16720,7 +16720,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 992
         },
         {
@@ -16739,7 +16739,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -16778,7 +16778,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 981
         },
@@ -16814,7 +16814,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -16844,7 +16844,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 981
         },
         {
@@ -16863,7 +16863,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -16902,7 +16902,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 345
         },
@@ -16938,7 +16938,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "closing/signature",
           "pouceni"
@@ -17304,7 +17304,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 345
         },
         {
@@ -17323,7 +17323,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -17362,7 +17362,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 427
         },
@@ -17398,7 +17398,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -17633,7 +17633,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 427
         },
         {
@@ -17652,7 +17652,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -17691,7 +17691,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -17795,7 +17795,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -17834,7 +17834,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 577
         },
@@ -17870,7 +17870,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -17887,7 +17887,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 577
         },
         {
@@ -17906,7 +17906,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -17945,7 +17945,7 @@
           "present": true,
           "position": 26
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 549
         },
@@ -17981,7 +17981,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -18003,7 +18003,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 549
         },
         {
@@ -18022,7 +18022,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -18061,7 +18061,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 396
         },
@@ -18097,7 +18097,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -18274,7 +18274,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 396
         },
         {
@@ -18293,7 +18293,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -18332,7 +18332,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 295
         },
@@ -18368,7 +18368,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -18542,7 +18542,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 295
         },
         {
@@ -18561,7 +18561,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -18600,7 +18600,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 689
         },
@@ -18636,7 +18636,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -18670,7 +18670,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 689
         },
         {
@@ -18689,7 +18689,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -18728,7 +18728,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 978
         },
@@ -18764,7 +18764,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -18883,7 +18883,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 978
         },
         {
@@ -18902,7 +18902,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -18941,7 +18941,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 309
         },
@@ -18977,7 +18977,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -19158,7 +19158,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 309
         },
         {
@@ -19177,7 +19177,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -19216,7 +19216,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 1058
         },
@@ -19252,7 +19252,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -19269,7 +19269,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 1058
         },
         {
@@ -19288,7 +19288,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -19327,7 +19327,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 308
         },
@@ -19363,7 +19363,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -19600,7 +19600,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 308
         },
         {
@@ -19619,7 +19619,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -19658,7 +19658,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 765
         },
@@ -19694,7 +19694,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -19790,7 +19790,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 765
         },
         {
@@ -19809,7 +19809,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -19848,7 +19848,7 @@
           "present": true,
           "position": 26
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 526
         },
@@ -19884,7 +19884,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -19962,7 +19962,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 526
         },
         {
@@ -19981,7 +19981,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -20020,7 +20020,7 @@
           "present": true,
           "position": 26
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 512
         },
@@ -20056,7 +20056,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -20073,7 +20073,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 512
         },
         {
@@ -20092,7 +20092,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -20131,7 +20131,7 @@
           "present": true,
           "position": 25
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 501
         },
@@ -20167,7 +20167,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -20233,7 +20233,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 501
         },
         {
@@ -20252,7 +20252,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -20291,7 +20291,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 803
         },
@@ -20327,7 +20327,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -20353,7 +20353,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 803
         },
         {
@@ -20372,7 +20372,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -20411,7 +20411,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 322
         },
@@ -20447,7 +20447,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -20473,7 +20473,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 322
         },
         {
@@ -20492,7 +20492,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -20531,7 +20531,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -20920,7 +20920,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -20959,7 +20959,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 287
         },
@@ -20995,7 +20995,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "closing/signature",
           "pouceni"
@@ -21162,7 +21162,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 287
         },
         {
@@ -21181,7 +21181,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -21220,7 +21220,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 256
         },
@@ -21256,7 +21256,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -21361,7 +21361,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 256
         },
         {
@@ -21380,7 +21380,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -21419,7 +21419,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 391
         },
@@ -21455,7 +21455,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -21724,7 +21724,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 391
         },
         {
@@ -21743,7 +21743,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -21782,7 +21782,7 @@
           "present": true,
           "position": 61
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 649
         },
@@ -21818,7 +21818,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -22043,7 +22043,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 649
         },
         {
@@ -22062,7 +22062,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -22101,7 +22101,7 @@
           "present": true,
           "position": 63
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 649
         },
@@ -22137,7 +22137,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -22358,7 +22358,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 649
         },
         {
@@ -22377,7 +22377,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -22416,7 +22416,7 @@
           "present": true,
           "position": 53
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 816
         },
@@ -22452,7 +22452,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -22494,7 +22494,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 816
         },
         {
@@ -22513,7 +22513,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -22552,7 +22552,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 667
         },
@@ -22588,7 +22588,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "closing/signature",
           "pouceni"
@@ -22763,7 +22763,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 667
         },
         {
@@ -22782,7 +22782,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -22821,7 +22821,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 387
         },
@@ -22857,7 +22857,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -23058,7 +23058,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 387
         },
         {
@@ -23077,7 +23077,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -23116,7 +23116,7 @@
           "present": true,
           "position": 25
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 221
         },
@@ -23152,7 +23152,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -23236,7 +23236,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 221
         },
         {
@@ -23255,7 +23255,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -23294,7 +23294,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 767
         },
@@ -23330,7 +23330,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -23474,7 +23474,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 767
         },
         {
@@ -23493,7 +23493,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -23532,7 +23532,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 780
         },
@@ -23568,7 +23568,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -23754,7 +23754,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 780
         },
         {
@@ -23773,7 +23773,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -23812,7 +23812,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 1003
         },
@@ -23848,7 +23848,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -23929,7 +23929,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 1003
         },
         {
@@ -23948,7 +23948,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -23987,7 +23987,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 846
         },
@@ -24023,7 +24023,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -24040,7 +24040,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 846
         },
         {
@@ -24059,7 +24059,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -24098,7 +24098,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 807
         },
@@ -24134,7 +24134,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -24245,7 +24245,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 807
         },
         {
@@ -24264,7 +24264,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -24303,7 +24303,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 760
         },
@@ -24339,7 +24339,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -24460,7 +24460,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 760
         },
         {
@@ -24479,7 +24479,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -24518,7 +24518,7 @@
           "present": true,
           "position": 26
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 668
         },
@@ -24554,7 +24554,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -24602,7 +24602,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 668
         },
         {
@@ -24621,7 +24621,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -24660,7 +24660,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -24803,7 +24803,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -24842,7 +24842,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 712
         },
@@ -24878,7 +24878,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -25004,7 +25004,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 712
         },
         {
@@ -25023,7 +25023,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -25062,7 +25062,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 745
         },
@@ -25098,7 +25098,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -25305,7 +25305,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 745
         },
         {
@@ -25324,7 +25324,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -25363,7 +25363,7 @@
           "present": true,
           "position": 27
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 272
         },
@@ -25399,7 +25399,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -25425,7 +25425,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 272
         },
         {
@@ -25444,7 +25444,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -25483,7 +25483,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 945
         },
@@ -25519,7 +25519,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -25545,7 +25545,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 945
         },
         {
@@ -25564,7 +25564,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -25603,7 +25603,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 513
         },
@@ -25639,7 +25639,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -25665,7 +25665,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 513
         },
         {
@@ -25684,7 +25684,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -25723,7 +25723,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 261
         },
@@ -25759,7 +25759,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -25831,7 +25831,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 261
         },
         {
@@ -25850,7 +25850,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -25889,7 +25889,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -25965,7 +25965,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -26004,7 +26004,7 @@
           "present": true,
           "position": 55
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 726
         },
@@ -26040,7 +26040,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -26331,7 +26331,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 726
         },
         {
@@ -26350,7 +26350,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -26389,7 +26389,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 793
         },
@@ -26425,7 +26425,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -26536,7 +26536,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 793
         },
         {
@@ -26555,7 +26555,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -26594,7 +26594,7 @@
           "present": true,
           "position": 26
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -26716,7 +26716,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -26755,7 +26755,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 690
         },
@@ -26791,7 +26791,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "closing/signature",
           "pouceni"
@@ -26860,7 +26860,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 690
         },
         {
@@ -26879,7 +26879,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -26918,7 +26918,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 747
         },
@@ -26954,7 +26954,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -27065,7 +27065,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 747
         },
         {
@@ -27084,7 +27084,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -27123,7 +27123,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 679
         },
@@ -27159,7 +27159,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -27210,7 +27210,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 679
         },
         {
@@ -27229,7 +27229,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -27268,7 +27268,7 @@
           "present": true,
           "position": 31
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 318
         },
@@ -27304,7 +27304,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -27475,7 +27475,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 318
         },
         {
@@ -27494,7 +27494,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -27533,7 +27533,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 322
         },
@@ -27569,7 +27569,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -27854,7 +27854,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 322
         },
         {
@@ -27873,7 +27873,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -27912,7 +27912,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 353
         },
@@ -27948,7 +27948,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -28573,7 +28573,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 353
         },
         {
@@ -28592,7 +28592,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -28631,7 +28631,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 334
         },
@@ -28667,7 +28667,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -28922,7 +28922,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 334
         },
         {
@@ -28941,7 +28941,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -28980,7 +28980,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 558
         },
@@ -29016,7 +29016,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -29088,7 +29088,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 558
         },
         {
@@ -29107,7 +29107,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -29146,7 +29146,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 647
         },
@@ -29182,7 +29182,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -29212,7 +29212,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 647
         },
         {
@@ -29231,7 +29231,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -29270,7 +29270,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 569
         },
@@ -29306,7 +29306,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -29328,7 +29328,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 569
         },
         {
@@ -29347,7 +29347,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -29386,7 +29386,7 @@
           "present": true,
           "position": 2633
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 484
         },
@@ -29422,7 +29422,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -29545,7 +29545,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 484
         },
         {
@@ -29564,7 +29564,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -29603,7 +29603,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 304
         },
@@ -29639,7 +29639,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -29942,7 +29942,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 304
         },
         {
@@ -29961,7 +29961,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -30000,7 +30000,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 927
         },
@@ -30036,7 +30036,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -30053,7 +30053,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 927
         },
         {
@@ -30072,7 +30072,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -30111,7 +30111,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -30264,7 +30264,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -30303,7 +30303,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 775
         },
@@ -30339,7 +30339,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -30498,7 +30498,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 775
         },
         {
@@ -30517,7 +30517,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -30556,7 +30556,7 @@
           "present": true,
           "position": 25
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 923
         },
@@ -30592,7 +30592,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -30699,7 +30699,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 923
         },
         {
@@ -30718,7 +30718,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -30757,7 +30757,7 @@
           "present": true,
           "position": 27
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -31152,7 +31152,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -31191,7 +31191,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 571
         },
@@ -31227,7 +31227,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -31320,7 +31320,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 571
         },
         {
@@ -31339,7 +31339,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -31378,7 +31378,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -31557,7 +31557,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -31596,7 +31596,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 1020
         },
@@ -31632,7 +31632,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "closing/signature",
           "pouceni"
@@ -31668,7 +31668,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 1020
         },
         {
@@ -31687,7 +31687,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -31726,7 +31726,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 501
         },
@@ -31762,7 +31762,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "pouceni",
           "closing/signature"
         ],
@@ -31816,7 +31816,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 501
         },
         {
@@ -31831,7 +31831,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": false,
         "pouceni": true,
         "closing": true,
@@ -31870,7 +31870,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 749
         },
@@ -31906,7 +31906,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "pouceni",
           "closing/signature"
         ],
@@ -32070,7 +32070,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 749
         },
         {
@@ -32085,7 +32085,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": false,
         "pouceni": true,
         "closing": true,
@@ -32124,7 +32124,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 835
         },
@@ -32160,7 +32160,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -32325,7 +32325,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 835
         },
         {
@@ -32344,7 +32344,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -32383,7 +32383,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 817
         },
@@ -32419,7 +32419,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -32539,7 +32539,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 817
         },
         {
@@ -32558,7 +32558,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -32597,7 +32597,7 @@
           "present": false,
           "position": null
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 543
         },
@@ -32633,7 +32633,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -32650,7 +32650,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 543
         },
         {
@@ -32669,7 +32669,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": false,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -32708,7 +32708,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 327
         },
@@ -32744,7 +32744,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -32963,7 +32963,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 327
         },
         {
@@ -32982,7 +32982,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -33021,7 +33021,7 @@
           "present": true,
           "position": 27
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 317
         },
@@ -33057,7 +33057,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -33318,7 +33318,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 317
         },
         {
@@ -33337,7 +33337,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -33376,7 +33376,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 680
         },
@@ -33412,7 +33412,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "closing/signature",
           "pouceni"
@@ -33496,7 +33496,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 680
         },
         {
@@ -33515,7 +33515,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -33554,7 +33554,7 @@
           "present": true,
           "position": 30
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 796
         },
@@ -33590,7 +33590,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -33797,7 +33797,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 796
         },
         {
@@ -33816,7 +33816,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -33855,7 +33855,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 855
         },
@@ -33891,7 +33891,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -34122,7 +34122,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 855
         },
         {
@@ -34141,7 +34141,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -34180,7 +34180,7 @@
           "present": true,
           "position": 27
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 377
         },
@@ -34216,7 +34216,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "closing/signature",
           "pouceni"
@@ -34459,7 +34459,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 377
         },
         {
@@ -34478,7 +34478,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -34517,7 +34517,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": false,
           "position": null
         },
@@ -34990,7 +34990,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": false,
+        "operative_part": false,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -35029,7 +35029,7 @@
           "present": true,
           "position": 26
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 463
         },
@@ -35065,7 +35065,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -35125,7 +35125,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 463
         },
         {
@@ -35144,7 +35144,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -35183,7 +35183,7 @@
           "present": true,
           "position": 29
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 699
         },
@@ -35219,7 +35219,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -35270,7 +35270,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 699
         },
         {
@@ -35289,7 +35289,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -35328,7 +35328,7 @@
           "present": true,
           "position": 28
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 627
         },
@@ -35364,7 +35364,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -35459,7 +35459,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 627
         },
         {
@@ -35478,7 +35478,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,
@@ -35517,7 +35517,7 @@
           "present": true,
           "position": 26
         },
-        "takto:": {
+        "operative_part": {
           "present": true,
           "position": 566
         },
@@ -35553,7 +35553,7 @@
       "detected_section_order": {
         "observed_sections": [
           "header",
-          "vyrok",
+          "operative_part",
           "oduvodneni",
           "pouceni",
           "closing/signature"
@@ -35601,7 +35601,7 @@
           "position": 0
         },
         {
-          "section": "vyrok",
+          "section": "operative_part",
           "position": 566
         },
         {
@@ -35620,7 +35620,7 @@
       "marker_flags": {
         "document_type": true,
         "nejvyssi_soud_rozhodl": true,
-        "takto": true,
+        "operative_part": true,
         "oduvodneni": true,
         "pouceni": true,
         "closing": true,

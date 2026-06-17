@@ -1,7 +1,7 @@
 # NSoud Document Structure Analysis
 
 - Status: **PASS**
-- Input path: `app/artifacts/nsoud/rag_ready/nsoud_documents_2025_01_03.parquet`
+- Input path: `app\artifacts\nsoud\rag_ready\nsoud_documents_2025_01_03.parquet`
 - Total documents: **150**
 
 ## Metadata Distribution
@@ -23,7 +23,7 @@
 | STANOVISKO | 0 | 0.00 |
 | JMÉNEM REPUBLIKY | 15 | 10.00 |
 | Nejvyšší soud rozhodl | 108 | 72.00 |
-| takto: | 135 | 90.00 |
+| operative_part | 135 | 90.00 |
 | Odůvodnění: | 127 | 84.67 |
 | O d ů v o d n ě n í: | 17 | 11.33 |
 | Poučení: | 136 | 90.67 |
@@ -52,37 +52,37 @@
 
 | order | count | pct |
 | --- | ---: | ---: |
-| header > vyrok > oduvodneni > pouceni > closing/signature | 119 | 79.33 |
+| header > operative_part > oduvodneni > pouceni > closing/signature | 119 | 79.33 |
 | header > oduvodneni > pouceni > closing/signature | 14 | 9.33 |
-| header > vyrok > oduvodneni > closing/signature > pouceni | 10 | 6.67 |
-| header > vyrok > pouceni > closing/signature | 6 | 4.00 |
+| header > operative_part > oduvodneni > closing/signature > pouceni | 10 | 6.67 |
+| header > operative_part > pouceni > closing/signature | 6 | 4.00 |
 | header > oduvodneni > closing/signature > pouceni | 1 | 0.67 |
 
 ## Most Common Marker Combinations
 
 | combination | count | pct |
 | --- | ---: | ---: |
-| DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE + ROMAN + NUM | 60 | 40.00 |
-| DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE + NUM | 24 | 16.00 |
-| DTYPE + TAKTO + ODUV + POUC + CLOSE + ROMAN + NUM | 15 | 10.00 |
+| DTYPE + NSR + OPER + ODUV + POUC + CLOSE + ROMAN + NUM | 60 | 40.00 |
+| DTYPE + NSR + OPER + ODUV + POUC + CLOSE + NUM | 24 | 16.00 |
+| DTYPE + OPER + ODUV + POUC + CLOSE + ROMAN + NUM | 15 | 10.00 |
 | DTYPE + NSR + ODUV + POUC + CLOSE + ROMAN + NUM | 9 | 6.00 |
-| DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE + ROMAN | 8 | 5.33 |
-| DTYPE + TAKTO + ODUV + POUC + CLOSE | 8 | 5.33 |
-| DTYPE + TAKTO + ODUV + POUC + CLOSE + NUM | 8 | 5.33 |
-| DTYPE + TAKTO + POUC + CLOSE + ROMAN + NUM | 4 | 2.67 |
-| DTYPE + TAKTO + ODUV + POUC + CLOSE + ROMAN | 4 | 2.67 |
-| DTYPE + NSR + TAKTO + POUC + CLOSE + ROMAN + NUM | 2 | 1.33 |
+| DTYPE + NSR + OPER + ODUV + POUC + CLOSE + ROMAN | 8 | 5.33 |
+| DTYPE + OPER + ODUV + POUC + CLOSE | 8 | 5.33 |
+| DTYPE + OPER + ODUV + POUC + CLOSE + NUM | 8 | 5.33 |
+| DTYPE + OPER + POUC + CLOSE + ROMAN + NUM | 4 | 2.67 |
+| DTYPE + OPER + ODUV + POUC + CLOSE + ROMAN | 4 | 2.67 |
+| DTYPE + NSR + OPER + POUC + CLOSE + ROMAN + NUM | 2 | 1.33 |
 | DTYPE + NSR + ODUV + POUC + CLOSE + NUM | 2 | 1.33 |
 | DTYPE + ODUV + POUC + CLOSE + NUM | 2 | 1.33 |
-| DTYPE + NSR + TAKTO + ODUV + POUC + CLOSE | 2 | 1.33 |
+| DTYPE + NSR + OPER + ODUV + POUC + CLOSE | 2 | 1.33 |
 | DTYPE + ODUV + POUC + CLOSE + ROMAN + NUM | 1 | 0.67 |
 | DTYPE + NSR + ODUV + POUC + CLOSE + ROMAN | 1 | 0.67 |
 
 ## Recommendations For NS Chunking Rules
 
-- Prefer a first-pass split around `takto:` and `Odůvodnění` markers before any token-length chunking.
+- Prefer a first-pass split between the operative part (`výroková část`) and `Odůvodnění` before any token-length chunking.
 - Preserve numbered legal paragraphs as atomic boundaries whenever possible.
-- Preserve Roman numeral verdict sections (`I.` to `XX.`) inside the `takto` block.
+- Preserve Roman numeral subdivisions (`I.` to `XX.`) inside the operative part (`výroková část`).
 - Treat `Poučení` as a late-document boundary and avoid merging it into substantive reasoning chunks.
 - Use `V Brně dne` as a deterministic closing/signature boundary for trimming footer-only tails.
 - Support both regular and spaced marker spellings (`Odůvodnění` / `O d ů v o d n ě n í`, `Poučení` / `P o u č e n í`).

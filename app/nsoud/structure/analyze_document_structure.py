@@ -135,12 +135,14 @@ def chunking_recommendations(summary: dict[str, Any]) -> list[str]:
     coverage = summary["marker_coverage"]
     coverage_map = {row["marker"]: row["pct"] for row in coverage}
     recommendations: list[str] = []
-    if coverage_map.get("takto:", 0.0) >= 80.0 and coverage_map.get("Odůvodnění:", 0.0) + coverage_map.get("O d ů v o d n ě n í:", 0.0) >= 80.0:
-        recommendations.append("Prefer a first-pass split around `takto:` and `Odůvodnění` markers before any token-length chunking.")
+    if coverage_map.get("operative_part", 0.0) >= 80.0 and coverage_map.get("Odůvodnění:", 0.0) + coverage_map.get("O d ů v o d n ě n í:", 0.0) >= 80.0:
+        recommendations.append(
+            "Prefer a first-pass split between the operative part (`výroková část`) and `Odůvodnění` before any token-length chunking."
+        )
     if coverage_map.get("numbered_paragraphs_any", 0.0) >= 80.0:
         recommendations.append("Preserve numbered legal paragraphs as atomic boundaries whenever possible.")
     if coverage_map.get("roman_sections_any", 0.0) >= 60.0:
-        recommendations.append("Preserve Roman numeral verdict sections (`I.` to `XX.`) inside the `takto` block.")
+        recommendations.append("Preserve Roman numeral subdivisions (`I.` to `XX.`) inside the operative part (`výroková část`).")
     if coverage_map.get("Poučení:", 0.0) + coverage_map.get("P o u č e n í:", 0.0) >= 80.0:
         recommendations.append("Treat `Poučení` as a late-document boundary and avoid merging it into substantive reasoning chunks.")
     if coverage_map.get("V Brně dne", 0.0) == 100.0:

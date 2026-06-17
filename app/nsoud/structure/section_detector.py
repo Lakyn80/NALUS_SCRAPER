@@ -36,11 +36,11 @@ def detect_numbered_paragraphs(
     full_text: str,
     *,
     oduvodneni_position: int | None,
-    takto_position: int | None,
+    operative_part_position: int | None,
     pouceni_position: int | None,
 ) -> list[dict[str, Any]]:
     detections: list[dict[str, Any]] = []
-    lower_bound = oduvodneni_position if oduvodneni_position is not None else (takto_position or 0)
+    lower_bound = oduvodneni_position if oduvodneni_position is not None else (operative_part_position or 0)
 
     for label, pattern in NUMBERED_PARAGRAPH_PATTERNS.items():
         for match in pattern.finditer(full_text):
@@ -78,20 +78,20 @@ def detect_ns_document_structure(
     marker_matches = {label: find_marker(text, pattern) for label, pattern in MARKER_SPECS.items()}
     oduvodneni_position = marker_position(marker_matches, *ODUVODNENI_MARKERS)
     pouceni_position = marker_position(marker_matches, *POUCENI_MARKERS)
-    takto_position = marker_matches["takto:"].position
+    operative_part_position = marker_matches["operative_part"].position
     closing_position = marker_position(marker_matches, *CLOSING_MARKERS)
 
     roman_sections = detect_roman_sections(text)
     numbered_paragraphs = detect_numbered_paragraphs(
         text,
         oduvodneni_position=oduvodneni_position,
-        takto_position=takto_position,
+        operative_part_position=operative_part_position,
         pouceni_position=pouceni_position,
     )
 
     section_candidates: list[dict[str, Any]] = [{"section": "header", "position": 0}]
-    if takto_position is not None:
-        section_candidates.append({"section": "vyrok", "position": takto_position})
+    if operative_part_position is not None:
+        section_candidates.append({"section": "operative_part", "position": operative_part_position})
     if oduvodneni_position is not None:
         section_candidates.append({"section": "oduvodneni", "position": oduvodneni_position})
     if pouceni_position is not None:
@@ -103,7 +103,7 @@ def detect_ns_document_structure(
     observed_sections = [candidate["section"] for candidate in section_candidates]
     typical_section_order_exists = observed_sections == [
         "header",
-        "vyrok",
+        "operative_part",
         "oduvodneni",
         "pouceni",
         "closing/signature",
@@ -130,7 +130,7 @@ def detect_ns_document_structure(
         "marker_flags": {
             "document_type": any(marker_matches[label].present for label in DOCUMENT_TYPE_MARKERS),
             "nejvyssi_soud_rozhodl": marker_matches["Nejvyšší soud rozhodl"].present,
-            "takto": marker_matches["takto:"].present,
+            "operative_part": marker_matches["operative_part"].present,
             "oduvodneni": oduvodneni_position is not None,
             "pouceni": pouceni_position is not None,
             "closing": closing_position is not None,

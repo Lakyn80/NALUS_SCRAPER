@@ -75,14 +75,14 @@ DISALLOWED_PRECEDING_SUFFIXES = (
 )
 SECTION_TYPE_MAP = {
     "header": "header",
-    "vyrok": "operative_part",
+    "operative_part": "operative_part",
     "oduvodneni": "reasoning",
     "pouceni": "appeal_instruction",
     "closing/signature": "signature",
 }
 SECTION_HINT_MAP = {
     "header": "header",
-    "vyrok": "vyrok",
+    "operative_part": "operative_part",
     "oduvodneni": "oduvodneni",
     "pouceni": "pouceni",
     "closing/signature": "closing",

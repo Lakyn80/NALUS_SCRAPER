@@ -1,9 +1,9 @@
 # NSoud Chunk Validation
 
-- Input: `app/artifacts/nsoud/rag_ready/nsoud_documents_2025_01_03.parquet`
-- Output Parquet: `app/artifacts/nsoud/rag_ready/nsoud_chunks_2025_01_03.parquet`
-- Output JSONL: `app/artifacts/nsoud/rag_ready/nsoud_chunks_2025_01_03.jsonl`
-- Structure report: `app/artifacts/nsoud/rag_ready/nsoud_structure_patterns_2025_01_03.md`
+- Input: `app\artifacts\nsoud\rag_ready\nsoud_documents_2025_01_03.parquet`
+- Output Parquet: `app\artifacts\nsoud\rag_ready\nsoud_chunks_2025_01_03.parquet`
+- Output JSONL: `app\artifacts\nsoud\rag_ready\nsoud_chunks_2025_01_03.jsonl`
+- Structure report: `app\artifacts\nsoud\rag_ready\nsoud_structure_patterns_2025_01_03.md`
 - Validation status: **WARN**
 - Total documents: **150**
 - Total chunks: **1862**
@@ -44,7 +44,7 @@
 | STANOVISKO | 0 |
 | JMÉNEM REPUBLIKY | 15 |
 | Nejvyšší soud rozhodl | 108 |
-| takto: | 135 |
+| operative_part | 135 |
 | Odůvodnění: | 127 |
 | O d ů v o d n ě n í: | 17 |
 | Poučení: | 136 |
@@ -93,6 +93,6 @@
 | --- | ---: |
 | oduvodneni | 1194 |
 | closing | 192 |
-| vyrok | 165 |
+| operative_part | 165 |
 | pouceni | 161 |
 | header | 150 |

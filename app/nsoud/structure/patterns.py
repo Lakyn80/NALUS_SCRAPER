@@ -39,7 +39,7 @@ MAIN_SECTION_MARKERS = (
 STRUCTURE_PATTERN_LABELS = [
     ("document_type", "DTYPE"),
     ("nejvyssi_soud_rozhodl", "NSR"),
-    ("takto", "TAKTO"),
+    ("operative_part", "OPER"),
     ("oduvodneni", "ODUV"),
     ("pouceni", "POUC"),
     ("closing", "CLOSE"),
@@ -64,7 +64,7 @@ MARKER_SPECS = {
     "STANOVISKO": re.compile(r"\bSTANOVISKO\b"),
     "JMÉNEM REPUBLIKY": re.compile(r"JMÉNEM\s+REPUBLIKY", re.IGNORECASE),
     "Nejvyšší soud rozhodl": re.compile(r"Nejvyšší\s+soud\s+rozhodl", re.IGNORECASE),
-    "takto:": re.compile(r"\btakto\s*:", re.IGNORECASE),
+    "operative_part": re.compile(r"\btakto\s*:", re.IGNORECASE),
     "Odůvodnění:": re.compile(r"Odůvodnění\s*:", re.IGNORECASE),
     "O d ů v o d n ě n í:": re.compile(r"O\s+d\s+ů\s+v\s+o\s+d\s+n\s+ě\s+n\s+í\s*:", re.IGNORECASE),
     "Poučení:": re.compile(r"Poučení\s*:", re.IGNORECASE),

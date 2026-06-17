@@ -15,7 +15,7 @@
 | STANOVISKO | 0 |
 | JMÉNEM REPUBLIKY | 15 |
 | Nejvyšší soud rozhodl | 108 |
-| takto: | 135 |
+| operative_part | 135 |
 | Odůvodnění: | 127 |
 | O d ů v o d n ě n í: | 17 |
 | Poučení: | 136 |
@@ -28,8 +28,8 @@
 
 | Order | Document Count |
 | --- | ---: |
-| header > vyrok > oduvodneni > pouceni > closing/signature | 119 |
+| header > operative_part > oduvodneni > pouceni > closing/signature | 119 |
 | header > oduvodneni > pouceni > closing/signature | 14 |
-| header > vyrok > oduvodneni > closing/signature > pouceni | 10 |
-| header > vyrok > pouceni > closing/signature | 6 |
+| header > operative_part > oduvodneni > closing/signature > pouceni | 10 |
+| header > operative_part > pouceni > closing/signature | 6 |
 | header > oduvodneni > closing/signature > pouceni | 1 |
