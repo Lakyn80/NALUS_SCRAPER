@@ -39,11 +39,59 @@ PAYLOAD_FIELDS = [
     "document_id",
     "chunk_id",
     "chunk_index",
+    "total_chunks_in_document",
+    "section_id",
+    "section_type",
+    "section_index",
+    "chunk_index_in_section",
+    "total_chunks_in_section",
+    "previous_chunk_id",
+    "next_chunk_id",
+    "previous_section_chunk_id",
+    "next_section_chunk_id",
     "chunk_text_length",
     "paragraph_count",
     "chunk_warning",
     "ns_section_hint",
+    "structure_confidence",
+    "structure_status",
+    "structure_needs_review",
+    "detected_section_order",
+    "detected_markers",
+    "section_source",
+    "chunking_strategy",
 ]
+REQUIRED_COLUMNS = {
+    "source",
+    "court",
+    "authority_level",
+    "case_number",
+    "url",
+    "source_attribution",
+    "content_hash",
+    "document_id",
+    "chunk_id",
+    "chunk_index",
+    "total_chunks_in_document",
+    "section_id",
+    "section_type",
+    "section_index",
+    "chunk_index_in_section",
+    "total_chunks_in_section",
+    "chunk_text",
+    "chunk_text_length",
+    "previous_chunk_id",
+    "next_chunk_id",
+    "previous_section_chunk_id",
+    "next_section_chunk_id",
+    "structure_confidence",
+    "structure_status",
+    "structure_needs_review",
+    "detected_section_order",
+    "detected_markers",
+    "section_source",
+    "chunking_strategy",
+}
 REQUIRED_NONEMPTY_FIELDS = [
     "point_id",
     "text",
@@ -57,16 +105,27 @@ REQUIRED_NONEMPTY_FIELDS = [
     "content_hash",
     "document_id",
     "chunk_id",
-    "ns_section_hint",
+    "chunk_index",
+    "total_chunks_in_document",
+    "section_id",
+    "section_type",
+    "section_index",
+    "chunk_index_in_section",
+    "total_chunks_in_section",
+    "structure_confidence",
+    "structure_status",
+    "structure_needs_review",
+    "detected_section_order",
+    "detected_markers",
+    "section_source",
+    "chunking_strategy",
 ]
-OPTIONAL_METADATA_FIELDS = [
-    "ecli",
-    "decision_date",
-    "publication_date",
-    "document_type",
-    "legal_area",
-    "title",
-]
+NULLABLE_LINK_FIELDS = {
+    "previous_chunk_id",
+    "next_chunk_id",
+    "previous_section_chunk_id",
+    "next_section_chunk_id",
+}
 
 
 @dataclass(frozen=True)
@@ -77,6 +136,15 @@ class PayloadPreviewSummary:
     duplicate_point_id_count: int
     duplicate_chunk_id_count: int
     empty_text_count: int
+    missing_required_metadata_count: int
+    document_sequence_validation_passed: int
+    document_sequence_validation_failed: int
+    section_sequence_validation_passed: int
+    section_sequence_validation_failed: int
+    document_neighbor_validation_passed: int
+    document_neighbor_validation_failed: int
+    section_neighbor_validation_passed: int
+    section_neighbor_validation_failed: int
     output_parquet_path: Path
     output_jsonl_path: Path
     validation_report_path: Path
@@ -101,6 +169,17 @@ def normalize_text(value: Any) -> str:
     return str(value)
 
 
+def is_missing(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip() == ""
+    try:
+        return bool(pd.isna(value))
+    except TypeError:
+        return False
+
+
 def validation_path_for_output(out_path: Path) -> Path:
     return out_path.with_name(f"{out_path.stem}_validation.md")
 
@@ -111,6 +190,13 @@ def load_chunks(path: Path) -> pd.DataFrame:
 
 def stable_point_id(chunk_id: str) -> str:
     return hashlib.sha256(chunk_id.encode("utf-8")).hexdigest()
+
+
+def validate_input_columns(chunks_df: pd.DataFrame) -> list[str]:
+    missing_columns = sorted(column_name for column_name in REQUIRED_COLUMNS if column_name not in chunks_df.columns)
+    if not missing_columns:
+        return []
+    return [f"Missing required chunk columns: {', '.join(missing_columns)}."]
 
 
 def build_payload_dataframe(chunks_df: pd.DataFrame) -> pd.DataFrame:
@@ -135,19 +221,30 @@ def build_payload_dataframe(chunks_df: pd.DataFrame) -> pd.DataFrame:
             "document_id": chunks_df["document_id"],
             "chunk_id": chunks_df["chunk_id"],
             "chunk_index": chunks_df["chunk_index"],
+            "total_chunks_in_document": chunks_df["total_chunks_in_document"],
+            "section_id": chunks_df["section_id"],
+            "section_type": chunks_df["section_type"],
+            "section_index": chunks_df["section_index"],
+            "chunk_index_in_section": chunks_df["chunk_index_in_section"],
+            "total_chunks_in_section": chunks_df["total_chunks_in_section"],
+            "previous_chunk_id": chunks_df["previous_chunk_id"],
+            "next_chunk_id": chunks_df["next_chunk_id"],
+            "previous_section_chunk_id": chunks_df["previous_section_chunk_id"],
+            "next_section_chunk_id": chunks_df["next_section_chunk_id"],
             "chunk_text_length": chunks_df["chunk_text_length"],
             "paragraph_count": chunks_df["paragraph_count"],
             "chunk_warning": chunks_df["chunk_warning"],
             "ns_section_hint": chunks_df["ns_section_hint"],
+            "structure_confidence": chunks_df["structure_confidence"],
+            "structure_status": chunks_df["structure_status"],
+            "structure_needs_review": chunks_df["structure_needs_review"],
+            "detected_section_order": chunks_df["detected_section_order"],
+            "detected_markers": chunks_df["detected_markers"],
+            "section_source": chunks_df["section_source"],
+            "chunking_strategy": chunks_df["chunking_strategy"],
         }
     )
     return payload_df.reindex(columns=PAYLOAD_FIELDS)
-
-
-def count_missing_values(series: pd.Series, *, treat_empty_string_as_missing: bool) -> int:
-    if treat_empty_string_as_missing:
-        return int(series.map(lambda value: normalize_text(value).strip() == "").sum())
-    return int(series.isna().sum())
 
 
 def distribution_counts(df: pd.DataFrame, column_name: str) -> dict[str, int]:
@@ -182,55 +279,149 @@ def write_jsonl(df: pd.DataFrame, out_path: Path) -> None:
             handle.write("\n")
 
 
-def validate_payload_dataframe(df: pd.DataFrame) -> tuple[str, dict[str, int], list[str], list[str], int, int, int]:
+def validate_document_sequences(df: pd.DataFrame) -> tuple[int, int, int, int, list[str]]:
+    sequence_passed = 0
+    sequence_failed = 0
+    neighbor_passed = 0
+    neighbor_failed = 0
     failures: list[str] = []
-    warnings: list[str] = []
 
-    missing_required_counts: dict[str, int] = {}
-    for field_name in REQUIRED_NONEMPTY_FIELDS:
-        missing_count = count_missing_values(df[field_name], treat_empty_string_as_missing=True)
-        missing_required_counts[field_name] = missing_count
-        if missing_count > 0:
-            failures.append(f"Required payload field `{field_name}` contains missing values.")
+    for document_id, group in df.groupby("document_id", sort=False):
+        sorted_group = group.sort_values("chunk_index").reset_index(drop=True)
+        actual_sequence = sorted_group["chunk_index"].astype(int).tolist()
+        expected_sequence = list(range(len(sorted_group)))
+        total_chunks_values = sorted_group["total_chunks_in_document"].astype(int).unique().tolist()
+        if actual_sequence == expected_sequence and total_chunks_values == [len(sorted_group)]:
+            sequence_passed += 1
+        else:
+            sequence_failed += 1
+            failures.append(f"Document `{document_id}` has invalid chunk_index or total_chunks_in_document metadata.")
 
-    for field_name in ("chunk_index", "chunk_text_length", "paragraph_count"):
-        missing_count = count_missing_values(df[field_name], treat_empty_string_as_missing=False)
-        missing_required_counts[field_name] = missing_count
-        if missing_count > 0:
-            failures.append(f"Required payload field `{field_name}` contains missing values.")
+        links_ok = True
+        for index, row in sorted_group.iterrows():
+            expected_previous = normalize_text(sorted_group.iloc[index - 1]["chunk_id"]) if index > 0 else ""
+            expected_next = normalize_text(sorted_group.iloc[index + 1]["chunk_id"]) if index + 1 < len(sorted_group) else ""
+            actual_previous = normalize_text(row["previous_chunk_id"])
+            actual_next = normalize_text(row["next_chunk_id"])
+            if actual_previous != expected_previous or actual_next != expected_next:
+                links_ok = False
+                failures.append(f"Document `{document_id}` has invalid previous_chunk_id/next_chunk_id links.")
+                break
 
-    for field_name in ("chunk_warning",):
-        missing_required_counts[field_name] = count_missing_values(df[field_name], treat_empty_string_as_missing=False)
+        if links_ok:
+            neighbor_passed += 1
+        else:
+            neighbor_failed += 1
 
-    empty_text_count = count_missing_values(df["text"], treat_empty_string_as_missing=True)
+    return sequence_passed, sequence_failed, neighbor_passed, neighbor_failed, failures
+
+
+def validate_section_sequences(df: pd.DataFrame) -> tuple[int, int, int, int, list[str]]:
+    sequence_passed = 0
+    sequence_failed = 0
+    neighbor_passed = 0
+    neighbor_failed = 0
+    failures: list[str] = []
+
+    for (document_id, section_id), group in df.groupby(["document_id", "section_id"], sort=False):
+        sorted_group = group.sort_values("chunk_index_in_section").reset_index(drop=True)
+        actual_sequence = sorted_group["chunk_index_in_section"].astype(int).tolist()
+        expected_sequence = list(range(len(sorted_group)))
+        total_chunks_values = sorted_group["total_chunks_in_section"].astype(int).unique().tolist()
+        if actual_sequence == expected_sequence and total_chunks_values == [len(sorted_group)]:
+            sequence_passed += 1
+        else:
+            sequence_failed += 1
+            failures.append(
+                f"Section `{section_id}` in document `{document_id}` has invalid chunk_index_in_section or total_chunks_in_section metadata."
+            )
+
+        links_ok = True
+        for index, row in sorted_group.iterrows():
+            expected_previous = normalize_text(sorted_group.iloc[index - 1]["chunk_id"]) if index > 0 else ""
+            expected_next = normalize_text(sorted_group.iloc[index + 1]["chunk_id"]) if index + 1 < len(sorted_group) else ""
+            actual_previous = normalize_text(row["previous_section_chunk_id"])
+            actual_next = normalize_text(row["next_section_chunk_id"])
+            if actual_previous != expected_previous or actual_next != expected_next:
+                links_ok = False
+                failures.append(
+                    f"Section `{section_id}` in document `{document_id}` has invalid previous_section_chunk_id/next_section_chunk_id links."
+                )
+                break
+
+        if links_ok:
+            neighbor_passed += 1
+        else:
+            neighbor_failed += 1
+
+    return sequence_passed, sequence_failed, neighbor_passed, neighbor_failed, failures
+
+
+def validate_payload_dataframe(
+    df: pd.DataFrame,
+) -> tuple[str, dict[str, int], list[str], int, int, int, int, int, int, int, int, int, int]:
+    failures: list[str] = []
+    missing_field_counts: dict[str, int] = {}
+
+    duplicate_point_id_count = int(df["point_id"].duplicated(keep=False).sum()) if not df.empty else 0
+    duplicate_chunk_id_count = int(df["chunk_id"].duplicated(keep=False).sum()) if not df.empty else 0
+    empty_text_count = int(df["text"].map(lambda value: normalize_text(value).strip() == "").sum()) if not df.empty else 0
+
+    if duplicate_point_id_count > 0:
+        failures.append("Duplicate point_id values detected.")
+    if duplicate_chunk_id_count > 0:
+        failures.append("Duplicate chunk_id values detected.")
     if empty_text_count > 0:
         failures.append("One or more payload rows have empty text.")
 
-    duplicate_point_id_count = int(df["point_id"].duplicated(keep=False).sum())
-    if duplicate_point_id_count > 0:
-        failures.append("Duplicate point_id values detected.")
+    required_missing_rows = pd.Series([False] * len(df))
+    for field_name in REQUIRED_NONEMPTY_FIELDS:
+        field_missing = df[field_name].map(is_missing)
+        missing_field_counts[field_name] = int(field_missing.sum())
+        required_missing_rows = required_missing_rows | field_missing
+        if int(field_missing.sum()) > 0:
+            failures.append(f"Required payload field `{field_name}` contains missing values.")
 
-    duplicate_chunk_id_count = int(df["chunk_id"].duplicated(keep=False).sum())
-    if duplicate_chunk_id_count > 0:
-        failures.append("Duplicate chunk_id values detected.")
+    for field_name in NULLABLE_LINK_FIELDS:
+        missing_field_counts[field_name] = int(df[field_name].isna().sum())
 
-    optional_missing_total = 0
-    for field_name in OPTIONAL_METADATA_FIELDS:
-        missing_count = count_missing_values(df[field_name], treat_empty_string_as_missing=True)
-        missing_required_counts[field_name] = missing_count
-        optional_missing_total += missing_count
-    if optional_missing_total > 0:
-        warnings.append("Some optional metadata fields are missing.")
+    for field_name in ("ecli", "decision_date", "publication_date", "document_type", "legal_area", "title", "chunk_warning"):
+        missing_field_counts[field_name] = int(df[field_name].map(is_missing).sum())
 
-    validation_status = "FAIL" if failures else "WARN" if warnings else "PASS"
+    missing_required_metadata_count = int(required_missing_rows.sum())
+
+    invalid_chunking_strategy_count = int(
+        (df["chunking_strategy"].map(normalize_text) != "document_section_aware").sum()
+    ) if not df.empty else 0
+    if invalid_chunking_strategy_count > 0:
+        failures.append("One or more payload rows have invalid chunking_strategy values.")
+
+    document_sequence_passed, document_sequence_failed, document_neighbor_passed, document_neighbor_failed, document_failures = (
+        validate_document_sequences(df)
+    )
+    section_sequence_passed, section_sequence_failed, section_neighbor_passed, section_neighbor_failed, section_failures = (
+        validate_section_sequences(df)
+    )
+    failures.extend(document_failures)
+    failures.extend(section_failures)
+
+    validation_status = "FAIL" if failures else "PASS"
     return (
         validation_status,
-        missing_required_counts,
-        failures,
-        warnings,
+        missing_field_counts,
+        sorted(set(failures)),
         duplicate_point_id_count,
         duplicate_chunk_id_count,
         empty_text_count,
+        missing_required_metadata_count,
+        document_sequence_passed,
+        document_sequence_failed,
+        section_sequence_passed,
+        section_sequence_failed,
+        document_neighbor_passed,
+        document_neighbor_failed,
+        section_neighbor_passed,
+        section_neighbor_failed,
     )
 
 
@@ -243,14 +434,20 @@ def build_validation_report(
     validation_status: str,
     missing_field_counts: dict[str, int],
     failures: list[str],
-    warnings: list[str],
     duplicate_point_id_count: int,
     duplicate_chunk_id_count: int,
     empty_text_count: int,
+    missing_required_metadata_count: int,
+    document_sequence_validation_passed: int,
+    document_sequence_validation_failed: int,
+    section_sequence_validation_passed: int,
+    section_sequence_validation_failed: int,
+    document_neighbor_validation_passed: int,
+    document_neighbor_validation_failed: int,
+    section_neighbor_validation_passed: int,
+    section_neighbor_validation_failed: int,
 ) -> str:
-    status_items = failures + warnings if failures or warnings else ["Payload preview validation passed."]
-    text_lengths = df["chunk_text_length"].tolist() if not df.empty else []
-
+    text_lengths = df["chunk_text_length"].astype(int).tolist() if not df.empty else []
     lines = [
         "# NSoud Qdrant Payload Preview Validation",
         "",
@@ -262,39 +459,46 @@ def build_validation_report(
         f"- Duplicate point_id count: **{duplicate_point_id_count}**",
         f"- Duplicate chunk_id count: **{duplicate_chunk_id_count}**",
         f"- Empty text count: **{empty_text_count}**",
+        f"- Missing required metadata count: **{missing_required_metadata_count}**",
+        f"- Document sequence validation passed/failed: **{document_sequence_validation_passed}/{document_sequence_validation_failed}**",
+        f"- Section sequence validation passed/failed: **{section_sequence_validation_passed}/{section_sequence_validation_failed}**",
+        f"- Document neighbor validation passed/failed: **{document_neighbor_validation_passed}/{document_neighbor_validation_failed}**",
+        f"- Section neighbor validation passed/failed: **{section_neighbor_validation_passed}/{section_neighbor_validation_failed}**",
         "",
         "## Status",
     ]
-    lines.extend(f"- {item}" for item in status_items)
+    if failures:
+        lines.extend(f"- {failure}" for failure in failures)
+    else:
+        lines.append("- Payload preview validation passed.")
+
     lines.extend(
         [
             "",
-            "## Missing Required Field Counts",
+            "## Missing Field Counts",
             "",
             "| Field | Missing Count |",
             "| --- | ---: |",
         ]
     )
     for field_name in PAYLOAD_FIELDS:
-        count = missing_field_counts.get(field_name, 0)
-        lines.append(f"| `{field_name}` | {count} |")
+        lines.append(f"| `{field_name}` | {missing_field_counts.get(field_name, 0)} |")
 
     lines.extend(
         [
             "",
-            "## Chunk Text Lengths",
+            "## Text Lengths",
             f"- min: {min(text_lengths) if text_lengths else 0}",
             f"- max: {max(text_lengths) if text_lengths else 0}",
             f"- avg: {mean(text_lengths):.2f}" if text_lengths else "- avg: 0.00",
             "",
         ]
     )
-    lines.extend(render_distribution_table("Source Distribution", distribution_counts(df, "source")))
-    lines.extend(render_distribution_table("Authority Level Distribution", distribution_counts(df, "authority_level")))
     lines.extend(render_distribution_table("Document Type Distribution", distribution_counts(df, "document_type")))
     lines.extend(render_distribution_table("Legal Area Distribution", distribution_counts(df, "legal_area")))
+    lines.extend(render_distribution_table("Section Type Distribution", distribution_counts(df, "section_type")))
+    lines.extend(render_distribution_table("Structure Status Distribution", distribution_counts(df, "structure_status")))
     lines.extend(render_distribution_table("Chunk Warning Distribution", distribution_counts(df, "chunk_warning")))
-    lines.extend(render_distribution_table("NS Section Hint Distribution", distribution_counts(df, "ns_section_hint")))
     return "\n".join(lines)
 
 
@@ -311,6 +515,41 @@ def main() -> int:
 
     try:
         chunks_df = load_chunks(args.input)
+    except Exception as exc:
+        print("payload preview status: FAIL")
+        print(f"error: {exc}")
+        return 1
+
+    input_errors = validate_input_columns(chunks_df)
+    if input_errors:
+        report = build_validation_report(
+            pd.DataFrame(columns=PAYLOAD_FIELDS),
+            input_path=args.input,
+            output_parquet_path=args.out_parquet,
+            output_jsonl_path=args.out_jsonl,
+            validation_status="FAIL",
+            missing_field_counts={field_name: 0 for field_name in PAYLOAD_FIELDS},
+            failures=input_errors,
+            duplicate_point_id_count=0,
+            duplicate_chunk_id_count=0,
+            empty_text_count=0,
+            missing_required_metadata_count=0,
+            document_sequence_validation_passed=0,
+            document_sequence_validation_failed=0,
+            section_sequence_validation_passed=0,
+            section_sequence_validation_failed=0,
+            document_neighbor_validation_passed=0,
+            document_neighbor_validation_failed=0,
+            section_neighbor_validation_passed=0,
+            section_neighbor_validation_failed=0,
+        )
+        validation_path.write_text(report, encoding="utf-8")
+        print("payload preview status: FAIL")
+        print("error: input chunk parquet is missing required columns.")
+        print(f"validation report path: {validation_path}")
+        return 1
+
+    try:
         payload_df = build_payload_dataframe(chunks_df)
         write_parquet(payload_df, args.out_parquet)
         write_jsonl(payload_df, args.out_jsonl)
@@ -323,11 +562,20 @@ def main() -> int:
         validation_status,
         missing_field_counts,
         failures,
-        warnings,
         duplicate_point_id_count,
         duplicate_chunk_id_count,
         empty_text_count,
+        missing_required_metadata_count,
+        document_sequence_passed,
+        document_sequence_failed,
+        section_sequence_passed,
+        section_sequence_failed,
+        document_neighbor_passed,
+        document_neighbor_failed,
+        section_neighbor_passed,
+        section_neighbor_failed,
     ) = validate_payload_dataframe(payload_df)
+
     report = build_validation_report(
         payload_df,
         input_path=args.input,
@@ -336,10 +584,18 @@ def main() -> int:
         validation_status=validation_status,
         missing_field_counts=missing_field_counts,
         failures=failures,
-        warnings=warnings,
         duplicate_point_id_count=duplicate_point_id_count,
         duplicate_chunk_id_count=duplicate_chunk_id_count,
         empty_text_count=empty_text_count,
+        missing_required_metadata_count=missing_required_metadata_count,
+        document_sequence_validation_passed=document_sequence_passed,
+        document_sequence_validation_failed=document_sequence_failed,
+        section_sequence_validation_passed=section_sequence_passed,
+        section_sequence_validation_failed=section_sequence_failed,
+        document_neighbor_validation_passed=document_neighbor_passed,
+        document_neighbor_validation_failed=document_neighbor_failed,
+        section_neighbor_validation_passed=section_neighbor_passed,
+        section_neighbor_validation_failed=section_neighbor_failed,
     )
     validation_path.write_text(report, encoding="utf-8")
 
@@ -350,19 +606,46 @@ def main() -> int:
         duplicate_point_id_count=duplicate_point_id_count,
         duplicate_chunk_id_count=duplicate_chunk_id_count,
         empty_text_count=empty_text_count,
+        missing_required_metadata_count=missing_required_metadata_count,
+        document_sequence_validation_passed=document_sequence_passed,
+        document_sequence_validation_failed=document_sequence_failed,
+        section_sequence_validation_passed=section_sequence_passed,
+        section_sequence_validation_failed=section_sequence_failed,
+        document_neighbor_validation_passed=document_neighbor_passed,
+        document_neighbor_validation_failed=document_neighbor_failed,
+        section_neighbor_validation_passed=section_neighbor_passed,
+        section_neighbor_validation_failed=section_neighbor_failed,
         output_parquet_path=args.out_parquet,
         output_jsonl_path=args.out_jsonl,
         validation_report_path=validation_path,
     )
     print(f"payload preview status: {summary.payload_preview_status}")
+    print(f"validation status: {summary.validation_status}")
     print(f"total rows: {summary.total_rows}")
     print(f"duplicate point_id count: {summary.duplicate_point_id_count}")
     print(f"duplicate chunk_id count: {summary.duplicate_chunk_id_count}")
     print(f"empty text count: {summary.empty_text_count}")
+    print(f"missing required metadata count: {summary.missing_required_metadata_count}")
+    print(
+        "document sequence validation passed/failed: "
+        f"{summary.document_sequence_validation_passed}/{summary.document_sequence_validation_failed}"
+    )
+    print(
+        "section sequence validation passed/failed: "
+        f"{summary.section_sequence_validation_passed}/{summary.section_sequence_validation_failed}"
+    )
+    print(
+        "document neighbor validation passed/failed: "
+        f"{summary.document_neighbor_validation_passed}/{summary.document_neighbor_validation_failed}"
+    )
+    print(
+        "section neighbor validation passed/failed: "
+        f"{summary.section_neighbor_validation_passed}/{summary.section_neighbor_validation_failed}"
+    )
     print(f"output parquet path: {summary.output_parquet_path}")
     print(f"output jsonl path: {summary.output_jsonl_path}")
     print(f"validation report path: {summary.validation_report_path}")
-    print(f"validation status: {summary.validation_status}")
+    print("changed files: app/nsoud/build_qdrant_payload_preview.py")
     return 1 if summary.validation_status == "FAIL" else 0
 
 

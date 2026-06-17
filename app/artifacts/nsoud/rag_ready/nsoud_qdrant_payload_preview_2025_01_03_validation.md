@@ -1,18 +1,23 @@
 # NSoud Qdrant Payload Preview Validation
 
-- Input: `app\artifacts\nsoud\rag_ready\nsoud_chunks_2025_01_03.parquet`
-- Output Parquet: `app\artifacts\nsoud\rag_ready\nsoud_qdrant_payload_preview_2025_01_03.parquet`
-- Output JSONL: `app\artifacts\nsoud\rag_ready\nsoud_qdrant_payload_preview_2025_01_03.jsonl`
-- Validation status: **WARN**
-- Total payload rows: **1785**
+- Input: `app/artifacts/nsoud/rag_ready/nsoud_chunks_2025_01_03.parquet`
+- Output Parquet: `app/artifacts/nsoud/rag_ready/nsoud_qdrant_payload_preview_2025_01_03.parquet`
+- Output JSONL: `app/artifacts/nsoud/rag_ready/nsoud_qdrant_payload_preview_2025_01_03.jsonl`
+- Validation status: **PASS**
+- Total payload rows: **1862**
 - Duplicate point_id count: **0**
 - Duplicate chunk_id count: **0**
 - Empty text count: **0**
+- Missing required metadata count: **0**
+- Document sequence validation passed/failed: **150/0**
+- Section sequence validation passed/failed: **729/0**
+- Document neighbor validation passed/failed: **150/0**
+- Section neighbor validation passed/failed: **729/0**
 
 ## Status
-- Some optional metadata fields are missing.
+- Payload preview validation passed.
 
-## Missing Required Field Counts
+## Missing Field Counts
 
 | Field | Missing Count |
 | --- | ---: |
@@ -27,7 +32,7 @@
 | `decision_date` | 0 |
 | `publication_date` | 0 |
 | `document_type` | 0 |
-| `legal_area` | 13 |
+| `legal_area` | 15 |
 | `title` | 0 |
 | `url` | 0 |
 | `source_attribution` | 0 |
@@ -35,57 +40,68 @@
 | `document_id` | 0 |
 | `chunk_id` | 0 |
 | `chunk_index` | 0 |
+| `total_chunks_in_document` | 0 |
+| `section_id` | 0 |
+| `section_type` | 0 |
+| `section_index` | 0 |
+| `chunk_index_in_section` | 0 |
+| `total_chunks_in_section` | 0 |
+| `previous_chunk_id` | 150 |
+| `next_chunk_id` | 150 |
+| `previous_section_chunk_id` | 729 |
+| `next_section_chunk_id` | 729 |
 | `chunk_text_length` | 0 |
 | `paragraph_count` | 0 |
-| `chunk_warning` | 0 |
+| `chunk_warning` | 1849 |
 | `ns_section_hint` | 0 |
+| `structure_confidence` | 0 |
+| `structure_status` | 0 |
+| `structure_needs_review` | 0 |
+| `detected_section_order` | 0 |
+| `detected_markers` | 0 |
+| `section_source` | 0 |
+| `chunking_strategy` | 0 |
 
-## Chunk Text Lengths
-- min: 13
-- max: 8154
-- avg: 1442.95
-
-## Source Distribution
-
-| Value | Count |
-| --- | ---: |
-| nsoud | 1785 |
-
-## Authority Level Distribution
-
-| Value | Count |
-| --- | ---: |
-| supreme | 1785 |
+## Text Lengths
+- min: 25
+- max: 8155
+- avg: 1384.16
 
 ## Document Type Distribution
 
 | Value | Count |
 | --- | ---: |
-| USNESENÍ | 1592 |
-| ROZSUDEK | 193 |
+| USNESENÍ | 1664 |
+| ROZSUDEK | 198 |
 
 ## Legal Area Distribution
 
 | Value | Count |
 | --- | ---: |
-| civil | 932 |
-| criminal | 840 |
-| <missing> | 13 |
+| civil | 981 |
+| criminal | 866 |
+| <missing> | 15 |
+
+## Section Type Distribution
+
+| Value | Count |
+| --- | ---: |
+| reasoning | 1194 |
+| signature | 192 |
+| operative_part | 165 |
+| appeal_instruction | 161 |
+| header | 150 |
+
+## Structure Status Distribution
+
+| Value | Count |
+| --- | ---: |
+| strong | 1696 |
+| medium | 166 |
 
 ## Chunk Warning Distribution
 
 | Value | Count |
 | --- | ---: |
-| <missing> | 1771 |
-| overlong_ns_paragraph | 14 |
-
-## NS Section Hint Distribution
-
-| Value | Count |
-| --- | ---: |
-| oduvodneni | 1162 |
-| closing | 150 |
-| pouceni | 146 |
-| header | 142 |
-| vyrok | 126 |
-| unknown | 59 |
+| <missing> | 1849 |
+| overlong_ns_paragraph | 13 |
