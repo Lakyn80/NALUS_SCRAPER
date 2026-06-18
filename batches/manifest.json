@@ -3,13 +3,317 @@
   "description": "Tracking ingestovaných batchů do Qdrant kolekce 'nalus'",
   "batches": [
     {
+      "file": "batch_03_pages601_1600.json",
+      "doc_count": 1710,
+      "chunk_count": 20531,
+      "ingested_at": "2026-03-28T21:48:08"
+    },
+    {
       "file": "results_rodinne_pravo_1000.json",
-      "added_at": "2026-03-26T02:26:00",
-      "query": "rodinné právo",
-      "pages": "1-600",
       "doc_count": 5000,
       "chunk_count": 66803,
-      "ingested_at": "2026-03-26T14:56:37"
+      "ingested_at": "2026-03-28T21:48:51"
+    },
+    {
+      "file": "all_stezovatel_chunk0001_p1-100.json",
+      "query": "stěžovatel",
+      "start_page": 1,
+      "end_page": 100,
+      "doc_count": 1000,
+      "saved_at": "2026-03-28T23:26:43"
+    },
+    {
+      "file": "all_stezovatel_chunk0002_p101-161.json",
+      "query": "stěžovatel",
+      "start_page": 101,
+      "end_page": 161,
+      "doc_count": 600,
+      "saved_at": "2026-03-29T00:11:09"
+    },
+    {
+      "file": "all_stezovatel_chunk0003_p162-168.json",
+      "query": "stěžovatel",
+      "start_page": 162,
+      "end_page": 168,
+      "doc_count": 70,
+      "saved_at": "2026-03-29T00:26:21"
+    },
+    {
+      "file": "all_stezovatel_chunk0004_p169-171_20260329_005020.json",
+      "query": "stěžovatel",
+      "start_page": 169,
+      "end_page": 171,
+      "doc_count": 30,
+      "saved_at": "2026-03-29T00:50:20"
+    },
+    {
+      "file": "all_stezovatel_chunk0005_p172-173_20260329_010158.json",
+      "query": "stěžovatel",
+      "start_page": 172,
+      "end_page": 173,
+      "doc_count": 20,
+      "saved_at": "2026-03-29T01:01:58"
+    },
+    {
+      "file": "all_stezovatel_chunk0006_p174-178_20260329_011713.json",
+      "query": "stěžovatel",
+      "start_page": 174,
+      "end_page": 178,
+      "doc_count": 50,
+      "saved_at": "2026-03-29T01:17:13"
+    },
+    {
+      "file": "all_stezovatel_chunk0007_p179-189_20260329_013218.json",
+      "query": "stěžovatel",
+      "start_page": 179,
+      "end_page": 189,
+      "doc_count": 110,
+      "saved_at": "2026-03-29T01:32:18"
+    },
+    {
+      "file": "year_1993_20260329_020630.json",
+      "year": 1993,
+      "doc_count": 222,
+      "complete": true,
+      "saved_at": "2026-03-29T02:06:30"
+    },
+    {
+      "file": "year_1994_20260329_024806.json",
+      "year": 1994,
+      "doc_count": 615,
+      "complete": true,
+      "saved_at": "2026-03-29T02:48:06"
+    },
+    {
+      "file": "year_1995_20260329_031714.json",
+      "year": 1995,
+      "doc_count": 751,
+      "complete": true,
+      "saved_at": "2026-03-29T03:17:15"
+    },
+    {
+      "file": "year_1996_20260329_034744.json",
+      "year": 1996,
+      "doc_count": 999,
+      "complete": true,
+      "saved_at": "2026-03-29T03:47:44"
+    },
+    {
+      "file": "year_1997_20260329_042834.json",
+      "year": 1997,
+      "doc_count": 1319,
+      "complete": true,
+      "saved_at": "2026-03-29T04:28:34"
+    },
+    {
+      "file": "year_1998_20260329_051645.json",
+      "year": 1998,
+      "doc_count": 1571,
+      "complete": true,
+      "saved_at": "2026-03-29T05:16:45"
+    },
+    {
+      "file": "year_1999_20260329_061900.json",
+      "year": 1999,
+      "doc_count": 2016,
+      "complete": true,
+      "saved_at": "2026-03-29T06:19:00"
+    },
+    {
+      "file": "year_2000_20260329_075649.json",
+      "year": 2000,
+      "doc_count": 2500,
+      "complete": true,
+      "saved_at": "2026-03-29T07:56:50"
+    },
+    {
+      "file": "year_2001_20260329_095634.json",
+      "year": 2001,
+      "doc_count": 2730,
+      "complete": true,
+      "saved_at": "2026-03-29T09:56:34"
+    },
+    {
+      "file": "year_2002_20260329_114925.json",
+      "year": 2002,
+      "doc_count": 2601,
+      "complete": true,
+      "saved_at": "2026-03-29T11:49:26"
+    },
+    {
+      "file": "year_2003_20260329_192036.json",
+      "year": 2003,
+      "doc_count": 2393,
+      "complete": true,
+      "saved_at": "2026-03-29T19:20:37"
+    },
+    {
+      "file": "year_2004_20260329_211329.json",
+      "year": 2004,
+      "doc_count": 2427,
+      "complete": true,
+      "saved_at": "2026-03-29T21:13:30"
+    },
+    {
+      "file": "year_2005_20260329_230202.json",
+      "year": 2005,
+      "doc_count": 2519,
+      "complete": true,
+      "saved_at": "2026-03-29T23:02:03"
+    },
+    {
+      "file": "year_2006_20260330_021720.json",
+      "year": 2006,
+      "doc_count": 3094,
+      "complete": true,
+      "saved_at": "2026-03-30T02:17:22"
+    },
+    {
+      "file": "year_2007_20260330_043912.json",
+      "year": 2007,
+      "doc_count": 3244,
+      "complete": true,
+      "saved_at": "2026-03-30T04:39:13"
+    },
+    {
+      "file": "year_2008_20260330_085545.json",
+      "year": 2008,
+      "doc_count": 3268,
+      "complete": true,
+      "saved_at": "2026-03-30T08:55:47"
+    },
+    {
+      "file": "year_2009_20260330_115625.json",
+      "year": 2009,
+      "doc_count": 3277,
+      "complete": true,
+      "saved_at": "2026-03-30T11:56:26"
+    },
+    {
+      "file": "year_2010_20260330_152920.json",
+      "year": 2010,
+      "doc_count": 3542,
+      "complete": true,
+      "saved_at": "2026-03-30T15:29:22"
+    },
+    {
+      "file": "year_2011_20260330_184312.json",
+      "year": 2011,
+      "doc_count": 3520,
+      "complete": true,
+      "saved_at": "2026-03-30T18:43:13"
+    },
+    {
+      "file": "year_2012_20260331_094628.json",
+      "year": 2012,
+      "doc_count": 4365,
+      "complete": true,
+      "saved_at": "2026-03-31T09:46:30"
+    },
+    {
+      "file": "year_2013_20260331_130441.json",
+      "year": 2013,
+      "doc_count": 4149,
+      "complete": true,
+      "saved_at": "2026-03-31T13:04:42"
+    },
+    {
+      "file": "year_2014_20260331_172612.json",
+      "year": 2014,
+      "doc_count": 4126,
+      "complete": true,
+      "saved_at": "2026-03-31T17:26:15"
+    },
+    {
+      "file": "year_2015_20260331_210802.json",
+      "year": 2015,
+      "doc_count": 3493,
+      "complete": true,
+      "saved_at": "2026-03-31T21:08:04"
+    },
+    {
+      "file": "year_2016_20260401_020830.json",
+      "year": 2016,
+      "doc_count": 3894,
+      "complete": true,
+      "saved_at": "2026-04-01T02:08:32"
+    },
+    {
+      "file": "year_2017_20260401_232711.json",
+      "year": 2017,
+      "doc_count": 3875,
+      "complete": true,
+      "saved_at": "2026-04-01T23:27:12"
+    },
+    {
+      "file": "year_2018_20260402_134155.json",
+      "year": 2018,
+      "doc_count": 3946,
+      "complete": true,
+      "saved_at": "2026-04-02T13:41:57"
+    },
+    {
+      "file": "year_2019_20260402_182956.json",
+      "year": 2019,
+      "doc_count": 4239,
+      "complete": true,
+      "saved_at": "2026-04-02T18:29:58"
+    },
+    {
+      "file": "year_2020_20260402_224109.json",
+      "year": 2020,
+      "doc_count": 3695,
+      "complete": true,
+      "saved_at": "2026-04-02T22:41:11"
+    },
+    {
+      "file": "year_2021_20260403_031328.json",
+      "year": 2021,
+      "doc_count": 3143,
+      "complete": true,
+      "saved_at": "2026-04-03T03:13:29"
+    },
+    {
+      "file": "year_2022_20260403_061420.json",
+      "year": 2022,
+      "doc_count": 3144,
+      "complete": true,
+      "saved_at": "2026-04-03T06:14:21"
+    },
+    {
+      "file": "year_2023_20260403_090050.json",
+      "year": 2023,
+      "doc_count": 2945,
+      "complete": true,
+      "saved_at": "2026-04-03T09:00:52"
+    },
+    {
+      "file": "year_2024_20260403_170521.json",
+      "year": 2024,
+      "doc_count": 3514,
+      "complete": true,
+      "saved_at": "2026-04-03T17:05:22"
+    },
+    {
+      "file": "year_2025_20260403_185642.json",
+      "year": 2025,
+      "doc_count": 2588,
+      "complete": true,
+      "saved_at": "2026-04-03T18:56:43"
+    },
+    {
+      "file": "year_2026_20260403_191318.json",
+      "year": 2026,
+      "doc_count": 245,
+      "complete": true,
+      "saved_at": "2026-04-03T19:13:18"
+    }
+  ],
+  "progress": [
+    {
+      "query": "stěžovatel",
+      "end_page": 189,
+      "saved_at": "2026-03-29T01:37:36"
     }
   ]
 }

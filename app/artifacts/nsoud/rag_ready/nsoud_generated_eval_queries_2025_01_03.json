@@ -1,0 +1,336 @@
+{
+  "status": "PASS",
+  "created_at": "2026-06-15T19:55:14.150784+00:00",
+  "input_documents": "app\\artifacts\\nsoud\\rag_ready\\nsoud_documents_2025_01_03.parquet",
+  "input_chunks": "app\\artifacts\\nsoud\\rag_ready\\nsoud_chunks_2025_01_03.parquet",
+  "total_documents": 150,
+  "total_chunks": 1785,
+  "queries": [
+    {
+      "query": "přípustnost dovolání podle § 237 o. s. ř.",
+      "reason": "Extracted from 117 chunks across 76 documents; dominant context is civil / USNESENÍ.",
+      "expected_legal_area": "civil",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "Přípustnost dovolání",
+        "přípustnost dovolání",
+        "Přípustnost dovolání podle § 237 o. s. ř.",
+        "přípustnost dovolání podle § 237 o. s. ř."
+      ],
+      "source_case_numbers": [
+        "3 Tdo 19/2025",
+        "3 Tdo 53/2025",
+        "3 Tdo 650/2024",
+        "3 Tdo 984/2024",
+        "3 Tdo 1120/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:3.TDO.650.2024.1__chunk_0016",
+        "ECLI:CZ:NS:2024:3.TDO.984.2024.1__chunk_0012",
+        "ECLI:CZ:NS:2024:4.TDO.1044.2024.1__chunk_0010",
+        "ECLI:CZ:NS:2024:6.TDO.827.2024.1__chunk_0014",
+        "ECLI:CZ:NS:2024:6.TDO.936.2024.1__chunk_0007"
+      ]
+    },
+    {
+      "query": "náhradě nákladů dovolacího řízení",
+      "reason": "Extracted from 81 chunks across 61 documents; dominant context is civil / USNESENÍ.",
+      "expected_legal_area": "civil",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "náhradě nákladů dovolacího řízení"
+      ],
+      "source_case_numbers": [
+        "20 Cdo 13/2025",
+        "20 Cdo 15/2025",
+        "20 Cdo 875/2024",
+        "20 Cdo 2839/2024",
+        "20 Cdo 3061/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:20.CDO.2839.2024.1__chunk_0004",
+        "ECLI:CZ:NS:2024:20.CDO.3061.2024.1__chunk_0001",
+        "ECLI:CZ:NS:2024:20.CDO.3061.2024.1__chunk_0006",
+        "ECLI:CZ:NS:2024:21.CDO.2178.2024.1__chunk_0001",
+        "ECLI:CZ:NS:2024:21.CDO.2178.2024.1__chunk_0005"
+      ]
+    },
+    {
+      "query": "zjevně neopodstatněné dovolání",
+      "reason": "Extracted from 58 chunks across 29 documents; dominant context is criminal / USNESENÍ.",
+      "expected_legal_area": "criminal",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "dovolání",
+        "zjevně neopodstatněné"
+      ],
+      "source_case_numbers": [
+        "3 Tdo 19/2025",
+        "3 Tdo 53/2025",
+        "3 Tdo 650/2024",
+        "3 Tdo 980/2024",
+        "3 Tdo 984/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:3.TDO.650.2024.1__chunk_0014",
+        "ECLI:CZ:NS:2024:3.TDO.650.2024.1__chunk_0015",
+        "ECLI:CZ:NS:2024:3.TDO.650.2024.1__chunk_0030",
+        "ECLI:CZ:NS:2024:3.TDO.980.2024.1__chunk_0011",
+        "ECLI:CZ:NS:2024:3.TDO.980.2024.1__chunk_0012"
+      ]
+    },
+    {
+      "query": "odmítnutí dovolání",
+      "reason": "Extracted from 27 chunks across 26 documents; dominant context is criminal / USNESENÍ.",
+      "expected_legal_area": "criminal",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "Odmítnutí dovolání",
+        "odmítnutí dovolání"
+      ],
+      "source_case_numbers": [
+        "3 Tdo 19/2025",
+        "3 Tdo 53/2025",
+        "3 Tdo 650/2024",
+        "3 Tdo 980/2024",
+        "3 Tdo 984/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:3.TDO.650.2024.1__chunk_0030",
+        "ECLI:CZ:NS:2024:3.TDO.980.2024.1__chunk_0012",
+        "ECLI:CZ:NS:2024:3.TDO.984.2024.1__chunk_0020",
+        "ECLI:CZ:NS:2024:4.TDO.1044.2024.1__chunk_0028",
+        "ECLI:CZ:NS:2024:5.TDO.318.2024.1__chunk_0018"
+      ]
+    },
+    {
+      "query": "zastavení exekuce",
+      "reason": "Extracted from 16 chunks across 7 documents; dominant context is civil / USNESENÍ.",
+      "expected_legal_area": "civil",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "zastavení exekuce"
+      ],
+      "source_case_numbers": [
+        "20 Cdo 30/2025",
+        "20 Cdo 2831/2024",
+        "20 Cdo 3450/2024",
+        "21 Cdo 1566/2024",
+        "21 Cdo 2658/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:26.CDO.125.2024.1__chunk_0001",
+        "ECLI:CZ:NS:2024:26.CDO.125.2024.1__chunk_0003",
+        "ECLI:CZ:NS:2025:20.CDO.30.2025.1__chunk_0000",
+        "ECLI:CZ:NS:2025:20.CDO.2831.2024.1__chunk_0005",
+        "ECLI:CZ:NS:2025:20.CDO.2831.2024.1__chunk_0006"
+      ]
+    },
+    {
+      "query": "místní příslušnosti chybějí nebo je nelze zjistit",
+      "reason": "Extracted from 16 chunks across 16 documents; dominant context is civil / USNESENÍ.",
+      "expected_legal_area": "civil",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "místní příslušnosti chybějí nebo je nelze zjistit"
+      ],
+      "source_case_numbers": [
+        "20 Nd 18/2025",
+        "20 Nd 65/2025",
+        "20 Nd 67/2025",
+        "21 Nd 69/2025",
+        "21 Nd 514/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:21.ND.514.2024.1__chunk_0002",
+        "ECLI:CZ:NS:2024:22.ND.435.2024.1__chunk_0002",
+        "ECLI:CZ:NS:2024:29.ND.461.2024.1__chunk_0001",
+        "ECLI:CZ:NS:2025:20.ND.18.2025.1__chunk_0001",
+        "ECLI:CZ:NS:2025:20.ND.65.2025.1__chunk_0002"
+      ]
+    },
+    {
+      "query": "rodinný dům",
+      "reason": "Extracted from 5 chunks across 5 documents; dominant context is civil / USNESENÍ.",
+      "expected_legal_area": "civil",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "rodinný dům"
+      ],
+      "source_case_numbers": [
+        "22 Cdo 108/2025",
+        "23 Cdo 434/2024",
+        "23 Cdo 3170/2024",
+        "26 Cdo 2404/2024",
+        "30 Cdo 308/2025"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:23.CDO.434.2024.1__chunk_0002",
+        "ECLI:CZ:NS:2024:23.CDO.3170.2024.1__chunk_0002",
+        "ECLI:CZ:NS:2024:26.CDO.2404.2024.1__chunk_0003",
+        "ECLI:CZ:NS:2025:22.CDO.108.2025.1__chunk_0002",
+        "ECLI:CZ:NS:2025:30.CDO.308.2025.1__chunk_0002"
+      ]
+    },
+    {
+      "query": "nutná obrana vzájemné napadání",
+      "reason": "Extracted from 1 chunks across 1 documents; dominant context is criminal / USNESENÍ.",
+      "expected_legal_area": "criminal",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "nutná obrana v úvahu v případech vzájemného napadání"
+      ],
+      "source_case_numbers": [
+        "11 Tdo 679/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:11.TDO.679.2024.1__chunk_0009"
+      ]
+    },
+    {
+      "query": "právo bydlení",
+      "reason": "Extracted from 5 chunks across 1 documents; dominant context is civil / ROZSUDEK.",
+      "expected_legal_area": "civil",
+      "expected_document_type": "ROZSUDEK",
+      "source_terms": [
+        "Právo bydlení",
+        "právo bydlení"
+      ],
+      "source_case_numbers": [
+        "26 Cdo 439/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:26.CDO.439.2024.1__chunk_0004",
+        "ECLI:CZ:NS:2024:26.CDO.439.2024.1__chunk_0007",
+        "ECLI:CZ:NS:2024:26.CDO.439.2024.1__chunk_0009",
+        "ECLI:CZ:NS:2024:26.CDO.439.2024.1__chunk_0010",
+        "ECLI:CZ:NS:2024:26.CDO.439.2024.1__chunk_0011"
+      ]
+    },
+    {
+      "query": "bezdůvodné obohacení za užívání bytu",
+      "reason": "Extracted from 1 chunks across 1 documents; dominant context is civil / ROZSUDEK.",
+      "expected_legal_area": "civil",
+      "expected_document_type": "ROZSUDEK",
+      "source_terms": [
+        "bezdůvodné obohacení užívání bytu",
+        "bezdůvodné obohacení za užívání bytu"
+      ],
+      "source_case_numbers": [
+        "26 Cdo 439/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:26.CDO.439.2024.1__chunk_0004"
+      ]
+    },
+    {
+      "query": "trest odnětí svobody",
+      "reason": "Extracted from 34 chunks across 18 documents; dominant context is criminal / USNESENÍ.",
+      "expected_legal_area": "criminal",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "Trest odnětí svobody",
+        "trest odnětí svobody"
+      ],
+      "source_case_numbers": [
+        "3 Tdo 53/2025",
+        "3 Tdo 984/2024",
+        "3 Tdo 1120/2024",
+        "4 Tdo 1044/2024",
+        "4 Tdo 1056/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:3.TDO.984.2024.1__chunk_0005",
+        "ECLI:CZ:NS:2024:3.TDO.984.2024.1__chunk_0008",
+        "ECLI:CZ:NS:2024:3.TDO.984.2024.1__chunk_0012",
+        "ECLI:CZ:NS:2024:3.TDO.984.2024.1__chunk_0019",
+        "ECLI:CZ:NS:2024:4.TDO.1044.2024.1__chunk_0001"
+      ]
+    },
+    {
+      "query": "dovolací důvod podle § 265b odst. 1 písm. g)",
+      "reason": "Extracted from 54 chunks across 24 documents; dominant context is criminal / USNESENÍ.",
+      "expected_legal_area": "criminal",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "dovolací důvod podle § 265b odst. 1 písm. g)",
+        "Dovolací důvod podle § 265b odst. 1 písm. g)"
+      ],
+      "source_case_numbers": [
+        "3 Tdo 19/2025",
+        "3 Tdo 53/2025",
+        "3 Tdo 650/2024",
+        "3 Tdo 980/2024",
+        "3 Tdo 984/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:3.TDO.650.2024.1__chunk_0017",
+        "ECLI:CZ:NS:2024:3.TDO.980.2024.1__chunk_0012",
+        "ECLI:CZ:NS:2024:3.TDO.980.2024.1__chunk_0020",
+        "ECLI:CZ:NS:2024:3.TDO.980.2024.1__chunk_0022",
+        "ECLI:CZ:NS:2024:3.TDO.980.2024.1__chunk_0023"
+      ]
+    },
+    {
+      "query": "určení místní příslušnosti",
+      "reason": "Extracted from 30 chunks across 17 documents; dominant context is civil / USNESENÍ.",
+      "expected_legal_area": "civil",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "určení místní příslušnosti"
+      ],
+      "source_case_numbers": [
+        "7 Td 6/2025",
+        "20 Nd 18/2025",
+        "20 Nd 65/2025",
+        "20 Nd 67/2025",
+        "21 Nd 69/2025"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:21.ND.514.2024.1__chunk_0000",
+        "ECLI:CZ:NS:2024:21.ND.514.2024.1__chunk_0002",
+        "ECLI:CZ:NS:2024:22.ND.435.2024.1__chunk_0000",
+        "ECLI:CZ:NS:2024:22.ND.435.2024.1__chunk_0002",
+        "ECLI:CZ:NS:2024:29.ND.461.2024.1__chunk_0000"
+      ]
+    },
+    {
+      "query": "pověření a nařízení exekuce",
+      "reason": "Extracted from 17 chunks across 11 documents; dominant context is civil / USNESENÍ.",
+      "expected_legal_area": "civil",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "pověření a nařízení exekuce"
+      ],
+      "source_case_numbers": [
+        "20 Nd 65/2025",
+        "21 Nd 69/2025",
+        "21 Nd 514/2024",
+        "22 Nd 435/2024",
+        "24 Nd 34/2025"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:21.ND.514.2024.1__chunk_0001",
+        "ECLI:CZ:NS:2024:21.ND.514.2024.1__chunk_0002",
+        "ECLI:CZ:NS:2024:22.ND.435.2024.1__chunk_0001",
+        "ECLI:CZ:NS:2024:29.ND.461.2024.1__chunk_0001",
+        "ECLI:CZ:NS:2025:20.ND.65.2025.1__chunk_0001"
+      ]
+    },
+    {
+      "query": "odpovědnosti za vady jako slevy z kupní ceny",
+      "reason": "Extracted from 1 chunks across 1 documents; dominant context is civil / USNESENÍ.",
+      "expected_legal_area": "civil",
+      "expected_document_type": "USNESENÍ",
+      "source_terms": [
+        "odpovědnosti za vady jako slevy z kupní ceny"
+      ],
+      "source_case_numbers": [
+        "23 Cdo 3170/2024"
+      ],
+      "source_chunk_ids": [
+        "ECLI:CZ:NS:2024:23.CDO.3170.2024.1__chunk_0002"
+      ]
+    }
+  ]
+}

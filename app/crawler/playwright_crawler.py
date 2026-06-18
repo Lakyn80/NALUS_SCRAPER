@@ -1,20 +1,27 @@
 import html
+import os
 import re
 import time
 
 import requests
+import urllib3
 
 BASE_URL = "https://nalus.usoud.cz"
 SEARCH_URL = "https://nalus.usoud.cz/Search/Search.aspx"
 RESULTS_URL = "https://nalus.usoud.cz/Search/Results.aspx"
 RESULTS_URL_SUFFIX = "/Search/Results.aspx"
-REQUEST_TIMEOUT_SECONDS = 15
+REQUEST_TIMEOUT_SECONDS = 30
 REQUEST_MAX_RETRIES = 3
 
 _HIDDEN_INPUT_RE = re.compile(
     r'<input[^>]+type=["\']hidden["\'][^>]+name=["\'](?P<name>[^"\']+)["\'][^>]+value=["\'](?P<value>.*?)["\']',
     re.IGNORECASE | re.DOTALL,
 )
+
+
+def _ssl_verify_enabled() -> bool:
+    value = os.getenv("NALUS_SSL_VERIFY", "true").strip().lower()
+    return value not in {"0", "false", "no", "off"}
 
 
 def _extract_hidden_fields(html_text: str) -> dict[str, str]:
@@ -55,7 +62,12 @@ def _safe_request(request_callable, url: str, max_retries: int = REQUEST_MAX_RET
     return None
 
 
-def _run_search(session: requests.Session, query: str) -> requests.Response:
+def _run_search(
+    session: requests.Session,
+    query: str,
+    decided_from: str | None = None,
+    decided_to: str | None = None,
+) -> requests.Response:
     headers = _default_headers()
     search_response = _safe_request(session.get, SEARCH_URL, headers=headers)
     if search_response is None:
@@ -76,6 +88,10 @@ def _run_search(session: requests.Session, query: str) -> requests.Response:
         "ctl00$MainContent$text": query,
         "ctl00$MainContent$but_search": "Vyhledat",
     }
+    if decided_from:
+        payload["ctl00$MainContent$decidedFrom"] = decided_from
+    if decided_to:
+        payload["ctl00$MainContent$decidedTo"] = decided_to
 
     result_response = _safe_request(
         session.post,
@@ -102,12 +118,20 @@ def _run_search(session: requests.Session, query: str) -> requests.Response:
     return result_response
 
 
-def fetch_page_html(query: str = "rodinné právo", page: int = 0) -> str:
+def fetch_page_html(
+    query: str = "rodinné právo",
+    page: int = 0,
+    decided_from: str | None = None,
+    decided_to: str | None = None,
+) -> str:
     if page < 0:
         raise ValueError("Page index must be zero or greater.")
 
     session = requests.Session()
-    result_response = _run_search(session, query)
+    session.verify = _ssl_verify_enabled()
+    if not session.verify:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    result_response = _run_search(session, query, decided_from=decided_from, decided_to=decided_to)
     if page == 0:
         return result_response.text
 

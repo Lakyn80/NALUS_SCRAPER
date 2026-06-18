@@ -1,6 +1,9 @@
 __pycache__/
 *.pyc
 *.pyo
+.codex_tmp/
+.tmp/
+checkpoint.json
 .env
 *.egg-info/
 dist/

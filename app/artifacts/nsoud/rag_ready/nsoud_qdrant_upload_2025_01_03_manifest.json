@@ -1,0 +1,14 @@
+{
+  "collection_name": "nsoud_chunks_test_2025_01_03",
+  "qdrant_url": "http://qdrant:6333",
+  "vector_size": 768,
+  "distance": "Cosine",
+  "input_path": "app/artifacts/nsoud/rag_ready/nsoud_embeddings_2025_01_03.parquet",
+  "total_input_rows": 1785,
+  "total_uploaded_points": 0,
+  "batch_size": 128,
+  "recreated_collection": false,
+  "started_at": "2026-06-08T17:31:30.672590+00:00",
+  "finished_at": "2026-06-08T17:31:32.958380+00:00",
+  "status": "PASS"
+}

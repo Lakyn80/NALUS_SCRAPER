@@ -12,7 +12,7 @@ from app.rag.chunking.chunker import TextChunk, chunk_document
 from app.rag.retrieval.keyword_retriever import CorpusEntry
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_RESULTS_PATH = "results_rodinne_pravo_1000.json"
+DEFAULT_RESULTS_PATH = "batches/results_rodinne_pravo_1000.json"
 DEFAULT_CHUNK_SIZE = 1500
 DEFAULT_CHUNK_OVERLAP = 200
 
