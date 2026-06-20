@@ -1,0 +1,1847 @@
+{
+  "status": "PASS",
+  "collection_name": "nsoud_chunks_section_aware_test_2025_01_03",
+  "point_count": 1862,
+  "vector_size": 768,
+  "weak_query_count": 4,
+  "queries_with_exact_matches": [
+    "náhrada nákladů dovolacího řízení",
+    "zjevně neopodstatněné dovolání",
+    "odmítnutí dovolání",
+    "rodinný dům"
+  ],
+  "semantic_missed_exact_queries": [
+    "zjevně neopodstatněné dovolání",
+    "odmítnutí dovolání"
+  ],
+  "hybrid_retrieval_queries": [],
+  "old_collection_count_before": 1785,
+  "old_collection_count_after": 1785,
+  "markdown_path": "/app/app/artifacts/nsoud/qdrant/nsoud_chunks_section_aware_test_2025_01_03/weak_relevance_diagnostics.md",
+  "json_path": "/app/app/artifacts/nsoud/qdrant/nsoud_chunks_section_aware_test_2025_01_03/weak_relevance_diagnostics.json",
+  "diagnoses": [
+    {
+      "query": "náhrada nákladů dovolacího řízení",
+      "exact_match_exists": true,
+      "exact_match_count": 1228,
+      "phrase_match_count": 0,
+      "semantic_top_10_count": 10,
+      "semantic_top_10_exact_overlap_count": 1,
+      "semantic_missed_exact_matches": false,
+      "likely_failure_reason": "query_too_generic",
+      "recommendation": "rewrite query",
+      "notes": [
+        "The query terms are broad and match many chunks exactly, which weakens diagnostic precision."
+      ],
+      "semantic_results": [
+        {
+          "rank": 1,
+          "score": 0.77044386,
+          "chunk_id": "ECLI:CZ:NS:2025:28.CDO.3321.2024.1__chunk_0008",
+          "document_id": "ECLI:CZ:NS:2025:28.CDO.3321.2024.1",
+          "case_number": "28 Cdo 3321/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "8",
+          "total_chunks_in_document": "11",
+          "text_preview": "12. 2024 (dále „advokátní tarif“), a náhrady paušálně určených hotových výdajů za jeden úkon právní služby ve výši 300 Kč – § 11 odst. 1 písm. k) a § 13 odst. 4 advokátního tarifu. Protože zástupce dalšího účastníka říze...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "řízení"
+          ]
+        },
+        {
+          "rank": 2,
+          "score": 0.76961744,
+          "chunk_id": "ECLI:CZ:NS:2025:29.CDO.275.2024.1__chunk_0004",
+          "document_id": "ECLI:CZ:NS:2025:29.CDO.275.2024.1",
+          "case_number": "29 Cdo 275/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "medium",
+          "chunk_index": "4",
+          "total_chunks_in_document": "7",
+          "text_preview": "177/1996 Sb., o odměnách advokátů a náhradách advokátů za poskytování právních služeb (advokátního tarifu), ve znění účinném k datu podání vyjádření, činí (z tarifní hodnoty 421.400,- Kč) částku 10.020,- Kč, a z paušální...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": []
+        },
+        {
+          "rank": 3,
+          "score": 0.7686611,
+          "chunk_id": "ECLI:CZ:NS:2025:28.CDO.3513.2024.1__chunk_0006",
+          "document_id": "ECLI:CZ:NS:2025:28.CDO.3513.2024.1",
+          "case_number": "28 Cdo 3513/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "6",
+          "total_chunks_in_document": "9",
+          "text_preview": "15. O nákladech dovolacího řízení bylo rozhodnuto v intencích § 243 odst. 3 věty první, § 224 odst. 1, § 151 odst. 1 části věty před středníkem a § 146 odst. 3 o. s. ř.; dovolání žalované bylo odmítnuto a na straně žalob...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ]
+        },
+        {
+          "rank": 4,
+          "score": 0.76809865,
+          "chunk_id": "ECLI:CZ:NS:2025:27.CDO.2699.2024.1__chunk_0005",
+          "document_id": "ECLI:CZ:NS:2025:27.CDO.2699.2024.1",
+          "case_number": "27 Cdo 2699/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "5",
+          "total_chunks_in_document": "8",
+          "text_preview": "13. Výrok o náhradě nákladů dovolacího řízení se opírá o § 243c odst. 3, § 224 odst. 1 a § 146 odst. 3 o. s. ř., když dovolání žalobkyně bylo odmítnuto a žalovanému vzniklo právo na náhradu účelně vynaložených nákladů do...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ]
+        },
+        {
+          "rank": 5,
+          "score": 0.760259,
+          "chunk_id": "ECLI:CZ:NS:2024:25.CDO.2348.2024.1__chunk_0002",
+          "document_id": "ECLI:CZ:NS:2024:25.CDO.2348.2024.1",
+          "case_number": "25 Cdo 2348/2024",
+          "document_type": "ROZSUDEK",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "2",
+          "total_chunks_in_document": "15",
+          "text_preview": "Odůvodnění: 1. Žalobkyně se podanou žalobou domáhala 998.089 Kč s příslušenstvím z titulu odpovědnosti advokáta za škodu. Částka 203.186 Kč představovala marně vynaložené náklady řízení, částka 594.903 Kč kapitalizovaný...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "náklady",
+            "řízení"
+          ]
+        },
+        {
+          "rank": 6,
+          "score": 0.75232774,
+          "chunk_id": "ECLI:CZ:NS:2025:27.CDO.3338.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:27.CDO.3338.2024.1",
+          "case_number": "27 Cdo 3338/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "5",
+          "text_preview": "takto: I. Dovolací řízení se zastavuje . II. Žalovaná je povinna zaplatit žalobkyni na náhradě nákladů dovolacího řízení 64.323,60 Kč do tří dnů od právní moci tohoto usnesení k rukám zástupce žalobkyně.",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "řízení"
+          ]
+        },
+        {
+          "rank": 7,
+          "score": 0.7503058,
+          "chunk_id": "ECLI:CZ:NS:2025:20.CDO.3371.2024.1__chunk_0003",
+          "document_id": "ECLI:CZ:NS:2025:20.CDO.3371.2024.1",
+          "case_number": "20 Cdo 3371/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "medium",
+          "chunk_index": "3",
+          "total_chunks_in_document": "8",
+          "text_preview": "5) Podle dovolatele mu mělo být ve druhé skupině správně přiznáno 10 % z výtěžku 2 232 000Kč, tedy částka 223 200 Kč, a nikoli jen částka 187 194,30 Kč. Odvolací soud zaujal právní názor, že základ pro výpočet přihlášené...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání",
+            "řízení"
+          ]
+        },
+        {
+          "rank": 8,
+          "score": 0.7497269,
+          "chunk_id": "ECLI:CZ:NS:2025:23.CDO.68.2025.1__chunk_0002",
+          "document_id": "ECLI:CZ:NS:2025:23.CDO.68.2025.1",
+          "case_number": "23 Cdo 68/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "2",
+          "total_chunks_in_document": "8",
+          "text_preview": "Odůvodnění: 1. Žalobkyně se podanou žalobou domáhala na žalovaném zaplacení částky 176 000 Kč s příslušenstvím jako náhrady škody. Podle tvrzení žalobkyně se uplatněný nárok měl skládat jednak z částky 140 000 Kč (předst...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ]
+        },
+        {
+          "rank": 9,
+          "score": 0.7421441,
+          "chunk_id": "ECLI:CZ:NS:2024:23.CDO.707.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2024:23.CDO.707.2024.1",
+          "case_number": "23 Cdo 707/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "9",
+          "text_preview": "takto: I. Dovolání se odmítá. II. Žalována je povinna zaplatit žalobci na náhradu nákladů dovolacího řízení částku 17 714 Kč do tří dnů právní moci tohoto usnesení k rukám jeho právního zástupce.",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "dovolání",
+            "řízení"
+          ]
+        },
+        {
+          "rank": 10,
+          "score": 0.7373111,
+          "chunk_id": "ECLI:CZ:NS:2024:23.CDO.434.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2024:23.CDO.434.2024.1",
+          "case_number": "23 Cdo 434/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "11",
+          "text_preview": "takto: I. Dovolání se odmítá. II. Žalobkyně je povinna zaplatit žalovanému na náhradě nákladů dovolacího řízení částku 4 114 Kč do tří dnů od právní moci tohoto usnesení k rukám právní zástupkyně žalovaného.",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "dovolání",
+            "řízení"
+          ]
+        }
+      ],
+      "exact_candidates": [
+        {
+          "rank": 1,
+          "chunk_id": "ECLI:CZ:NS:2025:20.CDO.3450.2024.1__chunk_0004",
+          "document_id": "ECLI:CZ:NS:2025:20.CDO.3450.2024.1",
+          "case_number": "20 Cdo 3450/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "medium",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ],
+          "exact_score": 35,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "120/2001 Sb., o soudních exekutorech a exekuční činnosti (exekuční řád), ve znění pozdějších předpisů, nestanoví-li tento zákon jinak, použijí se pro exekuční řízení přiměřeně ustanovení občanského soudního řádu. Výkon r..."
+        },
+        {
+          "rank": 2,
+          "chunk_id": "ECLI:CZ:NS:2025:23.CDO.68.2025.1__chunk_0003",
+          "document_id": "ECLI:CZ:NS:2025:23.CDO.68.2025.1",
+          "case_number": "23 Cdo 68/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ],
+          "exact_score": 35,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "6. Žalovaný v podaném vyjádření k dovolání označil dovolání žalobkyně za nepřípustné a navrhl Nejvyššímu soudu, aby je odmítl, případně aby je zamítl a uložil žalobkyni povinnost nahradit žalovanému náklady dovolacího ří..."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "ECLI:CZ:NS:2024:24.CDO.2633.2024.1__chunk_0011",
+          "document_id": "ECLI:CZ:NS:2024:24.CDO.2633.2024.1",
+          "case_number": "24 Cdo 2633/2024",
+          "document_type": "ROZSUDEK",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ],
+          "exact_score": 35,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "7. 2015). Soudy v závěru, který nebyl dovolatelkou zpochybněn, dovodily, že žalobce nebyl platně vyděděn, a to nejen důvodem uplatněným v prohlášení o vydědění /z důvodu uvedeného v ustanovení § 1646 odst. 1 písm. b) o...."
+        },
+        {
+          "rank": 4,
+          "chunk_id": "ECLI:CZ:NS:2025:27.CDO.2699.2024.1__chunk_0005",
+          "document_id": "ECLI:CZ:NS:2025:27.CDO.2699.2024.1",
+          "case_number": "27 Cdo 2699/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ],
+          "exact_score": 35,
+          "in_semantic_top_10": true,
+          "semantic_rank": 4,
+          "text_preview": "13. Výrok o náhradě nákladů dovolacího řízení se opírá o § 243c odst. 3, § 224 odst. 1 a § 146 odst. 3 o. s. ř., když dovolání žalobkyně bylo odmítnuto a žalovanému vzniklo právo na náhradu účelně vynaložených nákladů do..."
+        },
+        {
+          "rank": 5,
+          "chunk_id": "ECLI:CZ:NS:2025:27.CDO.3338.2024.1__chunk_0003",
+          "document_id": "ECLI:CZ:NS:2025:27.CDO.3338.2024.1",
+          "case_number": "27 Cdo 3338/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "signature",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ],
+          "exact_score": 35,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "Předseda senátu Nejvyššího soudu proto dovolací řízení v souladu s § 243f odst. 2 zákona č. 99/1963 Sb., občanského soudního řádu (dále jen „o. s. ř.“), zastavil podle § 243c odst. 3 věty druhé o. s. ř. 5. Výrok o náhrad..."
+        },
+        {
+          "rank": 6,
+          "chunk_id": "ECLI:CZ:NS:2025:27.CDO.395.2024.1__chunk_0007",
+          "document_id": "ECLI:CZ:NS:2025:27.CDO.395.2024.1",
+          "case_number": "27 Cdo 395/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "signature",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ],
+          "exact_score": 35,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "11. 2022 a ze dne 14. 12. 2022 tudíž Nejvyšší soud nemohl přihlížet. [21] O náhradě nákladů dovolacího řízení ve vztahu mezi žalobcem a žalovanými 1), 2), 4) 6) až 9) bylo rozhodnuto podle § 243c odst. 3 věty první, § 22..."
+        },
+        {
+          "rank": 7,
+          "chunk_id": "ECLI:CZ:NS:2025:28.CDO.1880.2024.1__chunk_0006",
+          "document_id": "ECLI:CZ:NS:2025:28.CDO.1880.2024.1",
+          "case_number": "28 Cdo 1880/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ],
+          "exact_score": 35,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "2. 2024, sp. zn. 28 Cdo 2593/2023). 15. Z vylíčeného je zjevné, že na předmětné dovolání nelze pohlížet jako na přípustné, pročež je Nejvyšší soud podle § 243c odst. 1 o. s. ř. odmítl. 16. O náhradě nákladů dovolacího ří..."
+        },
+        {
+          "rank": 8,
+          "chunk_id": "ECLI:CZ:NS:2024:28.CDO.2866.2024.1__chunk_0007",
+          "document_id": "ECLI:CZ:NS:2024:28.CDO.2866.2024.1",
+          "case_number": "28 Cdo 2866/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ],
+          "exact_score": 35,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "16. Napadá-li snad dovolatel rozsudek odvolacího soudu i v části jeho výroku o nákladech řízení (uvádí-li výslovně, že rozhodnutí odvolacího soudu je napadeno v jeho celém rozsahu, přestože v této části žádnou dovolací a..."
+        },
+        {
+          "rank": 9,
+          "chunk_id": "ECLI:CZ:NS:2025:28.CDO.3321.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:28.CDO.3321.2024.1",
+          "case_number": "28 Cdo 3321/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ],
+          "exact_score": 35,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "takto: I. Dovolání se odmítá . II. Žalobce je povinen nahradit Římskokatolické farnosti Rožmberk nad Vltavou náklady dovolacího řízení ve výši 4.114,- Kč k rukám jejího zástupce, JUDr. Jakuba Kříže, Ph.D., advokáta se sí..."
+        },
+        {
+          "rank": 10,
+          "chunk_id": "ECLI:CZ:NS:2025:28.CDO.3321.2024.1__chunk_0007",
+          "document_id": "ECLI:CZ:NS:2025:28.CDO.3321.2024.1",
+          "case_number": "28 Cdo 3321/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "dovolacího řízení"
+          ],
+          "matched_generic_terms": [
+            "náklady",
+            "dovolání",
+            "řízení"
+          ],
+          "exact_score": 35,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "12/1945 Sb., nikterak neodchýlil. Jeho postup přitom plně koresponduje výše citované judikatuře Ústavního soudu o kasační závaznosti jeho nálezů. K ní se ve své recentní judikatuře hlásí i dovolací soud (srovnej např. us..."
+        }
+      ]
+    },
+    {
+      "query": "zjevně neopodstatněné dovolání",
+      "exact_match_exists": true,
+      "exact_match_count": 867,
+      "phrase_match_count": 0,
+      "semantic_top_10_count": 10,
+      "semantic_top_10_exact_overlap_count": 0,
+      "semantic_missed_exact_matches": true,
+      "likely_failure_reason": "query_too_generic",
+      "recommendation": "rewrite query",
+      "notes": [
+        "The query terms are broad and match many chunks exactly, which weakens diagnostic precision."
+      ],
+      "semantic_results": [
+        {
+          "rank": 1,
+          "score": 0.7367097,
+          "chunk_id": "ECLI:CZ:NS:2025:21.CDO.44.2025.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.44.2025.1",
+          "case_number": "21 Cdo 44/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "9",
+          "text_preview": "takto: Dovolání povinného se odmítá.",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 2,
+          "score": 0.7310319,
+          "chunk_id": "ECLI:CZ:NS:2025:21.CDO.2658.2024.3__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.2658.2024.3",
+          "case_number": "21 Cdo 2658/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "10",
+          "text_preview": "takto: Dovolání povinného se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 3,
+          "score": 0.6861256,
+          "chunk_id": "ECLI:CZ:NS:2025:27.CDO.1921.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:27.CDO.1921.2024.1",
+          "case_number": "27 Cdo 1921/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "8",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 4,
+          "score": 0.6861256,
+          "chunk_id": "ECLI:CZ:NS:2024:26.CDO.125.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.125.2024.1",
+          "case_number": "26 Cdo 125/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "8",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 5,
+          "score": 0.6861256,
+          "chunk_id": "ECLI:CZ:NS:2025:29.NSCR.70.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:29.NSCR.70.2024.1",
+          "case_number": "29 NSCR 70/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "medium",
+          "chunk_index": "1",
+          "total_chunks_in_document": "5",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 6,
+          "score": 0.6861256,
+          "chunk_id": "ECLI:CZ:NS:2025:22.CDO.3556.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:22.CDO.3556.2024.1",
+          "case_number": "22 Cdo 3556/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "13",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 7,
+          "score": 0.6861256,
+          "chunk_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+          "case_number": "29 NSCR 1/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "7",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 8,
+          "score": 0.6861256,
+          "chunk_id": "ECLI:CZ:NS:2025:26.CDO.84.2025.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:26.CDO.84.2025.1",
+          "case_number": "26 Cdo 84/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "8",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 9,
+          "score": 0.6861256,
+          "chunk_id": "ECLI:CZ:NS:2025:21.CDO.1566.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.1566.2024.1",
+          "case_number": "21 Cdo 1566/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "12",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 10,
+          "score": 0.6861256,
+          "chunk_id": "ECLI:CZ:NS:2025:20.CDO.875.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:20.CDO.875.2024.1",
+          "case_number": "20 Cdo 875/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "12",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        }
+      ],
+      "exact_candidates": [
+        {
+          "rank": 1,
+          "chunk_id": "ECLI:CZ:NS:2025:11.TDO.1114.2024.1__chunk_0013",
+          "document_id": "ECLI:CZ:NS:2025:11.TDO.1114.2024.1",
+          "case_number": "11 Tdo 1114/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "zjevně neopodstatněné",
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ],
+          "exact_score": 45,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "34. Označil však za zjevně nesprávné pokoušet se o nápravu vytvořením nové nezákonnosti – posunutím hranice mezi skutky vůči svědkyni J. ze 7. 6. 2021 na 30. 3. 2022 v nyní posuzované věci. Když v souladu s § 12 odst. 11..."
+        },
+        {
+          "rank": 2,
+          "chunk_id": "ECLI:CZ:NS:2025:11.TDO.1127.2024.1__chunk_0013",
+          "document_id": "ECLI:CZ:NS:2025:11.TDO.1127.2024.1",
+          "case_number": "11 Tdo 1127/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "zjevně neopodstatněné",
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ],
+          "exact_score": 45,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "24. Z těchto důvodů státní zástupkyně navrhuje, aby Nejvyšší soud podané dovolání podle § 265i odst. 1 písm. e) tr. řádu odmítl, protože je zjevně neopodstatněné, a aby tak rozhodl v souladu s § 265r odst. 1 písm. a) tr...."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1__chunk_0014",
+          "document_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+          "case_number": "11 Tdo 679/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "zjevně neopodstatněné",
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ],
+          "exact_score": 45,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "31. Dovolací důvod podle § 265b odst. 1 písm. h) tr. řádu , je naplněn tehdy, jestliže rozhodnutí spočívá na nesprávném právním posouzení skutku nebo jiném nesprávném hmotněprávním posouzení. V rámci takto vymezeného dov..."
+        },
+        {
+          "rank": 4,
+          "chunk_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1__chunk_0012",
+          "document_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+          "case_number": "11 Tdo 75/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "zjevně neopodstatněné",
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ],
+          "exact_score": 45,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "17. Závěrem svého dovolání proto obvinění A. navrhli, aby Nejvyšší soud zrušil napadené rozhodnutí Vrchního soudu v Praze a věc přikázal příslušnému soudu k novému projednání a rozhodnutí. Zároveň oba jmenovaní obvinění..."
+        },
+        {
+          "rank": 5,
+          "chunk_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1__chunk_0018",
+          "document_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+          "case_number": "11 Tdo 75/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "zjevně neopodstatněné",
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ],
+          "exact_score": 45,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "9. 2004, sp. zn. II. ÚS 279/03). 32. Nadto Nejvyšší soud i při respektování shora uvedeného interpretuje a aplikuje podmínky připuštění dovolání tak, aby dodržel maximy práva na spravedlivý proces vymezené Úmluvou o ochr..."
+        },
+        {
+          "rank": 6,
+          "chunk_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1__chunk_0039",
+          "document_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+          "case_number": "11 Tdo 75/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "zjevně neopodstatněné",
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ],
+          "exact_score": 45,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "5. 2005, sp. zn. II. ÚS 681/04, podle kterého právo na spravedlivý proces není možné vykládat tak, že garantuje úspěch v řízení či zaručuje právo na rozhodnutí, jež odpovídá představám stěžovatele (tj. obviněných). Uvede..."
+        },
+        {
+          "rank": 7,
+          "chunk_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1__chunk_0008",
+          "document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+          "case_number": "11 Tdo 765/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "zjevně neopodstatněné",
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ],
+          "exact_score": 45,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "10. Konečně se státní zástupce neztotožňuje ani s výtkou dovolatele, že soudy vzaly v potaz jeho trestní minulost. Poukazuje na to, že soud prvního stupně tuto skutečnost reflektoval jakožto přitěžující okolnost podle §..."
+        },
+        {
+          "rank": 8,
+          "chunk_id": "ECLI:CZ:NS:2025:3.TDO.1120.2024.1__chunk_0021",
+          "document_id": "ECLI:CZ:NS:2025:3.TDO.1120.2024.1",
+          "case_number": "3 Tdo 1120/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "zjevně neopodstatněné",
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ],
+          "exact_score": 45,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "V. Způsob rozhodnutí 32. Nejvyšší soud proto předložené dovolání odmítl podle § 265i odst. 1 písm. e) tr. ř. jako zjevně neopodstatněné. Toto rozhodnutí učinil v souladu s ustanovením § 265r odst. 1 písm. a) tr. ř. v nev..."
+        },
+        {
+          "rank": 9,
+          "chunk_id": "ECLI:CZ:NS:2025:3.TDO.19.2025.1__chunk_0009",
+          "document_id": "ECLI:CZ:NS:2025:3.TDO.19.2025.1",
+          "case_number": "3 Tdo 19/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "zjevně neopodstatněné",
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ],
+          "exact_score": 45,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "20. Státní zástupce proto navrhl, aby Nejvyšší soud dovolání obviněného odmítl podle § 265e tr. ř. jako zjevně neopodstatněné a aby tak učinil v neveřejném zasedání za podmínek § 265r odst. 1, písm. a) tr. ř. S rozhodová..."
+        },
+        {
+          "rank": 10,
+          "chunk_id": "ECLI:CZ:NS:2025:3.TDO.19.2025.1__chunk_0023",
+          "document_id": "ECLI:CZ:NS:2025:3.TDO.19.2025.1",
+          "case_number": "3 Tdo 19/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [
+            "zjevně neopodstatněné",
+            "dovolání"
+          ],
+          "matched_generic_terms": [
+            "dovolání"
+          ],
+          "exact_score": 45,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "47. Dovolací důvod podle tohoto ustanovení obviněný neuplatnil v prvé alternativě – tedy že mu bylo odepřeno právo na přístup k druhé instanci. Uplatnil jej v alternativně druhé – totiž že odvolací soud v rámci svého pře..."
+        }
+      ]
+    },
+    {
+      "query": "odmítnutí dovolání",
+      "exact_match_exists": true,
+      "exact_match_count": 868,
+      "phrase_match_count": 27,
+      "semantic_top_10_count": 10,
+      "semantic_top_10_exact_overlap_count": 0,
+      "semantic_missed_exact_matches": true,
+      "likely_failure_reason": "query_too_generic",
+      "recommendation": "rewrite query",
+      "notes": [
+        "The query terms are broad and match many chunks exactly, which weakens diagnostic precision."
+      ],
+      "semantic_results": [
+        {
+          "rank": 1,
+          "score": 0.92290395,
+          "chunk_id": "ECLI:CZ:NS:2025:21.CDO.1566.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.1566.2024.1",
+          "case_number": "21 Cdo 1566/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "12",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 2,
+          "score": 0.92290395,
+          "chunk_id": "ECLI:CZ:NS:2025:27.CDO.1921.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:27.CDO.1921.2024.1",
+          "case_number": "27 Cdo 1921/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "8",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 3,
+          "score": 0.92290395,
+          "chunk_id": "ECLI:CZ:NS:2024:26.CDO.125.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.125.2024.1",
+          "case_number": "26 Cdo 125/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "8",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 4,
+          "score": 0.92290395,
+          "chunk_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+          "case_number": "29 NSCR 1/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "7",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 5,
+          "score": 0.92290395,
+          "chunk_id": "ECLI:CZ:NS:2025:20.CDO.875.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:20.CDO.875.2024.1",
+          "case_number": "20 Cdo 875/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "12",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 6,
+          "score": 0.92290395,
+          "chunk_id": "ECLI:CZ:NS:2025:29.NSCR.70.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:29.NSCR.70.2024.1",
+          "case_number": "29 NSCR 70/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "medium",
+          "chunk_index": "1",
+          "total_chunks_in_document": "5",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 7,
+          "score": 0.92290395,
+          "chunk_id": "ECLI:CZ:NS:2025:22.CDO.3556.2024.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:22.CDO.3556.2024.1",
+          "case_number": "22 Cdo 3556/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "13",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 8,
+          "score": 0.92290395,
+          "chunk_id": "ECLI:CZ:NS:2025:26.CDO.84.2025.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:26.CDO.84.2025.1",
+          "case_number": "26 Cdo 84/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "8",
+          "text_preview": "takto: Dovolání se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 9,
+          "score": 0.8938018,
+          "chunk_id": "ECLI:CZ:NS:2025:21.CDO.2658.2024.3__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.2658.2024.3",
+          "case_number": "21 Cdo 2658/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "10",
+          "text_preview": "takto: Dovolání povinného se odmítá .",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        },
+        {
+          "rank": 10,
+          "score": 0.88766706,
+          "chunk_id": "ECLI:CZ:NS:2025:21.CDO.44.2025.1__chunk_0001",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.44.2025.1",
+          "case_number": "21 Cdo 44/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "strong",
+          "chunk_index": "1",
+          "total_chunks_in_document": "9",
+          "text_preview": "takto: Dovolání povinného se odmítá.",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "dovolání"
+          ]
+        }
+      ],
+      "exact_candidates": [
+        {
+          "rank": 1,
+          "chunk_id": "ECLI:CZ:NS:2025:20.CDO.13.2025.1__chunk_0003",
+          "document_id": "ECLI:CZ:NS:2025:20.CDO.13.2025.1",
+          "case_number": "20 Cdo 13/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "medium",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "odmítnutí dovolání"
+          ],
+          "matched_generic_terms": [
+            "odmítnutí",
+            "dovolání"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "99/1963 Sb., občanský soudní řád, ve znění účinném od 30. září 2017 (srov. část první čl. II bod 2 zákona č. 296/2017 Sb.), dále jen „o. s. ř.“. Dovolacímu soudu je z jeho činnosti známo a plyne to i z obsahu spisu, že p..."
+        },
+        {
+          "rank": 2,
+          "chunk_id": "ECLI:CZ:NS:2025:20.CDO.15.2025.1__chunk_0003",
+          "document_id": "ECLI:CZ:NS:2025:20.CDO.15.2025.1",
+          "case_number": "20 Cdo 15/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "medium",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "odmítnutí dovolání"
+          ],
+          "matched_generic_terms": [
+            "odmítnutí",
+            "dovolání"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "99/1963 Sb., občanský soudní řád, ve znění účinném od 30. září 2017 (srov. část první čl. II bod 2 zákona č. 296/2017 Sb.), dále jen „o. s. ř.“. Dovolacímu soudu je z jeho činnosti známo a plyne to i z obsahu spisu, že p..."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "ECLI:CZ:NS:2024:20.CDO.3061.2024.1__chunk_0006",
+          "document_id": "ECLI:CZ:NS:2024:20.CDO.3061.2024.1",
+          "case_number": "20 Cdo 3061/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "odmítnutí dovolání"
+          ],
+          "matched_generic_terms": [
+            "odmítnutí",
+            "dovolání"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "8/ Rozhodnutí odvolacího soudu (jeho závěr o tom, že žalobou pro zmatečnost napadené rozhodnutí není postiženo zmatečností podle ustanovení § 229 odst. 4 o. s. ř.) je v souladu s ustálenou rozhodovací praxí dovolacího so..."
+        },
+        {
+          "rank": 4,
+          "chunk_id": "ECLI:CZ:NS:2025:21.CDO.245.2024.1__chunk_0002",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.245.2024.1",
+          "case_number": "21 Cdo 245/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "medium",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "odmítnutí dovolání"
+          ],
+          "matched_generic_terms": [
+            "odmítnutí",
+            "dovolání"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "3. Proti rozsudku odvolacího soudu podali dovolání oba účastníci. 4. Žalobce přípustnost dovolání spatřuje k vyřešení otázky, zda § 650 občanského zákoníku „se vztahuje také na případy, kdy dlužník věřiteli hrozbou brání..."
+        },
+        {
+          "rank": 5,
+          "chunk_id": "ECLI:CZ:NS:2025:21.CDO.245.2024.1__chunk_0005",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.245.2024.1",
+          "case_number": "21 Cdo 245/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "medium",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "odmítnutí dovolání"
+          ],
+          "matched_generic_terms": [
+            "odmítnutí",
+            "dovolání"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "6. 2023, č. j. 12 Co 25/2023-148, se podává, že směřuje toliko proti části výroku I, v níž bylo rozhodnuto o změně rozsudku Okresního soudu v Chomutově ze dne 16. 9. 2022, č. j. 34 C 7/2021-112, ve výroku III tak, že žád..."
+        },
+        {
+          "rank": 6,
+          "chunk_id": "ECLI:CZ:NS:2025:21.CDO.2841.2024.1__chunk_0010",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.2841.2024.1",
+          "case_number": "21 Cdo 2841/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "operative_part",
+          "structure_status": "medium",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "odmítnutí dovolání"
+          ],
+          "matched_generic_terms": [
+            "odmítnutí",
+            "dovolání"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "11. 2017, sp. zn. Pl. ÚS-st. 45/16). O výjimečný případ, kdy skutková otázka s ohledem na její průmět do základních lidských práv a svobod je způsobilá založit přípustnost dovolání podle § 237 o. s. ř. (srov. například n..."
+        },
+        {
+          "rank": 7,
+          "chunk_id": "ECLI:CZ:NS:2025:21.CDO.44.2025.1__chunk_0006",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.44.2025.1",
+          "case_number": "21 Cdo 44/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "odmítnutí dovolání"
+          ],
+          "matched_generic_terms": [
+            "odmítnutí",
+            "dovolání"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "10. 2014, sp. zn. 29 Cdo 4097/2014). 18. Nejvyšší soud České republiky proto dovolání povinného podle ustanovení § 243c odst. 1 o. s. ř. odmítl. 19. Dovolatel navrhl odklad právní moci usnesení odvolacího soudu; Ústavní..."
+        },
+        {
+          "rank": 8,
+          "chunk_id": "ECLI:CZ:NS:2025:3.TDO.19.2025.1__chunk_0023",
+          "document_id": "ECLI:CZ:NS:2025:3.TDO.19.2025.1",
+          "case_number": "3 Tdo 19/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "odmítnutí dovolání"
+          ],
+          "matched_generic_terms": [
+            "odmítnutí",
+            "dovolání"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "47. Dovolací důvod podle tohoto ustanovení obviněný neuplatnil v prvé alternativě – tedy že mu bylo odepřeno právo na přístup k druhé instanci. Uplatnil jej v alternativně druhé – totiž že odvolací soud v rámci svého pře..."
+        },
+        {
+          "rank": 9,
+          "chunk_id": "ECLI:CZ:NS:2025:3.TDO.53.2025.1__chunk_0012",
+          "document_id": "ECLI:CZ:NS:2025:3.TDO.53.2025.1",
+          "case_number": "3 Tdo 53/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "signature",
+          "structure_status": "strong",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "odmítnutí dovolání"
+          ],
+          "matched_generic_terms": [
+            "odmítnutí",
+            "dovolání"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "předseda senátu Nejvyššího soudu podle § 265o odst. 1 tr. ř. odložil výkon napadeného rozhodnutí, pak je třeba uvést, že se z jeho strany jednalo o podnět, nikoli o návrh, o němž by bylo nutné učinit formální rozhodnutí...."
+        },
+        {
+          "rank": 10,
+          "chunk_id": "ECLI:CZ:NS:2024:3.TDO.650.2024.1__chunk_0031",
+          "document_id": "ECLI:CZ:NS:2024:3.TDO.650.2024.1",
+          "case_number": "3 Tdo 650/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "odmítnutí dovolání"
+          ],
+          "matched_generic_terms": [
+            "odmítnutí",
+            "dovolání"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "47. Je tak možno uzavřít, že vzhledem k tomu, že dovolací námitky obviněného M. H., ať už je bylo možno podřadit pod uplatněné důvody dovolání či nikoliv, vyhodnotil Nejvyšší soud jako neopodstatněné, nemohlo dojít k nap..."
+        }
+      ]
+    },
+    {
+      "query": "rodinný dům",
+      "exact_match_exists": true,
+      "exact_match_count": 543,
+      "phrase_match_count": 5,
+      "semantic_top_10_count": 10,
+      "semantic_top_10_exact_overlap_count": 1,
+      "semantic_missed_exact_matches": false,
+      "likely_failure_reason": "query_too_generic",
+      "recommendation": "rewrite query",
+      "notes": [
+        "The query terms are broad and match many chunks exactly, which weakens diagnostic precision."
+      ],
+      "semantic_results": [
+        {
+          "rank": 1,
+          "score": 0.38376513,
+          "chunk_id": "ECLI:CZ:NS:2025:26.CDO.1854.2024.1__chunk_0008",
+          "document_id": "ECLI:CZ:NS:2025:26.CDO.1854.2024.1",
+          "case_number": "26 Cdo 1854/2024",
+          "document_type": "ROZSUDEK",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "8",
+          "total_chunks_in_document": "13",
+          "text_preview": "16. Pojem „jednotka“ použitý v § 1196 odst. 2 o. z. je však třeba vykládat ve spojení s § 1159 o. z., jenž stanoví, že jednotka zahrnuje nejen byt (jako prostorově oddělenou část domu), ale také podíl na společných částe...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "byt"
+          ]
+        },
+        {
+          "rank": 2,
+          "score": 0.38348752,
+          "chunk_id": "ECLI:CZ:NS:2024:3.TDO.984.2024.1__chunk_0006",
+          "document_id": "ECLI:CZ:NS:2024:3.TDO.984.2024.1",
+          "case_number": "3 Tdo 984/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "6",
+          "total_chunks_in_document": "25",
+          "text_preview": "2. 2023 do 20. 2. 2023, kdy měl mít společné nezletilé děti v péči, avšak od poškozené věděl, že zdravotní stav nezletilého syna toto neumožňuje, pod záminkou být s dětmi apeloval právě opět v přítomnosti společných dětí...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "byt"
+          ]
+        },
+        {
+          "rank": 3,
+          "score": 0.3762397,
+          "chunk_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1__chunk_0003",
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+          "case_number": "26 Cdo 439/2024",
+          "document_type": "ROZSUDEK",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "3",
+          "total_chunks_in_document": "14",
+          "text_preview": "6. 2012, č. j. 11 Co 155/2012-78, bylo zrušeno právo společného nájmu tam specifikovaného družstevního bytu (předmětného bytu) a garáže (blíže označené) a společné členství v bytovém družstvu s tím, že výlučnou členkou d...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "byt"
+          ]
+        },
+        {
+          "rank": 4,
+          "score": 0.35345158,
+          "chunk_id": "ECLI:CZ:NS:2025:7.TDO.1096.2024.1__chunk_0004",
+          "document_id": "ECLI:CZ:NS:2025:7.TDO.1096.2024.1",
+          "case_number": "7 Tdo 1096/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "4",
+          "total_chunks_in_document": "24",
+          "text_preview": "6. Pokud jde o koncept sdílené újmy, obviněný uvedl, že z rozsudku soudu prvního stupně a ze spisu vyplynulo, že celá rodina poškozeného udržuje mezi sebou velmi dobré vztahy, stojí při sobě a vzájemně se podporuje. Manž...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": []
+        },
+        {
+          "rank": 5,
+          "score": 0.34056607,
+          "chunk_id": "ECLI:CZ:NS:2024:24.CDO.671.2024.1__chunk_0002",
+          "document_id": "ECLI:CZ:NS:2024:24.CDO.671.2024.1",
+          "case_number": "24 Cdo 671/2024; 24 Cdo 675/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "2",
+          "total_chunks_in_document": "10",
+          "text_preview": "Odůvodnění: 1. Okresní soud v Pelhřimově rozsudkem ze dne 31. 5. 2023, č. j. 5 C 255/2015-1439, rozhodl o určení vlastnického práva k celkem devíti jednotkám v domě č. p. XY v XY. Jednalo se o byty, garáže a dílnu. Struč...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": []
+        },
+        {
+          "rank": 6,
+          "score": 0.32866603,
+          "chunk_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1__chunk_0006",
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+          "case_number": "26 Cdo 439/2024",
+          "document_type": "ROZSUDEK",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "6",
+          "total_chunks_in_document": "14",
+          "text_preview": "8. Žalovaný ve vyjádření k dovolání považuje rozhodnutí odvolacího soudu za správné. Do okamžiku zajištění bytové náhrady se řídí vztah bývalého nájemce a pronajímatele ustanovením § 712a obč. zák. a teprve po zajištění...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "byt"
+          ]
+        },
+        {
+          "rank": 7,
+          "score": 0.32590047,
+          "chunk_id": "ECLI:CZ:NS:2024:4.TDO.1044.2024.1__chunk_0005",
+          "document_id": "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+          "case_number": "4 Tdo 1044/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "5",
+          "total_chunks_in_document": "31",
+          "text_preview": "14. Podle dovolatele je celé řízení vedeno tendenčně a je poplatné době, ve které žijeme, reagující na společenskou objednávku pod tíhou různých hnutí za hranicí demagogie. Příkladmo akcentuje, že soudy nijak nehodnotily...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": []
+        },
+        {
+          "rank": 8,
+          "score": 0.31235698,
+          "chunk_id": "ECLI:CZ:NS:2025:22.CDO.108.2025.1__chunk_0002",
+          "document_id": "ECLI:CZ:NS:2025:22.CDO.108.2025.1",
+          "case_number": "22 Cdo 108/2025",
+          "document_type": "ROZSUDEK",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "2",
+          "total_chunks_in_document": "12",
+          "text_preview": "Odůvodnění: I. Dosavadní průběh řízení 1. Okresní soud v Lounech (dále jen „soud prvního stupně“) rozsudkem ze dne 16. 5. 2024, č. j. 12 C 152/2023-52, určil, že pozemek p. č. XY a pozemek p. č. XY, jehož součástí je sta...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": true,
+          "matched_important_terms": [
+            "rodinný dům"
+          ],
+          "matched_generic_terms": [
+            "dům",
+            "byt"
+          ]
+        },
+        {
+          "rank": 9,
+          "score": 0.31000277,
+          "chunk_id": "ECLI:CZ:NS:2024:3.TDO.980.2024.1__chunk_0028",
+          "document_id": "ECLI:CZ:NS:2024:3.TDO.980.2024.1",
+          "case_number": "3 Tdo 980/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "signature",
+          "structure_status": "strong",
+          "chunk_index": "28",
+          "total_chunks_in_document": "33",
+          "text_preview": "51. Obdobná situace pak nastává u vniknutí do garáže v XY ulici, kterou měl pronajatou svědek O. H. od svědka J. H., a ve které se nacházely věci obou těchto osob [skutek pod bodem 2) výroku o vině]. Předně je potřebné u...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "byt"
+          ]
+        },
+        {
+          "rank": 10,
+          "score": 0.29955953,
+          "chunk_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1__chunk_0008",
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+          "case_number": "26 Cdo 439/2024",
+          "document_type": "ROZSUDEK",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "chunk_index": "8",
+          "total_chunks_in_document": "14",
+          "text_preview": "1. 2010, sp. zn. 28 Cdo 2146/2009). 14. Z § 712a obč. zák. vyplývá, že obsah vzájemných práv a povinností účastníků právního vztahu, který je uvedeným ustanovením posuzován, se řídí § 687 až § 699 obč. zák. , tedy i § 69...",
+          "metadata_present": true,
+          "missing_metadata_fields": [],
+          "matches_all_important_terms": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": []
+        }
+      ],
+      "exact_candidates": [
+        {
+          "rank": 1,
+          "chunk_id": "ECLI:CZ:NS:2025:30.CDO.308.2025.1__chunk_0002",
+          "document_id": "ECLI:CZ:NS:2025:30.CDO.308.2025.1",
+          "case_number": "30 Cdo 308/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "rodinný dům"
+          ],
+          "matched_generic_terms": [
+            "dům",
+            "nemovitost",
+            "byt"
+          ],
+          "exact_score": 135,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "Odůvodnění: Žalobkyně se žalobou domáhala po žalované zaplacení částky 6 130 000 Kč s příslušenstvím jako náhrady škody, která jí měla být způsobena v souvislosti s nesprávným úředním postupem soudního exekutora v exekuč..."
+        },
+        {
+          "rank": 2,
+          "chunk_id": "ECLI:CZ:NS:2025:22.CDO.108.2025.1__chunk_0002",
+          "document_id": "ECLI:CZ:NS:2025:22.CDO.108.2025.1",
+          "case_number": "22 Cdo 108/2025",
+          "document_type": "ROZSUDEK",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "rodinný dům"
+          ],
+          "matched_generic_terms": [
+            "dům",
+            "byt"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": true,
+          "semantic_rank": 8,
+          "text_preview": "Odůvodnění: I. Dosavadní průběh řízení 1. Okresní soud v Lounech (dále jen „soud prvního stupně“) rozsudkem ze dne 16. 5. 2024, č. j. 12 C 152/2023-52, určil, že pozemek p. č. XY a pozemek p. č. XY, jehož součástí je sta..."
+        },
+        {
+          "rank": 3,
+          "chunk_id": "ECLI:CZ:NS:2024:23.CDO.3170.2024.1__chunk_0002",
+          "document_id": "ECLI:CZ:NS:2024:23.CDO.3170.2024.1",
+          "case_number": "23 Cdo 3170/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "rodinný dům"
+          ],
+          "matched_generic_terms": [
+            "dům",
+            "byt"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "Odůvodnění: 1. Žalobce se podanou žalobou na žalované domáhal zaplacení částky 336 744 Kč z titulu odpovědnosti za vady jako slevy z kupní ceny, kterou zaplatil na základě kupní smlouvy uzavřené mezi žalobcem a žalovanou..."
+        },
+        {
+          "rank": 4,
+          "chunk_id": "ECLI:CZ:NS:2024:26.CDO.2404.2024.1__chunk_0003",
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.2404.2024.1",
+          "case_number": "26 Cdo 2404/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "rodinný dům"
+          ],
+          "matched_generic_terms": [
+            "dům",
+            "byt"
+          ],
+          "exact_score": 130,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "10. 2000) a nachází se na něm (pravý) podpis jmenované svědkyně. Ztotožnil se i s názory soudu prvního stupně, že nájemní smlouva není neplatná ani z důvodu, že k ní nedala souhlas valná hromada žalované (tímto souhlasem..."
+        },
+        {
+          "rank": 5,
+          "chunk_id": "ECLI:CZ:NS:2024:23.CDO.434.2024.1__chunk_0002",
+          "document_id": "ECLI:CZ:NS:2024:23.CDO.434.2024.1",
+          "case_number": "23 Cdo 434/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": true,
+          "matched_important_terms": [
+            "rodinný dům"
+          ],
+          "matched_generic_terms": [
+            "dům"
+          ],
+          "exact_score": 125,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "Odůvodnění: 1. Žalobkyně se podanou žalobou domáhala určení vlastnického práva ke stavbě č. p. XY (rodinný dům) na pozemcích parc. č. st. XY, parc. č. st. XY a parc. č. st. XY, vše v k. ú. XY. Tvrdila, že dne 8. 6. 1992..."
+        },
+        {
+          "rank": 6,
+          "chunk_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1__chunk_0024",
+          "document_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+          "case_number": "11 Tdo 75/2025",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "nemovitost",
+            "byt"
+          ],
+          "exact_score": 10,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "39. S ohledem na výše uvedené důkazy objektivní povahy, jimiž byl zdokumentovaný průběh návštěv obviněného M. R. v pěstírně v obci XY, odvoz sušiny konopí jeho osobou, jeho podíl na dodání sazenic konopí nezbytných pro j..."
+        },
+        {
+          "rank": 7,
+          "chunk_id": "ECLI:CZ:NS:2024:24.CDO.671.2024.1__chunk_0004",
+          "document_id": "ECLI:CZ:NS:2024:24.CDO.671.2024.1",
+          "case_number": "24 Cdo 671/2024; 24 Cdo 675/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "nemovitost",
+            "byt"
+          ],
+          "exact_score": 10,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "5. Žalovaná 1) ve svém dovolání předložila Nejvyššímu soud dvě otázky. První z nich dosud neměla být v rozhodovací praxi dovolacího soudu vyřešena. Žalovaná 1) nesouhlasila se závěrem odvolacího soudu, že při stanovení o..."
+        },
+        {
+          "rank": 8,
+          "chunk_id": "ECLI:CZ:NS:2024:26.CDO.125.2024.1__chunk_0002",
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.125.2024.1",
+          "case_number": "26 Cdo 125/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "civil",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "nemovitost",
+            "byt"
+          ],
+          "exact_score": 10,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "Odůvodnění: 1. Krajský soud v Praze (odvolací soud) usnesením ze dne 30. 5. 2023, č. j. 17 Co 96/2023-316, potvrdil usnesení Okresního soudu Praha-západ (soud prvního stupně) ze dne 8. 2. 2023, č. j. 206 EXE 6445/2021-27..."
+        },
+        {
+          "rank": 9,
+          "chunk_id": "ECLI:CZ:NS:2025:11.PZO.7.2024.1__chunk_0003",
+          "document_id": "ECLI:CZ:NS:2025:11.PZO.7.2024.1",
+          "case_number": "11 Pzo 7/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "reasoning",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "byt"
+          ],
+          "exact_score": 5,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "10. 2024, když zcela prokazatelně nebyla s obviněným v kontaktu a od 3. 5. 2022 pracuje a žije mimo Českou republiku. Jelikož jí nebyly nikdy sděleny žádné informace, z nichž by bylo možno byť jen dovodit, že by se jakko..."
+        },
+        {
+          "rank": 10,
+          "chunk_id": "ECLI:CZ:NS:2025:11.PZO.7.2024.1__chunk_0005",
+          "document_id": "ECLI:CZ:NS:2025:11.PZO.7.2024.1",
+          "case_number": "11 Pzo 7/2024",
+          "document_type": "USNESENÍ",
+          "legal_area": "criminal",
+          "section_type": "signature",
+          "structure_status": "strong",
+          "phrase_match": false,
+          "matched_important_terms": [],
+          "matched_generic_terms": [
+            "byt"
+          ],
+          "exact_score": 5,
+          "in_semantic_top_10": false,
+          "semantic_rank": null,
+          "text_preview": "předseda senátu a v přípravném řízení nařídí jejich vydání státnímu zástupci nebo policejnímu orgánu soudce na návrh státního zástupce. 1. 2. Příkaz k zjištění údajů o telekomunikačním provozu přitom musí být vydán písem..."
+        }
+      ]
+    }
+  ]
+}
