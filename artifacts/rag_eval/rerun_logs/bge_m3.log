@@ -1,0 +1,22 @@
+=== START bge_m3 2026-07-06T09:25:37Z ===
+{
+  "passed": true,
+  "issue_count": 0,
+  "issues": []
+}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/391 [00:00<?, ?it/s]Loading weights: 100%|██████████| 391/391 [00:00<00:00, 11010.08it/s]
+Split strings:   0%|          | 0/1862 [00:00<?, ?it/s]Split strings:  29%|██▊       | 534/1862 [00:00<00:00, 5319.81it/s]Split strings:  57%|█████▋    | 1066/1862 [00:00<00:00, 5162.38it/s]Split strings:  87%|████████▋ | 1623/1862 [00:00<00:00, 5338.25it/s]                                                                    BM25S Count Tokens:   0%|          | 0/1862 [00:00<?, ?it/s]                                                            BM25S Compute Scores:   0%|          | 0/1862 [00:00<?, ?it/s]BM25S Compute Scores:  95%|█████████▍| 1762/1862 [00:00<00:00, 17616.95it/s]                                                                            Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     {
+  "run_id": "20260706_092545Z",
+  "dataset_id": "nalus-nsoud-pilot-v1",
+  "winner_model_code": "bge_m3",
+  "winner_config_id": "bge_m3__dense_plus_bm25",
+  "failed_models": [],
+  "artifact_paths": {
+    "ranking_json": "/app/artifacts/rag_eval/out_rerun_bge_m3/ranking.json",
+    "report_md": "/app/artifacts/rag_eval/out_rerun_bge_m3/report.md",
+    "run_dir": "/app/artifacts/rag_eval/out_rerun_bge_m3/runs/20260706_092545Z",
+    "preflight_json": "/app/artifacts/rag_eval/out_rerun_bge_m3/runs/20260706_092545Z/preflight.json"
+  }
+}
+=== END bge_m3 2026-07-06T12:44:22Z ===

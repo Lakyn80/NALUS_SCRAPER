@@ -53,6 +53,14 @@ class ManualQueryResult:
     collection_validation: decision_layer.CollectionValidation
     metadata_validation_passed: bool
     exact_dataset_match: bool
+    direct_evidence_count: int
+    noise_result_count: int
+    substantive_reasoning_count: int
+    legal_area_distribution: dict[str, int]
+    section_type_distribution: dict[str, int]
+    matched_core_terms: list[str]
+    missing_core_terms: list[str]
+    decision_diagnostics: list[str]
     top_results: list[decision_layer.TopResultSummary]
     full_decisions: list[FullDecisionResult]
 
@@ -71,6 +79,11 @@ def parse_args() -> argparse.Namespace:
         "--include-full-decision",
         action="store_true",
         help="Assemble full decision text for the top distinct document_ids.",
+    )
+    parser.add_argument(
+        "--include-noisy-full-decisions",
+        action="store_true",
+        help="Include full decisions even for noisy top results. By default only core evidence documents are included.",
     )
     parser.add_argument(
         "--max-full-decisions",
@@ -110,6 +123,11 @@ def result_preview_row(result: decision_layer.TopResultSummary) -> dict[str, Any
         "document_type": result.document_type,
         "legal_area": result.legal_area,
         "section_type": result.section_type,
+        "matched_query_terms": result.matched_query_terms,
+        "missing_core_terms": result.missing_core_terms,
+        "is_core_evidence": result.is_core_evidence,
+        "is_noise": result.is_noise,
+        "noise_reason": result.noise_reason,
         "chunk_id": result.chunk_id,
         "document_id": result.document_id,
         "short_preview": result.short_preview,
@@ -124,23 +142,17 @@ def build_manual_reason_and_decision(
 ) -> tuple[decision_layer.DecisionType, float, str]:
     query_stems = decision_layer.significant_stems([query])
     specific_query = len(query_stems) >= 4
+    broad_query = len(query_stems) <= 2 or analysis.broad_query
     top_score = analysis.top_score or 0.0
-    top_non_generic_count = sum(
-        1 for result in results[:3] if not result.generic_procedural_fragment and result.score >= 0.56
+    enough_core_terms = len(analysis.matched_core_terms) >= max(1, min(2, len(decision_layer.query_core_terms(query))))
+    expected_area_hits = (
+        analysis.legal_area_distribution.get(analysis.expected_legal_area, 0)
+        if analysis.expected_legal_area
+        else 0
     )
-    top_query_match_count = sum(len(result.matched_query_terms) for result in results[:5])
-    top_civil_reasoning_count = sum(
-        1
-        for result in results[:5]
-        if result.legal_area == "civil"
-        and result.section_type in {"reasoning", "appeal_instruction"}
-        and not result.generic_procedural_fragment
-    )
-    dispersed = (
-        analysis.distinct_documents >= 4
-        or analysis.distinct_legal_areas >= 2
-        or analysis.distinct_section_types >= 3
-    )
+    area_consistent = not analysis.expected_legal_area or expected_area_hits >= max(1, min(3, len(results[:5]) - 1))
+    top_noise = sum(1 for result in results[:3] if result.is_noise)
+    top_query_match_count = sum(len(result.matched_query_terms) for result in results[:3])
 
     if not results:
         return (
@@ -154,35 +166,50 @@ def build_manual_reason_and_decision(
             0.25,
             "Retrieved results are missing required section-aware metadata, so they should not be used for answering.",
         )
-    if len(query_stems) <= 2 and dispersed:
+    if (
+        analysis.top2_core_evidence_count >= 1
+        and analysis.direct_evidence_count >= 2
+        and analysis.substantive_reasoning_count >= 2
+        and analysis.noise_result_count <= max(2, len(results) // 3)
+        and area_consistent
+        and enough_core_terms
+    ):
+        return (
+            "answerable",
+            0.86,
+            "High-ranked substantive results contain direct core evidence with acceptable noise levels.",
+        )
+    if (
+        analysis.top5_core_evidence_count >= 2
+        and analysis.direct_evidence_count >= 2
+        and analysis.substantive_reasoning_count >= 2
+        and analysis.top2_source_evidence_count >= 1
+        and analysis.noise_result_count <= max(3, len(results) // 2)
+        and area_consistent
+        and enough_core_terms
+    ):
+        return (
+            "answerable",
+            0.77,
+            "Multiple substantive results support the query and the highest-ranked evidence is strong enough for answering.",
+        )
+    if broad_query and analysis.noise_result_count >= 3 and analysis.top2_source_evidence_count == 0:
         return (
             "ask_for_clarification",
             0.88,
             "The query is broad and the top results span multiple documents or legal contexts, so clarification is needed.",
         )
-    if analysis.generic_result_count >= 3 and analysis.broad_query:
+    if analysis.noise_result_count >= 4 and analysis.direct_evidence_count == 0:
         return (
-            "ask_for_clarification",
-            0.84,
-            "The query collapses into generic procedural fragments instead of a single concrete legal issue.",
+            "insufficient_support",
+            0.83,
+            "Top results are dominated by noisy or procedural matches and do not provide enough direct support.",
         )
-    if top_score >= 0.68 and top_non_generic_count >= 1 and top_query_match_count >= 2:
+    if specific_query and (analysis.top2_core_evidence_count == 0 or top_noise >= 1 or not enough_core_terms):
         return (
-            "answerable",
-            0.88,
-            "Top results contain close non-generic legal context with sufficient overlap to support an answer.",
-        )
-    if specific_query and top_civil_reasoning_count >= 3 and analysis.query_term_overlap_count >= 4 and top_score >= 0.52:
-        return (
-            "answerable",
-            0.81,
-            "A specific legal query retrieved concentrated civil reasoning support that is sufficient for answerable retrieval.",
-        )
-    if top_score >= 0.58 and top_non_generic_count >= 2 and top_query_match_count >= 2 and len(query_stems) >= 3:
-        return (
-            "answerable",
-            0.79,
-            "Top results show stable legal context and term overlap that are strong enough for answerable retrieval.",
+            "insufficient_support",
+            0.52,
+            "The query is specific, but the highest-ranked results do not contain strong enough direct core evidence.",
         )
     if top_score < 0.45:
         return (
@@ -231,9 +258,12 @@ def assemble_full_decisions(
     chunks_df: pd.DataFrame,
     top_results: list[decision_layer.TopResultSummary],
     max_full_decisions: int,
+    include_noisy_full_decisions: bool,
 ) -> list[FullDecisionResult]:
     distinct_document_ids: list[str] = []
     for result in top_results:
+        if not include_noisy_full_decisions and not result.is_core_evidence:
+            continue
         if result.document_id and result.document_id not in distinct_document_ids:
             distinct_document_ids.append(result.document_id)
         if len(distinct_document_ids) >= max_full_decisions:
@@ -273,9 +303,14 @@ def format_console_table(results: list[decision_layer.TopResultSummary]) -> str:
         ("document_type", 12),
         ("legal_area", 10),
         ("section_type", 16),
+        ("matched_query_terms", 24),
+        ("missing_core_terms", 24),
+        ("core", 5),
+        ("noise", 5),
+        ("noise_reason", 26),
         ("chunk_id", 38),
         ("document_id", 32),
-        ("short_preview", 80),
+        ("short_preview", 72),
     ]
     lines = []
     header_line = " | ".join(label.ljust(width) for label, width in headers)
@@ -290,9 +325,14 @@ def format_console_table(results: list[decision_layer.TopResultSummary]) -> str:
             result.document_type[:12].ljust(12),
             result.legal_area[:10].ljust(10),
             result.section_type[:16].ljust(16),
+            ", ".join(result.matched_query_terms)[:24].ljust(24),
+            ", ".join(result.missing_core_terms)[:24].ljust(24),
+            str(result.is_core_evidence).ljust(5),
+            str(result.is_noise).ljust(5),
+            result.noise_reason[:26].ljust(26),
             result.chunk_id[:38].ljust(38),
             result.document_id[:32].ljust(32),
-            result.short_preview[:80].ljust(80),
+            result.short_preview[:72].ljust(72),
         ]
         lines.append(" | ".join(row))
     return "\n".join(lines)
@@ -309,6 +349,14 @@ def build_json_payload(result: ManualQueryResult) -> dict[str, Any]:
         "collection_validation": asdict(result.collection_validation),
         "metadata_validation_passed": result.metadata_validation_passed,
         "exact_dataset_match": result.exact_dataset_match,
+        "direct_evidence_count": result.direct_evidence_count,
+        "noise_result_count": result.noise_result_count,
+        "substantive_reasoning_count": result.substantive_reasoning_count,
+        "legal_area_distribution": result.legal_area_distribution,
+        "section_type_distribution": result.section_type_distribution,
+        "matched_core_terms": result.matched_core_terms,
+        "missing_core_terms": result.missing_core_terms,
+        "decision_diagnostics": result.decision_diagnostics,
         "top_results": [result_preview_row(item) for item in result.top_results],
     }
     if result.full_decisions:
@@ -327,17 +375,28 @@ def build_markdown_output(result: ManualQueryResult) -> str:
         f"- Recommended user message: {result.recommended_user_message}",
         f"- Top result count: **{result.top_result_count}**",
         f"- Exact dataset match: **{result.exact_dataset_match}**",
+        f"- Direct evidence count: **{result.direct_evidence_count}**",
+        f"- Noise result count: **{result.noise_result_count}**",
+        f"- Substantive reasoning count: **{result.substantive_reasoning_count}**",
+        f"- Legal area distribution: `{json.dumps(result.legal_area_distribution, ensure_ascii=False)}`",
+        f"- Section type distribution: `{json.dumps(result.section_type_distribution, ensure_ascii=False)}`",
+        f"- Matched core terms: {', '.join(result.matched_core_terms) if result.matched_core_terms else '-'}",
+        f"- Missing core terms: {', '.join(result.missing_core_terms) if result.missing_core_terms else '-'}",
+        f"- Decision diagnostics: {' | '.join(result.decision_diagnostics) if result.decision_diagnostics else '-'}",
         "",
         "## Top Results",
         "",
-        "| rank | score | case_number | document_type | legal_area | section_type | chunk_id | document_id | short preview |",
-        "| --- | ---: | --- | --- | --- | --- | --- | --- | --- |",
+        "| rank | score | case_number | document_type | legal_area | section_type | matched_query_terms | missing_core_terms | is_core_evidence | is_noise | noise_reason | chunk_id | document_id | short preview |",
+        "| --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for item in result.top_results:
         lines.append(
             f"| {item.rank} | {item.score:.6f} | {item.case_number or '-'} | {item.document_type or '-'} | "
-            f"{item.legal_area or '-'} | {item.section_type or '-'} | {item.chunk_id or '-'} | "
-            f"{item.document_id or '-'} | {item.short_preview or '-'} |"
+            f"{item.legal_area or '-'} | {item.section_type or '-'} | "
+            f"{', '.join(item.matched_query_terms) if item.matched_query_terms else '-'} | "
+            f"{', '.join(item.missing_core_terms) if item.missing_core_terms else '-'} | "
+            f"{item.is_core_evidence} | {item.is_noise} | {item.noise_reason or '-'} | "
+            f"{item.chunk_id or '-'} | {item.document_id or '-'} | {item.short_preview or '-'} |"
         )
     lines.append("")
     if result.full_decisions:
@@ -370,6 +429,7 @@ def run_manual_query(
     dataset_context: dict[str, Any] | None,
     collection_validation: decision_layer.CollectionValidation,
     include_full_decision: bool,
+    include_noisy_full_decisions: bool,
     chunks_df: pd.DataFrame | None,
     max_full_decisions: int,
 ) -> ManualQueryResult:
@@ -381,22 +441,52 @@ def run_manual_query(
         limit=top_k,
     )
     query_terms = [query]
+    source_terms: list[str] = []
+    source_case_numbers: set[str] = set()
+    source_chunk_ids: set[str] = set()
+    expected_section_types: set[str] = set()
     if dataset_context is not None:
-        query_terms.extend(
+        source_terms = [
             decision_layer.normalize_text(value)
             for value in dataset_context.get("source_terms", [])
             if decision_layer.normalize_text(value)
-        )
+        ]
+        query_terms.extend(source_terms)
+        source_case_numbers = {
+            decision_layer.normalize_text(value)
+            for value in dataset_context.get("source_case_numbers", [])
+            if decision_layer.normalize_text(value)
+        }
+        source_chunk_ids = {
+            decision_layer.normalize_text(value)
+            for value in dataset_context.get("source_chunk_ids", [])
+            if decision_layer.normalize_text(value)
+        }
+        expected_section_types = {
+            decision_layer.normalize_text(value)
+            for value in dataset_context.get("expected_section_types", [])
+            if decision_layer.normalize_text(value)
+        }
+    core_terms = decision_layer.query_core_terms(query)
+    expected_legal_area = decision_layer.infer_expected_legal_area(query, source_case_numbers)
     mapped_results = [
-        decision_layer.map_result(rank, point, query_terms=query_terms, source_terms=[])
+        decision_layer.map_result(
+            rank,
+            point,
+            query_terms=query_terms,
+            source_terms=source_terms,
+            core_terms=core_terms,
+            expected_legal_area=expected_legal_area,
+            expected_section_types=expected_section_types,
+        )
         for rank, point in enumerate(raw_results, start=1)
     ]
     analysis = decision_layer.analyze_results(
         query=query,
         results=mapped_results,
-        source_terms=[],
-        source_chunk_ids=set(),
-        source_case_numbers=set(),
+        source_terms=source_terms,
+        source_chunk_ids=source_chunk_ids,
+        source_case_numbers=source_case_numbers,
         weak_query_info=(dataset_context or {}).get("weak_query_info") if dataset_context else None,
     )
     decision, confidence, reason, exact_dataset_match = classify_manual_query(
@@ -413,7 +503,18 @@ def run_manual_query(
             chunks_df=chunks_df,
             top_results=mapped_results,
             max_full_decisions=max_full_decisions,
+            include_noisy_full_decisions=include_noisy_full_decisions,
         )
+    decision_diagnostics = [
+        f"expected_legal_area={analysis.expected_legal_area or 'unknown'}",
+        f"top2_core_evidence_count={analysis.top2_core_evidence_count}",
+        f"top5_core_evidence_count={analysis.top5_core_evidence_count}",
+        f"top2_source_evidence_count={analysis.top2_source_evidence_count}",
+        f"top5_source_evidence_count={analysis.top5_source_evidence_count}",
+        f"source_backed_result_count={analysis.source_backed_result_count}",
+        f"noise_result_count={analysis.noise_result_count}",
+        f"substantive_reasoning_count={analysis.substantive_reasoning_count}",
+    ]
     return ManualQueryResult(
         query=query,
         decision=decision,
@@ -424,6 +525,14 @@ def run_manual_query(
         collection_validation=collection_validation,
         metadata_validation_passed=analysis.metadata_validation_passed,
         exact_dataset_match=exact_dataset_match,
+        direct_evidence_count=analysis.direct_evidence_count,
+        noise_result_count=analysis.noise_result_count,
+        substantive_reasoning_count=analysis.substantive_reasoning_count,
+        legal_area_distribution=analysis.legal_area_distribution,
+        section_type_distribution=analysis.section_type_distribution,
+        matched_core_terms=analysis.matched_core_terms,
+        missing_core_terms=analysis.missing_core_terms,
+        decision_diagnostics=decision_diagnostics,
         top_results=mapped_results,
         full_decisions=full_decisions,
     )
@@ -500,6 +609,7 @@ def main() -> int:
             dataset_context=query_context.get(args.query),
             collection_validation=collection_validation,
             include_full_decision=args.include_full_decision,
+            include_noisy_full_decisions=args.include_noisy_full_decisions,
             chunks_df=chunks_df,
             max_full_decisions=args.max_full_decisions,
         )
@@ -518,10 +628,14 @@ def main() -> int:
     command_used = f"{Path(sys.executable).name} " + " ".join(shlex.quote(arg) for arg in sys.argv)
     print(f"command used: {command_used}")
     print(f"query: {result.query}")
-    print(f"decision: {result.decision}")
+    print(f"manual query decision: {result.decision}")
     print(f"confidence: {result.confidence:.3f}")
     print(f"reason: {result.reason}")
     print(f"recommended user message: {result.recommended_user_message}")
+    print(f"direct evidence count: {result.direct_evidence_count}")
+    print(f"noise result count: {result.noise_result_count}")
+    print(f"matched core terms: {', '.join(result.matched_core_terms) if result.matched_core_terms else '-'}")
+    print(f"missing core terms: {', '.join(result.missing_core_terms) if result.missing_core_terms else '-'}")
     print(f"top result count: {result.top_result_count}")
     print("top results:")
     print(format_console_table(result.top_results))

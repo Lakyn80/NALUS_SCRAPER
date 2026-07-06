@@ -1,0 +1,97 @@
+{
+  "run_id": "20260704_214017Z",
+  "dataset_id": "nalus-nsoud-pilot-v1",
+  "dataset_name": "NALUS NSOud Retrieval Pilot",
+  "preflight_passed": true,
+  "preflight_issue_count": 0,
+  "failed_models": [
+    {
+      "model_code": "bge_m3",
+      "config_id": "bge_m3__dense_plus_bm25",
+      "status": "FAILED",
+      "error": "Due to a serious vulnerability issue in `torch.load`, even with `weights_only=True`, we now require users to upgrade torch to at least v2.6 in order to use the function. This version restriction does not apply when loading files with safetensors.\nSee the vulnerability report here https://nvd.nist.gov/vuln/detail/CVE-2025-32434"
+    },
+    {
+      "model_code": "multilingual_e5_base",
+      "config_id": "multilingual_e5_base__dense_plus_bm25",
+      "status": "FAILED",
+      "error": "timed out"
+    },
+    {
+      "model_code": "multilingual_e5_large",
+      "config_id": "multilingual_e5_large__dense_plus_bm25",
+      "status": "FAILED",
+      "error": "timed out"
+    },
+    {
+      "model_code": "paraphrase_multilingual_mpnet_base_v2",
+      "config_id": "paraphrase_multilingual_mpnet_base_v2__dense_plus_bm25",
+      "status": "FAILED",
+      "error": "timed out"
+    }
+  ],
+  "winner": {
+    "config_id": "bm25__bm25",
+    "model_code": "bm25",
+    "collection_name": "nalus_rag_eval__bm25__rag_eval__nalus_nsoud_pilot_v1__63119240e1",
+    "metrics": {
+      "hit_rate": 1.0,
+      "recall_at_k": 1.0,
+      "mrr": 0.71875,
+      "forbidden_marker_rate": 0.0,
+      "average_latency_ms": 1725.995375,
+      "cost_estimate_total": null,
+      "evidence_marker_coverage": 1.0,
+      "missing_expected_marker_count": 0,
+      "false_positive_count": 20
+    }
+  },
+  "ranking": [
+    {
+      "config_id": "bm25__bm25",
+      "model_code": "bm25",
+      "collection_name": "nalus_rag_eval__bm25__rag_eval__nalus_nsoud_pilot_v1__63119240e1",
+      "metrics": {
+        "hit_rate": 1.0,
+        "recall_at_k": 1.0,
+        "mrr": 0.71875,
+        "forbidden_marker_rate": 0.0,
+        "average_latency_ms": 1725.995375,
+        "cost_estimate_total": null,
+        "evidence_marker_coverage": 1.0,
+        "missing_expected_marker_count": 0,
+        "false_positive_count": 20
+      },
+      "reasons": [
+        "hit_rate=1.000",
+        "evidence_marker_coverage=1.000",
+        "recall_at_k=1.000",
+        "mrr=0.719",
+        "forbidden_marker_rate=0.000"
+      ]
+    },
+    {
+      "config_id": "multilingual_e5_small__dense_plus_bm25",
+      "model_code": "multilingual_e5_small",
+      "collection_name": "nalus_rag_eval__multilingual_e5_small__rag_eval__nalus_nsoud_pilot_v1__63119240e1",
+      "metrics": {
+        "hit_rate": 1.0,
+        "recall_at_k": 1.0,
+        "mrr": 0.6354166666666666,
+        "forbidden_marker_rate": 0.0,
+        "average_latency_ms": 2362.741,
+        "cost_estimate_total": null,
+        "evidence_marker_coverage": 1.0,
+        "missing_expected_marker_count": 0,
+        "false_positive_count": 26
+      },
+      "reasons": [
+        "hit_rate=1.000",
+        "evidence_marker_coverage=1.000",
+        "recall_at_k=1.000",
+        "mrr=0.635",
+        "forbidden_marker_rate=0.000"
+      ]
+    }
+  ]
+}

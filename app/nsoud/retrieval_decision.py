@@ -72,6 +72,7 @@ LOW_SIGNAL_STEMS = {
     "odst",
     "pak",
     "podl",
+    "podle",
     "pism",
     "podm",
     "pred",
@@ -96,6 +97,42 @@ GENERIC_PROCEDURAL_PHRASES = [
     "vec vedena u okresniho soudu",
     "v brne dne",
 ]
+LOW_QUALITY_SECTION_TYPES = {
+    "appeal_instruction",
+    "signature",
+}
+CIVIL_HINT_STEMS = {
+    "bydlen",
+    "drazb",
+    "exekuc",
+    "kupni",
+    "naklad",
+    "najem",
+    "nemovit",
+    "odpovednost",
+    "ochran",
+    "osobn",
+    "pozem",
+    "pravo",
+    "sleva",
+    "spoluvlast",
+    "udaju",
+    "urcen",
+    "vady",
+    "vlastnic",
+    "gdpr",
+}
+CRIMINAL_HINT_STEMS = {
+    "dovolac",
+    "napaden",
+    "nutn",
+    "obvin",
+    "odnet",
+    "obrana",
+    "skutk",
+    "trest",
+    "vin",
+}
 
 
 @dataclass(frozen=True)
@@ -123,6 +160,11 @@ class TopResultSummary:
     generic_procedural_fragment: bool
     matched_query_terms: list[str]
     matched_source_terms: list[str]
+    matched_core_terms: list[str]
+    missing_core_terms: list[str]
+    is_core_evidence: bool
+    is_noise: bool
+    noise_reason: str
     short_preview: str
 
 
@@ -134,14 +176,26 @@ class QueryAnalysis:
     top_result_count: int
     strong_result_count: int
     direct_evidence_count: int
+    top2_core_evidence_count: int
+    top5_core_evidence_count: int
+    top2_source_evidence_count: int
+    top5_source_evidence_count: int
+    source_backed_result_count: int
     distinct_documents: int
     distinct_legal_areas: int
     distinct_section_types: int
     generic_result_count: int
+    noise_result_count: int
+    substantive_reasoning_count: int
     metadata_validation_passed: bool
     query_term_overlap_count: int
     source_term_overlap_count: int
     broad_query: bool
+    expected_legal_area: str
+    legal_area_distribution: dict[str, int]
+    section_type_distribution: dict[str, int]
+    matched_core_terms: list[str]
+    missing_core_terms: list[str]
 
 
 @dataclass(frozen=True)
@@ -156,8 +210,15 @@ class RetrievalDecision:
     top_result_count: int
     strong_result_count: int
     direct_evidence_count: int
+    noise_result_count: int
+    substantive_reasoning_count: int
+    legal_area_distribution: dict[str, int]
+    section_type_distribution: dict[str, int]
+    matched_core_terms: list[str]
+    missing_core_terms: list[str]
     matched_terms: list[str]
     missing_terms: list[str]
+    decision_diagnostics: list[str]
     recommended_user_message: str
     top_results: list[TopResultSummary]
 
@@ -289,6 +350,80 @@ def significant_stems(terms: list[str]) -> set[str]:
     return stems
 
 
+def query_core_terms(query: str) -> list[str]:
+    terms: list[str] = []
+    seen_stems: set[str] = set()
+    for token in re.findall(r"\w+", normalize_text(query).lower(), flags=re.UNICODE):
+        stem = stem_token(token)
+        if len(stem) < 4 or stem.isdigit() or stem in LOW_SIGNAL_STEMS or stem in seen_stems:
+            continue
+        seen_stems.add(stem)
+        terms.append(token)
+    return terms
+
+
+def query_core_term_stems(query: str) -> dict[str, str]:
+    return {term: stem_token(term) for term in query_core_terms(query)}
+
+
+def infer_legal_area_from_case_number(case_number: str) -> str:
+    normalized = simplify_text(case_number).replace(" ", "")
+    if any(marker in normalized for marker in ("tdo", "td.", "pzo", "tz")):
+        return "criminal"
+    if any(marker in normalized for marker in ("cdo", "nd", "nscr")):
+        return "civil"
+    return ""
+
+
+def infer_expected_legal_area(query: str, source_case_numbers: set[str]) -> str:
+    area_counts = {"civil": 0, "criminal": 0}
+    for case_number in source_case_numbers:
+        inferred = infer_legal_area_from_case_number(case_number)
+        if inferred:
+            area_counts[inferred] += 1
+    if area_counts["civil"] > area_counts["criminal"]:
+        return "civil"
+    if area_counts["criminal"] > area_counts["civil"]:
+        return "criminal"
+
+    query_stems = significant_stems([query])
+    civil_hits = len(query_stems.intersection(CIVIL_HINT_STEMS))
+    criminal_hits = len(query_stems.intersection(CRIMINAL_HINT_STEMS))
+    if civil_hits > criminal_hits and civil_hits >= 1:
+        return "civil"
+    if criminal_hits > civil_hits and criminal_hits >= 1:
+        return "criminal"
+    return ""
+
+
+def build_distribution(values: list[str]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        key = value or "<missing>"
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def is_substantive_section(section_type: str, expected_section_types: set[str]) -> bool:
+    if section_type == "reasoning":
+        return True
+    if section_type in {"operative_part", "header"} and section_type in expected_section_types:
+        return True
+    return False
+
+
+def matched_core_terms_in_text(text: str, core_terms: list[str]) -> list[str]:
+    if not core_terms:
+        return []
+    haystack_tokens = [token for token in tokenize_stems(text) if token]
+    matches: list[str] = []
+    for term in core_terms:
+        term_stem = stem_token(term)
+        if term_stem and any(term_stem in hay_token or hay_token in term_stem for hay_token in haystack_tokens):
+            matches.append(term)
+    return matches
+
+
 def contains_generic_procedural_phrase(text: str) -> bool:
     haystack = f" {simplify_text(text)} "
     for phrase in GENERIC_PROCEDURAL_PHRASES:
@@ -381,24 +516,67 @@ def build_query_context(dataset: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return context
 
 
-def map_result(rank: int, point: Any, *, query_terms: list[str], source_terms: list[str]) -> TopResultSummary:
+def map_result(
+    rank: int,
+    point: Any,
+    *,
+    query_terms: list[str],
+    source_terms: list[str],
+    core_terms: list[str],
+    expected_legal_area: str,
+    expected_section_types: set[str],
+) -> TopResultSummary:
     payload = dict(point.payload or {})
     text = normalize_text(payload.get("text"))
     missing_metadata_fields = validate_payload_metadata(payload)
+    legal_area = normalize_text(payload.get("legal_area"))
+    section_type = normalize_text(payload.get("section_type"))
+    matched_source_terms = matched_terms_in_text(text, source_terms)
+    matched_core_terms = matched_core_terms_in_text(text, core_terms)
+    missing_core_terms = [term for term in core_terms if term not in matched_core_terms]
+    generic_fragment = is_generic_procedural_result(payload)
+    substantive_section = is_substantive_section(section_type, expected_section_types)
+    noise_reasons: list[str] = []
+    if expected_legal_area and legal_area and legal_area != expected_legal_area:
+        noise_reasons.append(f"legal_area_mismatch:{legal_area}")
+    if generic_fragment:
+        noise_reasons.append("generic_procedural_fragment")
+    if not substantive_section:
+        noise_reasons.append(f"low_quality_section:{section_type or 'missing'}")
+    if core_terms and not matched_core_terms:
+        noise_reasons.append("missing_core_terms")
+    elif core_terms and len(matched_core_terms) < min(2, len(core_terms)):
+        noise_reasons.append("weak_core_term_overlap")
+    is_core_evidence = (
+        not missing_metadata_fields
+        and substantive_section
+        and not generic_fragment
+        and (not expected_legal_area or not legal_area or legal_area == expected_legal_area)
+        and (
+            (core_terms and len(matched_core_terms) >= min(2, len(core_terms)))
+            or bool(matched_source_terms)
+        )
+    )
+    is_noise = bool(noise_reasons) and not is_core_evidence
     return TopResultSummary(
         rank=rank,
         score=float(point.score),
         case_number=normalize_text(payload.get("case_number")),
         document_type=normalize_text(payload.get("document_type")),
-        legal_area=normalize_text(payload.get("legal_area")),
-        section_type=normalize_text(payload.get("section_type")),
+        legal_area=legal_area,
+        section_type=section_type,
         chunk_id=normalize_text(payload.get("chunk_id")),
         document_id=normalize_text(payload.get("document_id")),
         metadata_present=not missing_metadata_fields,
         missing_metadata_fields=missing_metadata_fields,
-        generic_procedural_fragment=is_generic_procedural_result(payload),
+        generic_procedural_fragment=generic_fragment,
         matched_query_terms=matched_terms_in_text(text, query_terms),
-        matched_source_terms=matched_terms_in_text(text, source_terms),
+        matched_source_terms=matched_source_terms,
+        matched_core_terms=matched_core_terms,
+        missing_core_terms=missing_core_terms,
+        is_core_evidence=is_core_evidence,
+        is_noise=is_noise,
+        noise_reason="; ".join(noise_reasons),
         short_preview=preview_text(text),
     )
 
@@ -414,11 +592,18 @@ def analyze_results(
 ) -> QueryAnalysis:
     strong_score_threshold = 0.62
     query_term_stems = significant_stems([query])
+    core_terms = query_core_terms(query)
+    expected_legal_area = infer_expected_legal_area(query, source_case_numbers)
     top_score = results[0].score if results else None
     second_score = results[1].score if len(results) > 1 else None
     score_gap = (top_score - second_score) if top_score is not None and second_score is not None else None
     strong_result_count = sum(1 for result in results if result.score >= strong_score_threshold)
     direct_evidence_count = 0
+    top2_core_evidence_count = 0
+    top5_core_evidence_count = 0
+    top2_source_evidence_count = 0
+    top5_source_evidence_count = 0
+    source_backed_result_count = 0
     query_term_overlap_count = 0
     source_term_overlap_count = 0
 
@@ -434,21 +619,41 @@ def analyze_results(
             or bool(result.matched_source_terms)
         )
         if has_direct_source_match:
+            source_backed_result_count += 1
+        if has_direct_source_match or result.is_core_evidence:
             direct_evidence_count += 1
+        if result.rank <= 2 and result.is_core_evidence:
+            top2_core_evidence_count += 1
+        if result.rank <= 5 and result.is_core_evidence:
+            top5_core_evidence_count += 1
+        if result.rank <= 2 and has_direct_source_match:
+            top2_source_evidence_count += 1
+        if result.rank <= 5 and has_direct_source_match:
+            top5_source_evidence_count += 1
 
     distinct_documents = len({result.document_id for result in results if result.document_id})
     distinct_legal_areas = len({result.legal_area for result in results if result.legal_area})
     distinct_section_types = len({result.section_type for result in results if result.section_type})
     generic_result_count = sum(1 for result in results if result.generic_procedural_fragment)
+    noise_result_count = sum(1 for result in results if result.is_noise)
+    substantive_reasoning_count = sum(
+        1
+        for result in results
+        if result.section_type == "reasoning" and not result.is_noise
+    )
     metadata_validation_passed = all(result.metadata_present for result in results)
     weak_classification = normalize_text((weak_query_info or {}).get("primary_classification"))
-    broad_query = (
-        len(query_term_stems) <= 2
-        or weak_classification == "too_generic"
-        or distinct_documents >= 6
-        or distinct_legal_areas >= 2
-        or distinct_section_types >= 3
+    broad_query = len(query_term_stems) <= 2 or weak_classification == "too_generic"
+    matched_core_terms = sorted(
+        {
+            term
+            for result in results[:5]
+            for term in result.matched_core_terms
+        }
     )
+    missing_core_terms = [term for term in core_terms if term not in matched_core_terms]
+    legal_area_distribution = build_distribution([result.legal_area for result in results])
+    section_type_distribution = build_distribution([result.section_type for result in results])
 
     return QueryAnalysis(
         top_score=top_score,
@@ -457,14 +662,26 @@ def analyze_results(
         top_result_count=len(results),
         strong_result_count=strong_result_count,
         direct_evidence_count=direct_evidence_count,
+        top2_core_evidence_count=top2_core_evidence_count,
+        top5_core_evidence_count=top5_core_evidence_count,
+        top2_source_evidence_count=top2_source_evidence_count,
+        top5_source_evidence_count=top5_source_evidence_count,
+        source_backed_result_count=source_backed_result_count,
         distinct_documents=distinct_documents,
         distinct_legal_areas=distinct_legal_areas,
         distinct_section_types=distinct_section_types,
         generic_result_count=generic_result_count,
+        noise_result_count=noise_result_count,
+        substantive_reasoning_count=substantive_reasoning_count,
         metadata_validation_passed=metadata_validation_passed,
         query_term_overlap_count=query_term_overlap_count,
         source_term_overlap_count=source_term_overlap_count,
         broad_query=broad_query,
+        expected_legal_area=expected_legal_area,
+        legal_area_distribution=legal_area_distribution,
+        section_type_distribution=section_type_distribution,
+        matched_core_terms=matched_core_terms,
+        missing_core_terms=missing_core_terms,
     )
 
 
@@ -495,34 +712,74 @@ def classify_positive(
     results: list[TopResultSummary],
     analysis: QueryAnalysis,
 ) -> tuple[DecisionType, float, str]:
-    expected_sections = {
-        normalize_text(value)
-        for value in item.get("expected_section_types", [])
-        if normalize_text(value)
-    }
-    top_section_match = any(result.section_type in expected_sections for result in results[:3])
-    early_source_match = any(result.matched_source_terms for result in results[:3])
-    early_case_match = any(
-        result.case_number in {normalize_text(value) for value in item.get("source_case_numbers", []) if normalize_text(value)}
-        for result in results[:5]
-    )
+    query_is_broad = len(significant_stems([query])) <= 2
+    top2_noise = sum(1 for result in results[:2] if result.is_noise)
+    expected_area_hits = analysis.legal_area_distribution.get(analysis.expected_legal_area, 0) if analysis.expected_legal_area else 0
+    area_consistent = not analysis.expected_legal_area or expected_area_hits >= max(1, min(3, len(results[:5]) - 1))
+    enough_core_terms = len(analysis.matched_core_terms) >= max(1, min(2, len(query_core_terms(query))))
     if not results:
         return "insufficient_support", 0.0, "No results were retrieved for a query that should be answerable."
     if not analysis.metadata_validation_passed:
         return "insufficient_support", 0.2, "Retrieved results are missing required section-aware metadata."
-    if analysis.direct_evidence_count >= 1 and analysis.strong_result_count >= 1:
-        confidence = confidence_from_score(0.82 + min(0.14, analysis.direct_evidence_count * 0.03))
-        return "answerable", confidence, "Top results contain direct source evidence for the expected answerable query."
-    if early_source_match and top_section_match:
-        confidence = confidence_from_score(0.78 + min(0.08, (analysis.top_score or 0.0) * 0.1))
-        return "answerable", confidence, "Top results contain source-term overlap in the expected section context."
-    if early_case_match and analysis.top_score is not None and analysis.top_score >= 0.55:
-        confidence = confidence_from_score(0.76 + min(0.08, analysis.top_score * 0.1))
-        return "answerable", confidence, "Source case context appears early enough to support an answer."
-    if top_section_match and analysis.query_term_overlap_count >= 3 and analysis.top_score is not None and analysis.top_score >= 0.55:
-        confidence = confidence_from_score(0.74 + min(0.08, analysis.top_score * 0.08))
-        return "answerable", confidence, "Results contain sufficiently close legal context even though direct evidence is indirect."
-    return "insufficient_support", 0.45, f"Retrieved context for '{query}' stays too indirect to support an answer deterministically."
+    if (
+        analysis.top2_core_evidence_count >= 1
+        and analysis.direct_evidence_count >= 2
+        and analysis.substantive_reasoning_count >= 2
+        and analysis.noise_result_count <= max(2, len(results) // 3)
+        and area_consistent
+        and enough_core_terms
+    ):
+        confidence = confidence_from_score(0.84 + min(0.10, analysis.top2_core_evidence_count * 0.04))
+        return "answerable", confidence, "High-ranked results contain direct substantive evidence with acceptable noise levels."
+    if (
+        analysis.top2_source_evidence_count >= 1
+        and analysis.top5_source_evidence_count >= 1
+        and analysis.direct_evidence_count >= 2
+        and analysis.substantive_reasoning_count >= 1
+        and enough_core_terms
+        and top2_noise <= 1
+    ):
+        confidence = confidence_from_score(0.72 + min(0.10, analysis.top2_source_evidence_count * 0.04))
+        return "answerable", confidence, "Curated source-backed evidence appears in the highest-ranked results despite surrounding retrieval noise."
+    if (
+        analysis.top5_source_evidence_count >= 1
+        and analysis.source_backed_result_count >= 2
+        and analysis.direct_evidence_count >= 2
+        and analysis.substantive_reasoning_count >= 1
+        and not analysis.missing_core_terms
+    ):
+        confidence = confidence_from_score(0.66 + min(0.10, analysis.top5_source_evidence_count * 0.03))
+        return "answerable", confidence, "Curated source-backed evidence is present in substantive results, even though procedural or cross-domain hits still appear above it."
+    if (
+        analysis.top5_source_evidence_count >= 2
+        and analysis.direct_evidence_count >= 2
+        and analysis.substantive_reasoning_count >= 1
+        and enough_core_terms
+        and analysis.noise_result_count <= max(8, len(results) - 1)
+        and area_consistent
+    ):
+        confidence = confidence_from_score(0.68 + min(0.08, analysis.top5_source_evidence_count * 0.03))
+        return "answerable", confidence, "Multiple curated source-backed results support the query, although the ranking still includes noisy context."
+    if (
+        analysis.top5_core_evidence_count >= 2
+        and analysis.direct_evidence_count >= 2
+        and analysis.substantive_reasoning_count >= 2
+        and analysis.noise_result_count <= max(3, len(results) // 2)
+        and area_consistent
+        and enough_core_terms
+    ):
+        confidence = confidence_from_score(0.74 + min(0.08, analysis.top5_core_evidence_count * 0.03))
+        return "answerable", confidence, "Multiple substantive results contain direct evidence, but the query still carries some retrieval noise."
+    if (
+        query_is_broad
+        and analysis.noise_result_count >= 3
+        and analysis.top2_source_evidence_count == 0
+        and analysis.top5_source_evidence_count == 0
+    ):
+        return "ask_for_clarification", 0.72, "The query remains broad and top results mix multiple contexts without strong high-ranked evidence."
+    if analysis.top2_source_evidence_count == 0 or top2_noise >= 1 or not enough_core_terms:
+        return "insufficient_support", 0.46, f"Direct evidence for '{query}' is too weak or too noisy in the highest-ranked results."
+    return "insufficient_support", 0.52, f"Retrieved context for '{query}' stays too indirect to support an answer deterministically."
 
 
 def classify_negative(
@@ -544,7 +801,7 @@ def classify_negative(
     for result in results[:5]:
         matched_missing_terms.extend(matched_terms_in_text(result.short_preview, missing_terms))
     matched_missing_terms = sorted(set(matched_missing_terms))
-    if analysis.direct_evidence_count == 0 and not matched_missing_terms and analysis.generic_result_count >= 2:
+    if analysis.direct_evidence_count == 0 and not matched_missing_terms and analysis.noise_result_count >= 2:
         return "insufficient_support", 0.92, "Top hits are generic or off-topic and do not provide direct support for the requested issue."
     if analysis.direct_evidence_count == 0 and not matched_missing_terms and (analysis.top_score or 0.0) < 0.80:
         return "insufficient_support", 0.88, "The current collection returns only indirect context and lacks direct support for this query."
@@ -552,7 +809,16 @@ def classify_negative(
         return "insufficient_support", 0.84, "Some vocabulary overlaps appear, but the results remain too weak and indirect to support an answer."
     if analysis.direct_evidence_count == 0 and analysis.distinct_documents >= 4:
         return "insufficient_support", 0.82, "The query disperses across unrelated documents without surfacing direct support."
-    return "answerable", 0.51, "The unsupported query unexpectedly retrieved narrow evidence and should be reviewed."
+    if (
+        analysis.top2_core_evidence_count >= 2
+        and analysis.top5_core_evidence_count >= 3
+        and analysis.noise_result_count <= 1
+        and len(analysis.missing_core_terms) <= 1
+        and analysis.distinct_legal_areas <= 1
+        and (analysis.top_score or 0.0) >= 0.85
+    ):
+        return "insufficient_support", 0.58, "Results look stronger than expected, but the collection still lacks deterministic support for this unsupported query."
+    return "insufficient_support", 0.76, "Retrieved overlaps remain too noisy, incomplete, or cross-domain to treat this unsupported query as answerable."
 
 
 def classify_underspecified(
@@ -571,7 +837,7 @@ def classify_underspecified(
         analysis.distinct_documents >= 3 or analysis.distinct_legal_areas >= 2 or analysis.distinct_section_types >= 3
     ):
         return "ask_for_clarification", 0.9, "Results span too many documents or legal contexts to justify a single direct answer."
-    if analysis.generic_result_count >= 3 and analysis.direct_evidence_count == 0:
+    if analysis.noise_result_count >= 3 and analysis.direct_evidence_count == 0:
         return "ask_for_clarification", 0.84, "The query collapses into generic procedural fragments instead of a specific legal issue."
     if analysis.top_score is not None and analysis.top_score < 0.55:
         return "ask_for_clarification", 0.78, "Scores stay diffuse, which indicates the query should be narrowed before answering."
@@ -630,8 +896,24 @@ def evaluate_queries(
         raw_results = run_search(client, collection_name=collection_name, vector=vector, limit=limit)
         source_terms = [normalize_text(value) for value in item.get("source_terms", []) if normalize_text(value)]
         query_terms = [query, *source_terms]
+        source_case_numbers = {normalize_text(value) for value in item.get("source_case_numbers", []) if normalize_text(value)}
+        expected_section_types = {
+            normalize_text(value)
+            for value in item.get("expected_section_types", [])
+            if normalize_text(value)
+        }
+        core_terms = query_core_terms(query)
+        expected_legal_area = infer_expected_legal_area(query, source_case_numbers)
         mapped_results = [
-            map_result(rank, point, query_terms=query_terms, source_terms=source_terms)
+            map_result(
+                rank,
+                point,
+                query_terms=query_terms,
+                source_terms=source_terms,
+                core_terms=core_terms,
+                expected_legal_area=expected_legal_area,
+                expected_section_types=expected_section_types,
+            )
             for rank, point in enumerate(raw_results, start=1)
         ]
         analysis = analyze_results(
@@ -639,7 +921,7 @@ def evaluate_queries(
             results=mapped_results,
             source_terms=source_terms,
             source_chunk_ids={normalize_text(value) for value in item.get("source_chunk_ids", []) if normalize_text(value)},
-            source_case_numbers={normalize_text(value) for value in item.get("source_case_numbers", []) if normalize_text(value)},
+            source_case_numbers=source_case_numbers,
             weak_query_info=item.get("weak_query_info"),
         )
         decision, confidence, reason = classify_query(query=query, item=item, results=mapped_results, analysis=analysis)
@@ -662,6 +944,16 @@ def evaluate_queries(
             }
         )
         expected_decision = item["expected_decision"]
+        decision_diagnostics = [
+            f"expected_legal_area={analysis.expected_legal_area or 'unknown'}",
+            f"top2_core_evidence_count={analysis.top2_core_evidence_count}",
+            f"top5_core_evidence_count={analysis.top5_core_evidence_count}",
+            f"top2_source_evidence_count={analysis.top2_source_evidence_count}",
+            f"top5_source_evidence_count={analysis.top5_source_evidence_count}",
+            f"source_backed_result_count={analysis.source_backed_result_count}",
+            f"noise_result_count={analysis.noise_result_count}",
+            f"substantive_reasoning_count={analysis.substantive_reasoning_count}",
+        ]
         results.append(
             RetrievalDecision(
                 query=query,
@@ -678,8 +970,15 @@ def evaluate_queries(
                 top_result_count=analysis.top_result_count,
                 strong_result_count=analysis.strong_result_count,
                 direct_evidence_count=analysis.direct_evidence_count,
+                noise_result_count=analysis.noise_result_count,
+                substantive_reasoning_count=analysis.substantive_reasoning_count,
+                legal_area_distribution=analysis.legal_area_distribution,
+                section_type_distribution=analysis.section_type_distribution,
+                matched_core_terms=analysis.matched_core_terms,
+                missing_core_terms=analysis.missing_core_terms,
                 matched_terms=matched_terms,
                 missing_terms=missing_terms,
+                decision_diagnostics=decision_diagnostics,
                 recommended_user_message=recommended_message_for(decision),
                 top_results=mapped_results,
             )
@@ -785,14 +1084,18 @@ def render_summary_table(title: str, results: list[RetrievalDecision]) -> list[s
 
 def render_top_results_table(results: list[TopResultSummary]) -> list[str]:
     lines = [
-        "| rank | score | case_number | document_type | legal_area | section_type | chunk_id | document_id | metadata | preview |",
-        "| --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| rank | score | case_number | document_type | legal_area | section_type | matched_query_terms | missing_core_terms | is_core_evidence | is_noise | noise_reason | chunk_id | document_id | metadata | preview |",
+        "| --- | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for result in results:
         lines.append(
             f"| {result.rank} | {result.score:.6f} | {result.case_number or '-'} | {result.document_type or '-'} | "
-            f"{result.legal_area or '-'} | {result.section_type or '-'} | {result.chunk_id or '-'} | "
-            f"{result.document_id or '-'} | {'PASS' if result.metadata_present else 'FAIL'} | {result.short_preview or '-'} |"
+            f"{result.legal_area or '-'} | {result.section_type or '-'} | "
+            f"{', '.join(result.matched_query_terms) if result.matched_query_terms else '-'} | "
+            f"{', '.join(result.missing_core_terms) if result.missing_core_terms else '-'} | "
+            f"{result.is_core_evidence} | {result.is_noise} | {result.noise_reason or '-'} | "
+            f"{result.chunk_id or '-'} | {result.document_id or '-'} | "
+            f"{'PASS' if result.metadata_present else 'FAIL'} | {result.short_preview or '-'} |"
         )
     lines.append("")
     return lines
@@ -817,8 +1120,16 @@ def render_query_sections(results: list[RetrievalDecision]) -> list[str]:
                 f"- Top result document_type: `{top_result.document_type or '-'}`" if top_result else "- Top result document_type: `n/a`",
                 f"- Top result legal_area: `{top_result.legal_area or '-'}`" if top_result else "- Top result legal_area: `n/a`",
                 f"- Top result section_type: `{top_result.section_type or '-'}`" if top_result else "- Top result section_type: `n/a`",
+                f"- Direct evidence count: **{item.direct_evidence_count}**",
+                f"- Noise result count: **{item.noise_result_count}**",
+                f"- Substantive reasoning count: **{item.substantive_reasoning_count}**",
+                f"- Legal area distribution: `{json.dumps(item.legal_area_distribution, ensure_ascii=False)}`",
+                f"- Section type distribution: `{json.dumps(item.section_type_distribution, ensure_ascii=False)}`",
+                f"- Matched core terms: {', '.join(item.matched_core_terms) if item.matched_core_terms else '-'}",
+                f"- Missing core terms: {', '.join(item.missing_core_terms) if item.missing_core_terms else '-'}",
                 f"- Matched terms: {', '.join(item.matched_terms) if item.matched_terms else '-'}",
                 f"- Missing terms: {', '.join(item.missing_terms) if item.missing_terms else '-'}",
+                f"- Decision diagnostics: {' | '.join(item.decision_diagnostics) if item.decision_diagnostics else '-'}",
                 "",
             ]
         )

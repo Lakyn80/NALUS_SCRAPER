@@ -1,0 +1,4 @@
+Winner: bge_m3__dense_plus_bm25 (hit_rate=1.0)
+Complete: True (7/7)
+Wrote /app/artifacts/rag_eval/out_combined/combined_ranking.json
+Wrote /app/artifacts/rag_eval/out_combined/combined_report.md

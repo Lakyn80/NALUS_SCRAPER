@@ -1,0 +1,29 @@
+=== START e5_large 2026-07-05T21:58:13Z ===
+{
+  "passed": true,
+  "issue_count": 0,
+  "issues": []
+}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/391 [00:00<?, ?it/s]Loading weights:  22%|██▏       | 87/391 [00:00<00:00, 865.86it/s]Loading weights: 100%|██████████| 391/391 [00:00<00:00, 2084.02it/s]
+[1mXLMRobertaModel LOAD REPORT[0m from: intfloat/multilingual-e5-large
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+Split strings:   0%|          | 0/1862 [00:00<?, ?it/s]Split strings:  32%|███▏      | 600/1862 [00:00<00:00, 5957.54it/s]Split strings:  64%|██████▍   | 1196/1862 [00:00<00:00, 5342.47it/s]Split strings:  96%|█████████▌| 1787/1862 [00:00<00:00, 5585.30it/s]                                                                    BM25S Count Tokens:   0%|          | 0/1862 [00:00<?, ?it/s]                                                            BM25S Compute Scores:   0%|          | 0/1862 [00:00<?, ?it/s]                                                              Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     Split strings:   0%|          | 0/1 [00:00<?, ?it/s]                                                    BM25S Retrieve:   0%|          | 0/1 [00:00<?, ?it/s]                                                     {
+  "run_id": "20260705_215820Z",
+  "dataset_id": "nalus-nsoud-pilot-v1",
+  "winner_model_code": "multilingual_e5_large",
+  "winner_config_id": "multilingual_e5_large__dense_plus_bm25",
+  "failed_models": [],
+  "artifact_paths": {
+    "ranking_json": "/app/artifacts/rag_eval/out_rerun_e5_large/ranking.json",
+    "report_md": "/app/artifacts/rag_eval/out_rerun_e5_large/report.md",
+    "run_dir": "/app/artifacts/rag_eval/out_rerun_e5_large/runs/20260705_215820Z",
+    "preflight_json": "/app/artifacts/rag_eval/out_rerun_e5_large/runs/20260705_215820Z/preflight.json"
+  }
+}
+=== END e5_large 2026-07-06T09:25:37Z ===

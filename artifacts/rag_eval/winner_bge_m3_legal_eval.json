@@ -1,0 +1,540 @@
+{
+  "evaluated_at": "2026-07-06T16:19:38.890361+00:00",
+  "source_export": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\out_combined\\winner_bge_m3_qa.json",
+  "source_dataset": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\nalus_eval.json",
+  "winner_config_id": "bge_m3__dense_plus_bm25",
+  "model_code": "bge_m3",
+  "retrieval_mode": "dense_plus_bm25",
+  "benchmark_metrics": {
+    "hit_rate": 1.0,
+    "recall_at_k": 1.0,
+    "mrr": 0.9375,
+    "forbidden_marker_rate": 0.0,
+    "average_latency_ms": 2362.23025,
+    "cost_estimate_total": null,
+    "evidence_marker_coverage": 1.0,
+    "missing_expected_marker_count": 0,
+    "false_positive_count": 23
+  },
+  "case_count": 8,
+  "classification_counts": {
+    "exact_dataset_match": 12,
+    "alternate_relevant": 26,
+    "uncertain": 1,
+    "irrelevant": 1
+  },
+  "cases": [
+    {
+      "case_id": "nsoud-positive-01",
+      "question": "bezdůvodné obohacení za užívání bytu",
+      "expected_ecli": [
+        "ECLI:CZ:NS:2024:26.CDO.439.2024.1"
+      ],
+      "expected_markers": [
+        "bezdůvodného obohacení za užívání bytu"
+      ],
+      "generic_question_risk": "medium",
+      "top1_classification": "exact_dataset_match",
+      "best_relevant_rank": 1,
+      "best_relevant_document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+      "production_usefulness": "excellent",
+      "benchmark_alignment": "aligned",
+      "summary_cs": "Top výsledek pochází z očekávaného dokumentu datasetu a řeší právní problém z otázky.",
+      "hits": [
+        {
+          "rank": 1,
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Chunk pochází z očekávaného ECLI a tematicky odpovídá otázce."
+        },
+        {
+          "rank": 2,
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Chunk pochází z očekávaného dokumentu datasetu a řeší stejné právní téma."
+        },
+        {
+          "rank": 3,
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Chunk pochází z očekávaného ECLI a tematicky odpovídá otázce."
+        },
+        {
+          "rank": 4,
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Chunk pochází z očekávaného ECLI a tematicky odpovídá otázce."
+        },
+        {
+          "rank": 5,
+          "document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Chunk pochází z očekávaného ECLI a tematicky odpovídá otázce."
+        }
+      ],
+      "notes": [
+        "Shoda s benchmark datasetem i produkční relevancí."
+      ]
+    },
+    {
+      "case_id": "nsoud-positive-02",
+      "question": "dovolací důvod podle § 265b odst. 1 písm. g)",
+      "expected_ecli": [
+        "ECLI:CZ:NS:2024:3.TDO.650.2024.1",
+        "ECLI:CZ:NS:2024:3.TDO.980.2024.1"
+      ],
+      "expected_markers": [
+        "Dovolací důvod podle § 265b odst. 1 písm. g)"
+      ],
+      "generic_question_risk": "high",
+      "top1_classification": "alternate_relevant",
+      "best_relevant_rank": 1,
+      "best_relevant_document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+      "production_usefulness": "excellent",
+      "benchmark_alignment": "partially_aligned",
+      "summary_cs": "Retrieval našel jiné, ale právně relevantní rozhodnutí k tématu otázky. To je pro reálné vyhledávání obvykle přijatelné.",
+      "hits": [
+        {
+          "rank": 1,
+          "document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        },
+        {
+          "rank": 2,
+          "document_id": "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        },
+        {
+          "rank": 3,
+          "document_id": "ECLI:CZ:NS:2025:4.TDO.1137.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        },
+        {
+          "rank": 4,
+          "document_id": "ECLI:CZ:NS:2025:4.TDO.1100.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        },
+        {
+          "rank": 5,
+          "document_id": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        }
+      ],
+      "notes": [
+        "Otázka je obecná; více ECLI může být právně relevantních.",
+        "Top-1 není v dataset scope, ale nalezená judikatura je tematicky blízká."
+      ]
+    },
+    {
+      "case_id": "nsoud-positive-03",
+      "question": "dovolací důvod podle § 265b odst. 1 písm. h)",
+      "expected_ecli": [
+        "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+        "ECLI:CZ:NS:2024:3.TDO.984.2024.1",
+        "ECLI:CZ:NS:2024:8.TDO.760.2024.1"
+      ],
+      "expected_markers": [
+        "dovolací důvod podle § 265b odst. 1 písm. h)"
+      ],
+      "generic_question_risk": "high",
+      "top1_classification": "alternate_relevant",
+      "best_relevant_rank": 1,
+      "best_relevant_document_id": "ECLI:CZ:NS:2025:4.TDO.1137.2024.1",
+      "production_usefulness": "excellent",
+      "benchmark_alignment": "partially_aligned",
+      "summary_cs": "Retrieval našel jiné, ale právně relevantní rozhodnutí k tématu otázky. To je pro reálné vyhledávání obvykle přijatelné.",
+      "hits": [
+        {
+          "rank": 1,
+          "document_id": "ECLI:CZ:NS:2025:4.TDO.1137.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        },
+        {
+          "rank": 2,
+          "document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Chunk pochází z očekávaného ECLI a tematicky odpovídá otázce."
+        },
+        {
+          "rank": 3,
+          "document_id": "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        },
+        {
+          "rank": 4,
+          "document_id": "ECLI:CZ:NS:2024:6.TDO.976.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        },
+        {
+          "rank": 5,
+          "document_id": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        }
+      ],
+      "notes": [
+        "Otázka je obecná; více ECLI může být právně relevantních.",
+        "Top-1 není v dataset scope, ale nalezená judikatura je tematicky blízká."
+      ]
+    },
+    {
+      "case_id": "nsoud-positive-04",
+      "question": "dovolací důvod podle § 265b odst. 1 písm. m)",
+      "expected_ecli": [
+        "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+        "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+        "ECLI:CZ:NS:2024:6.TDO.827.2024.1",
+        "ECLI:CZ:NS:2024:6.TDO.976.2024.1"
+      ],
+      "expected_markers": [
+        "dovolací důvod podle § 265b odst. 1 písm. m)"
+      ],
+      "generic_question_risk": "high",
+      "top1_classification": "exact_dataset_match",
+      "best_relevant_rank": 1,
+      "best_relevant_document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+      "production_usefulness": "excellent",
+      "benchmark_alignment": "aligned",
+      "summary_cs": "Top výsledek pochází z očekávaného dokumentu datasetu a řeší právní problém z otázky.",
+      "hits": [
+        {
+          "rank": 1,
+          "document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Chunk pochází z očekávaného dokumentu datasetu a řeší stejné právní téma."
+        },
+        {
+          "rank": 2,
+          "document_id": "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Chunk pochází z očekávaného dokumentu datasetu a řeší stejné právní téma."
+        },
+        {
+          "rank": 3,
+          "document_id": "ECLI:CZ:NS:2025:4.TDO.1137.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        },
+        {
+          "rank": 4,
+          "document_id": "ECLI:CZ:NS:2025:4.TDO.1100.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        },
+        {
+          "rank": 5,
+          "document_id": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        }
+      ],
+      "notes": [
+        "Otázka je obecná; více ECLI může být právně relevantních.",
+        "Shoda s benchmark datasetem i produkční relevancí."
+      ]
+    },
+    {
+      "case_id": "nsoud-positive-05",
+      "question": "místní příslušnosti chybějí nebo je nelze zjistit",
+      "expected_ecli": [
+        "ECLI:CZ:NS:2024:21.ND.514.2024.1",
+        "ECLI:CZ:NS:2024:22.ND.435.2024.1",
+        "ECLI:CZ:NS:2024:29.ND.461.2024.1",
+        "ECLI:CZ:NS:2025:20.ND.18.2025.1",
+        "ECLI:CZ:NS:2025:20.ND.65.2025.1"
+      ],
+      "expected_markers": [
+        "místní příslušnosti chybějí nebo je nelze zjistit"
+      ],
+      "generic_question_risk": "low",
+      "top1_classification": "alternate_relevant",
+      "best_relevant_rank": 1,
+      "best_relevant_document_id": "ECLI:CZ:NS:2025:28.ND.6.2025.1",
+      "production_usefulness": "excellent",
+      "benchmark_alignment": "partially_aligned",
+      "summary_cs": "Retrieval našel jiné, ale právně relevantní rozhodnutí k tématu otázky. Pro reálné vyhledávání jde o relevantní podobnou judikaturu.",
+      "hits": [
+        {
+          "rank": 1,
+          "document_id": "ECLI:CZ:NS:2025:28.ND.6.2025.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        },
+        {
+          "rank": 2,
+          "document_id": "ECLI:CZ:NS:2024:5.TDO.318.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        },
+        {
+          "rank": 3,
+          "document_id": "ECLI:CZ:NS:2025:26.ND.533.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        },
+        {
+          "rank": 4,
+          "document_id": "ECLI:CZ:NS:2024:21.ND.514.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Chunk pochází z očekávaného dokumentu datasetu a řeší stejné právní téma."
+        },
+        {
+          "rank": 5,
+          "document_id": "ECLI:CZ:NS:2025:29.ND.63.2025.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        }
+      ],
+      "notes": [
+        "Top-1 není v dataset scope, ale nalezená judikatura je tematicky blízká."
+      ]
+    },
+    {
+      "case_id": "nsoud-positive-06",
+      "question": "nutná obrana vzájemné napadání",
+      "expected_ecli": [
+        "ECLI:CZ:NS:2024:11.TDO.679.2024.1"
+      ],
+      "expected_markers": [
+        "nutná obrana v úvahu v případech vzájemného napadání"
+      ],
+      "generic_question_risk": "medium",
+      "top1_classification": "exact_dataset_match",
+      "best_relevant_rank": 1,
+      "best_relevant_document_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+      "production_usefulness": "excellent",
+      "benchmark_alignment": "aligned",
+      "summary_cs": "Top výsledek pochází z očekávaného dokumentu datasetu a řeší právní problém z otázky.",
+      "hits": [
+        {
+          "rank": 1,
+          "document_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Chunk pochází z očekávaného dokumentu datasetu a řeší stejné právní téma."
+        },
+        {
+          "rank": 2,
+          "document_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+          "classification": "uncertain",
+          "legal_topic_match": "low",
+          "marker_found": false,
+          "reason_cs": "Očekávané ECLI, ale tematická shoda s otázkou je slabá."
+        },
+        {
+          "rank": 3,
+          "document_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "medium",
+          "marker_found": false,
+          "reason_cs": "Chunk pochází z očekávaného ECLI a tematicky odpovídá otázce."
+        },
+        {
+          "rank": 4,
+          "document_id": "ECLI:CZ:NS:2024:3.TDO.980.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "medium",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk je tematicky blízký právnímu problému z otázky."
+        },
+        {
+          "rank": 5,
+          "document_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+          "classification": "irrelevant",
+          "legal_topic_match": "none",
+          "marker_found": false,
+          "reason_cs": "Chunk se k právnímu problému z otázky zřejmě netýká."
+        }
+      ],
+      "notes": [
+        "Shoda s benchmark datasetem i produkční relevancí."
+      ]
+    },
+    {
+      "case_id": "nsoud-positive-07",
+      "question": "náhradě nákladů dovolacího řízení",
+      "expected_ecli": [
+        "ECLI:CZ:NS:2024:20.CDO.2839.2024.1",
+        "ECLI:CZ:NS:2024:20.CDO.3061.2024.1",
+        "ECLI:CZ:NS:2024:21.CDO.2178.2024.1"
+      ],
+      "expected_markers": [
+        "náhradě nákladů dovolacího řízení"
+      ],
+      "generic_question_risk": "high",
+      "top1_classification": "alternate_relevant",
+      "best_relevant_rank": 1,
+      "best_relevant_document_id": "ECLI:CZ:NS:2025:27.CDO.2699.2024.1",
+      "production_usefulness": "excellent",
+      "benchmark_alignment": "partially_aligned",
+      "summary_cs": "Retrieval našel jiné, ale právně relevantní rozhodnutí k tématu otázky. To je pro reálné vyhledávání obvykle přijatelné.",
+      "hits": [
+        {
+          "rank": 1,
+          "document_id": "ECLI:CZ:NS:2025:27.CDO.2699.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        },
+        {
+          "rank": 2,
+          "document_id": "ECLI:CZ:NS:2025:26.CDO.1854.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        },
+        {
+          "rank": 3,
+          "document_id": "ECLI:CZ:NS:2025:26.CDO.3375.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        },
+        {
+          "rank": 4,
+          "document_id": "ECLI:CZ:NS:2025:23.CDO.3535.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        },
+        {
+          "rank": 5,
+          "document_id": "ECLI:CZ:NS:2025:27.CDO.3338.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Jiné ECLI, ale chunk obsahuje očekávanou evidenci a řeší stejné právní téma."
+        }
+      ],
+      "notes": [
+        "Otázka je obecná; více ECLI může být právně relevantních.",
+        "Top-1 není v dataset scope, ale nalezená judikatura je tematicky blízká."
+      ]
+    },
+    {
+      "case_id": "nsoud-positive-08",
+      "question": "odpovědnosti za vady jako slevy z kupní ceny",
+      "expected_ecli": [
+        "ECLI:CZ:NS:2024:23.CDO.3170.2024.1"
+      ],
+      "expected_markers": [
+        "odpovědnosti za vady jako slevy z kupní ceny"
+      ],
+      "generic_question_risk": "low",
+      "top1_classification": "exact_dataset_match",
+      "best_relevant_rank": 1,
+      "best_relevant_document_id": "ECLI:CZ:NS:2024:23.CDO.3170.2024.1",
+      "production_usefulness": "excellent",
+      "benchmark_alignment": "aligned",
+      "summary_cs": "Top výsledek pochází z očekávaného dokumentu datasetu a řeší právní problém z otázky.",
+      "hits": [
+        {
+          "rank": 1,
+          "document_id": "ECLI:CZ:NS:2024:23.CDO.3170.2024.1",
+          "classification": "exact_dataset_match",
+          "legal_topic_match": "high",
+          "marker_found": true,
+          "reason_cs": "Chunk pochází z očekávaného dokumentu datasetu a řeší stejné právní téma."
+        },
+        {
+          "rank": 2,
+          "document_id": "ECLI:CZ:NS:2025:26.CDO.1854.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        },
+        {
+          "rank": 3,
+          "document_id": "ECLI:CZ:NS:2025:26.CDO.1854.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "high",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk řeší stejný právní institut jako otázka."
+        },
+        {
+          "rank": 4,
+          "document_id": "ECLI:CZ:NS:2024:24.CDO.671.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "medium",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk je tematicky blízký právnímu problému z otázky."
+        },
+        {
+          "rank": 5,
+          "document_id": "ECLI:CZ:NS:2025:26.CDO.1854.2024.1",
+          "classification": "alternate_relevant",
+          "legal_topic_match": "medium",
+          "marker_found": false,
+          "reason_cs": "Jiné ECLI, ale chunk je tematicky blízký právnímu problému z otázky."
+        }
+      ],
+      "notes": [
+        "Shoda s benchmark datasetem i produkční relevancí."
+      ]
+    }
+  ]
+}

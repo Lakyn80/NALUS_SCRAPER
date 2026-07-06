@@ -1,0 +1,36 @@
+device: cpu
+artifact_dir: /app/artifacts/rag_eval/out_rerun_e5_large
+
+backend: sql_qdrant
+database_url: sqlite:////app/artifacts/rag_eval/nalus_chunks.sqlite
+qdrant_url: http://qdrant:6333
+collection_prefix: nalus_rag_eval
+
+source_id: 1
+profile_id: 1
+dataset: /app/artifacts/rag_eval/nalus_eval.json
+top_k: 5
+
+retrieval:
+  modes: [dense_plus_bm25]
+  fusion: rrf
+  rrf_k: 60
+  bm25_k1: 1.5
+  bm25_b: 0.75
+
+models:
+  default: [multilingual_e5_large]
+  include_optional: false
+
+sql_qdrant:
+  chunks_table: rag_chunks
+  columns:
+    id: id
+    source_id: source_id
+    chunk_text: chunk_text
+    chunk_metadata: chunk_metadata
+    validation_status: validation_status
+  invalid_statuses: [invalid]
+  qdrant_timeout_sec: 7200
+  embed_batch_size: 32
+  upsert_batch_size: 128

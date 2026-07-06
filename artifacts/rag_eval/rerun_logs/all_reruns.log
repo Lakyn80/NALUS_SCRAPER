@@ -1,0 +1,3 @@
+torch=2.6.0+cpu
+qdrant_timeout_sec=7200 embed_batch=32
+ALL RERUNS DONE 2026-07-06T12:44:24Z

@@ -1,0 +1,49 @@
+{
+  "run_id": "20260705_215018Z",
+  "dataset_id": "nalus-nsoud-pilot-v1",
+  "dataset_name": "NALUS NSOud Retrieval Pilot",
+  "preflight_passed": true,
+  "preflight_issue_count": 0,
+  "failed_models": [],
+  "winner": {
+    "config_id": "paraphrase_multilingual_mpnet_base_v2__dense_plus_bm25",
+    "model_code": "paraphrase_multilingual_mpnet_base_v2",
+    "collection_name": "nalus_rag_eval__paraphrase_multilingual_mpnet_base_v2__rag_eval__nalus_nsoud_pilot_v1__63119240e1",
+    "metrics": {
+      "hit_rate": 0.875,
+      "recall_at_k": 0.875,
+      "mrr": 0.53125,
+      "forbidden_marker_rate": 0.0,
+      "average_latency_ms": 985.743375,
+      "cost_estimate_total": null,
+      "evidence_marker_coverage": 0.875,
+      "missing_expected_marker_count": 1,
+      "false_positive_count": 27
+    }
+  },
+  "ranking": [
+    {
+      "config_id": "paraphrase_multilingual_mpnet_base_v2__dense_plus_bm25",
+      "model_code": "paraphrase_multilingual_mpnet_base_v2",
+      "collection_name": "nalus_rag_eval__paraphrase_multilingual_mpnet_base_v2__rag_eval__nalus_nsoud_pilot_v1__63119240e1",
+      "metrics": {
+        "hit_rate": 0.875,
+        "recall_at_k": 0.875,
+        "mrr": 0.53125,
+        "forbidden_marker_rate": 0.0,
+        "average_latency_ms": 985.743375,
+        "cost_estimate_total": null,
+        "evidence_marker_coverage": 0.875,
+        "missing_expected_marker_count": 1,
+        "false_positive_count": 27
+      },
+      "reasons": [
+        "hit_rate=0.875",
+        "evidence_marker_coverage=0.875",
+        "recall_at_k=0.875",
+        "mrr=0.531",
+        "forbidden_marker_rate=0.000"
+      ]
+    }
+  ]
+}

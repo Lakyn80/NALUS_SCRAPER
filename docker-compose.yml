@@ -38,7 +38,9 @@ services:
     volumes:
       - huggingface_cache:/root/.cache/huggingface
       - ./app/artifacts:/app/app/artifacts
+      - ./artifacts:/app/artifacts
       - ./batches:/app/batches:ro
+      - ../eternal-world/packages/rag-embedding-benchmark:/packages/rag-embedding-benchmark:ro
     restart: unless-stopped
 
 volumes:

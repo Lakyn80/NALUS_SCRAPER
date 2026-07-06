@@ -1,0 +1,32 @@
+device: cpu
+artifact_dir: /app/artifacts/rag_eval/out
+
+backend: sql_qdrant
+database_url: sqlite:////app/artifacts/rag_eval/nalus_chunks.sqlite
+qdrant_url: http://qdrant:6333
+collection_prefix: nalus_rag_eval
+
+source_id: 1
+profile_id: 1
+dataset: /app/artifacts/rag_eval/nalus_eval.json
+top_k: 5
+
+models:
+  default:
+    - multilingual_e5_small
+    - multilingual_e5_base
+    - paraphrase_multilingual_mpnet_base_v2
+    - bge_m3
+    - multilingual_e5_large
+  include_optional: false
+
+sql_qdrant:
+  chunks_table: rag_chunks
+  columns:
+    id: id
+    source_id: source_id
+    chunk_text: chunk_text
+    chunk_metadata: chunk_metadata
+    validation_status: validation_status
+  invalid_statuses:
+    - invalid

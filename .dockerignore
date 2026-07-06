@@ -1,0 +1,13 @@
+.git
+.gitignore
+.venv
+.venv-rag-eval
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.cursor
+batches/
+terminals/
+*.diff

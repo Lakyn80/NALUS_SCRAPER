@@ -1,0 +1,162 @@
+{
+  "benchmark_complete": true,
+  "dataset_questions": 8,
+  "dataset_chunks": 1862,
+  "expected_candidate_count": 7,
+  "completed_candidate_count": 7,
+  "missing_candidates": [],
+  "environment_fixes": [
+    "torch upgraded from 2.5.1+cpu to 2.6.0+cpu for bge_m3 (CVE-2025-32434)",
+    "failed hybrid candidates rerun one-by-one (separate artifact_dir per model)",
+    "BM25 package 0.2.0 installed from /tmp copy (writable, not read-only mount)"
+  ],
+  "sources_used": [
+    "dense_baseline:20260704_150825Z",
+    "bm25_batch:20260704_214017Z",
+    "rerun:20260705_211457Z (multilingual_e5_base__dense_plus_bm25)",
+    "rerun:20260705_215018Z (paraphrase_multilingual_mpnet_base_v2__dense_plus_bm25)",
+    "rerun:20260705_215820Z (multilingual_e5_large__dense_plus_bm25)",
+    "rerun:20260706_092545Z (bge_m3__dense_plus_bm25)"
+  ],
+  "reruns_applied": [
+    "multilingual_e5_base__dense_plus_bm25 -> 20260705_211457Z",
+    "paraphrase_multilingual_mpnet_base_v2__dense_plus_bm25 -> 20260705_215018Z",
+    "multilingual_e5_large__dense_plus_bm25 -> 20260705_215820Z",
+    "bge_m3__dense_plus_bm25 -> 20260706_092545Z"
+  ],
+  "winner": {
+    "config_id": "bge_m3__dense_plus_bm25",
+    "model_code": "bge_m3",
+    "retrieval_mode": "dense_plus_bm25",
+    "hit_rate": 1.0,
+    "evidence_marker_coverage": 1.0,
+    "mrr": 0.9375,
+    "recall_at_k": 1.0,
+    "status": "completed",
+    "error": null,
+    "source_run_id": "20260706_092545Z",
+    "source_label": "rerun"
+  },
+  "bm25_beats_best_dense_or_hybrid": false,
+  "ranking": [
+    {
+      "config_id": "bge_m3__dense_plus_bm25",
+      "model_code": "bge_m3",
+      "retrieval_mode": "dense_plus_bm25",
+      "hit_rate": 1.0,
+      "evidence_marker_coverage": 1.0,
+      "mrr": 0.9375,
+      "recall_at_k": 1.0,
+      "status": "completed",
+      "error": null,
+      "source_run_id": "20260706_092545Z",
+      "source_label": "rerun"
+    },
+    {
+      "config_id": "bm25__bm25",
+      "model_code": "bm25",
+      "retrieval_mode": "bm25",
+      "hit_rate": 1.0,
+      "evidence_marker_coverage": 1.0,
+      "mrr": 0.71875,
+      "recall_at_k": 1.0,
+      "status": "completed",
+      "error": null,
+      "source_run_id": "20260704_214017Z",
+      "source_label": "bm25_batch"
+    },
+    {
+      "config_id": "multilingual_e5_small__dense_plus_bm25",
+      "model_code": "multilingual_e5_small",
+      "retrieval_mode": "dense_plus_bm25",
+      "hit_rate": 1.0,
+      "evidence_marker_coverage": 1.0,
+      "mrr": 0.6354166666666666,
+      "recall_at_k": 1.0,
+      "status": "completed",
+      "error": null,
+      "source_run_id": "20260704_214017Z",
+      "source_label": "bm25_batch"
+    },
+    {
+      "config_id": "multilingual_e5_base__dense_plus_bm25",
+      "model_code": "multilingual_e5_base",
+      "retrieval_mode": "dense_plus_bm25",
+      "hit_rate": 1.0,
+      "evidence_marker_coverage": 1.0,
+      "mrr": 0.6354166666666666,
+      "recall_at_k": 1.0,
+      "status": "completed",
+      "error": null,
+      "source_run_id": "20260705_211457Z",
+      "source_label": "rerun"
+    },
+    {
+      "config_id": "multilingual_e5_large__dense_plus_bm25",
+      "model_code": "multilingual_e5_large",
+      "retrieval_mode": "dense_plus_bm25",
+      "hit_rate": 1.0,
+      "evidence_marker_coverage": 1.0,
+      "mrr": 0.47916666666666663,
+      "recall_at_k": 1.0,
+      "status": "completed",
+      "error": null,
+      "source_run_id": "20260705_215820Z",
+      "source_label": "rerun"
+    },
+    {
+      "config_id": "paraphrase_multilingual_mpnet_base_v2__dense_plus_bm25",
+      "model_code": "paraphrase_multilingual_mpnet_base_v2",
+      "retrieval_mode": "dense_plus_bm25",
+      "hit_rate": 0.875,
+      "evidence_marker_coverage": 0.875,
+      "mrr": 0.53125,
+      "recall_at_k": 0.875,
+      "status": "completed",
+      "error": null,
+      "source_run_id": "20260705_215018Z",
+      "source_label": "rerun"
+    },
+    {
+      "config_id": "multilingual_e5_small__dense",
+      "model_code": "multilingual_e5_small",
+      "retrieval_mode": "dense",
+      "hit_rate": 0.5,
+      "evidence_marker_coverage": 0.5,
+      "mrr": 0.5,
+      "recall_at_k": 0.5,
+      "status": "completed",
+      "error": null,
+      "source_run_id": "20260704_150825Z",
+      "source_label": "dense_baseline"
+    }
+  ],
+  "failures": [
+    {
+      "config_id": "multilingual_e5_base__unknown",
+      "model_code": "multilingual_e5_base",
+      "retrieval_mode": "unknown",
+      "hit_rate": null,
+      "evidence_marker_coverage": null,
+      "mrr": null,
+      "recall_at_k": null,
+      "status": "FAILED",
+      "error": "timed out",
+      "source_run_id": "20260704_150825Z",
+      "source_label": "dense_baseline"
+    },
+    {
+      "config_id": "paraphrase_multilingual_mpnet_base_v2__unknown",
+      "model_code": "paraphrase_multilingual_mpnet_base_v2",
+      "retrieval_mode": "unknown",
+      "hit_rate": null,
+      "evidence_marker_coverage": null,
+      "mrr": null,
+      "recall_at_k": null,
+      "status": "FAILED",
+      "error": "timed out",
+      "source_run_id": "20260704_150825Z",
+      "source_label": "dense_baseline"
+    }
+  ]
+}
