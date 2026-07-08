@@ -1,0 +1,36 @@
+device: cpu
+artifact_dir: /app/artifacts/rag_eval/client_longform_v1/out_hybrid_mpnet
+
+backend: sql_qdrant
+database_url: sqlite:////app/artifacts/rag_eval/nalus_chunks.sqlite
+qdrant_url: http://qdrant:6333
+collection_prefix: nalus_client_lf
+
+source_id: 1
+profile_id: 1
+dataset: /app/artifacts/rag_eval/nalus_client_longform_eval_v1.json
+top_k: 5
+
+retrieval:
+  modes: [dense_plus_bm25]
+  fusion: rrf
+  rrf_k: 60
+  bm25_k1: 1.5
+  bm25_b: 0.75
+
+models:
+  default: [paraphrase_multilingual_mpnet_base_v2]
+  include_optional: false
+
+sql_qdrant:
+  chunks_table: rag_chunks
+  columns:
+    id: id
+    source_id: source_id
+    chunk_text: chunk_text
+    chunk_metadata: chunk_metadata
+    validation_status: validation_status
+  invalid_statuses: [invalid]
+  qdrant_timeout_sec: 7200
+  embed_batch_size: 32
+  upsert_batch_size: 128

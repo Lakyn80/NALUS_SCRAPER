@@ -1,0 +1,314 @@
+{
+  "dataset_id": "nalus-client-longform-v1",
+  "name": "NALUS NSOud Client Long-Form Retrieval Eval v1",
+  "description": "Long-form client-style legal problem descriptions for semantic retrieval evaluation. Questions describe facts and conflicts in natural language without ECLI or benchmark markers.",
+  "project_name": "NALUS Scraper",
+  "metadata": {
+    "court": "Nejvyšší soud ČR",
+    "batch": "2025_01_03",
+    "chunking_strategy": "document_section_aware",
+    "eval_style": "client_longform",
+    "pilot_dataset_id": "nalus-nsoud-pilot-v1",
+    "question_style": "client_narrative"
+  },
+  "cases": [
+    {
+      "id": "client-longform-01",
+      "question": "Jsem vlastník bytu a druhá osoba v něm zůstala bydlet i po tom, co podle mě už neměla normální nájemní vztah. Tvrdí, že měla ještě nějaké právo v bytě bydlet, protože nebyla vyřešená bytová náhrada. Já ale řeším, jestli mi má platit částku odpovídající normálnímu nájemnému, nebo jen nějakou nižší úhradu. Soud nižší instance to posoudil tak, že dokud nebyla zajištěna bytová náhrada, nemůže jít o plné bezdůvodné obohacení. Potřebuji najít judikaturu, která řeší, kdy vzniká nárok vlastníka bytu na peněžní náhradu za další užívání bytu po skončení původního vztahu.",
+      "expected_answer_type": "short_fact",
+      "test_type": "short_fact",
+      "source_scope": {
+        "scope_type": "document",
+        "document_ids": [
+          "ECLI:CZ:NS:2024:26.CDO.439.2024.1"
+        ]
+      },
+      "required_evidence": [
+        {
+          "marker": "bezdůvodného obohacení za užívání bytu",
+          "aliases": []
+        }
+      ],
+      "minimum_coverage": 1.0,
+      "allow_partial": false,
+      "expected_citation_count_min": 1,
+      "difficulty": "hard",
+      "language": "cs",
+      "expected_long_context": true,
+      "minimum_context_chars": 200,
+      "pilot_case_id": "nsoud-positive-01"
+    },
+    {
+      "id": "client-longform-02",
+      "question": "V trestní věci byl člověk odsouzen, ale tvrdí, že soudy vzaly důkazy úplně jednostranně. Podle něj z provedených důkazů vůbec nevyplývá skutkový závěr, na kterém stojí odsouzení. Některé důkazy podle něj nebyly použitelné nebo nebyly vůbec provedeny, i když mohly být důležité. Potřebuji najít rozhodnutí Nejvyššího soudu, kde se vysvětluje, kdy může dovolací soud zasáhnout kvůli extrémnímu nesouladu mezi skutkovými závěry a důkazy.",
+      "expected_answer_type": "short_fact",
+      "test_type": "multi_document",
+      "source_scope": {
+        "scope_type": "multi_document",
+        "document_ids": [
+          "ECLI:CZ:NS:2024:3.TDO.650.2024.1",
+          "ECLI:CZ:NS:2024:3.TDO.980.2024.1"
+        ]
+      },
+      "required_evidence": [
+        {
+          "marker": "Dovolací důvod podle § 265b odst. 1 písm. g)",
+          "aliases": []
+        }
+      ],
+      "minimum_coverage": 1.0,
+      "allow_partial": false,
+      "expected_citation_count_min": 1,
+      "difficulty": "hard",
+      "language": "cs",
+      "expected_long_context": true,
+      "minimum_context_chars": 200,
+      "pilot_case_id": "nsoud-positive-02"
+    },
+    {
+      "id": "client-longform-03",
+      "question": "Obviněný nechce v dovolání jen znovu opakovat, že se skutek nestal jinak, ale tvrdí, že i kdyby soud vzal skutkový stav tak, jak je popsán, právně to bylo posouzeno špatně. Řeší se, jestli jednání vůbec naplňuje trestný čin nebo jestli byl uložen druh trestu, který není přiměřený právnímu posouzení. Potřebuji judikaturu, která vysvětluje hranici mezi námitkami proti skutku a námitkami proti právní kvalifikaci v dovolacím řízení.",
+      "expected_answer_type": "short_fact",
+      "test_type": "multi_document",
+      "source_scope": {
+        "scope_type": "multi_document",
+        "document_ids": [
+          "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+          "ECLI:CZ:NS:2024:3.TDO.984.2024.1",
+          "ECLI:CZ:NS:2024:8.TDO.760.2024.1"
+        ]
+      },
+      "required_evidence": [
+        {
+          "marker": "dovolací důvod podle § 265b odst. 1 písm. h)",
+          "aliases": []
+        }
+      ],
+      "minimum_coverage": 1.0,
+      "allow_partial": false,
+      "expected_citation_count_min": 1,
+      "difficulty": "hard",
+      "language": "cs",
+      "expected_long_context": true,
+      "minimum_context_chars": 200,
+      "pilot_case_id": "nsoud-positive-03"
+    },
+    {
+      "id": "client-longform-04",
+      "question": "Klient se odvolal proti rozsudku, ale odvolací soud jeho odvolání zamítl po věcném přezkoumání. Teď chce podat dovolání a tvrdí, že chyby vznikly už před soudem prvního stupně. Potřebuji najít rozhodnutí, která vysvětlují, jak se v dovolání argumentuje v situaci, kdy odvolací soud odvolání zamítl, ale dovolatel tvrdí, že už předchozí řízení mělo právní vadu. Zajímá mě hlavně vazba mezi rozhodnutím odvolacího soudu a dovolacími důvody vztahujícími se k předchozímu řízení.",
+      "expected_answer_type": "short_fact",
+      "test_type": "multi_document",
+      "source_scope": {
+        "scope_type": "multi_document",
+        "document_ids": [
+          "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+          "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+          "ECLI:CZ:NS:2024:6.TDO.827.2024.1",
+          "ECLI:CZ:NS:2024:6.TDO.976.2024.1"
+        ]
+      },
+      "required_evidence": [
+        {
+          "marker": "dovolací důvod podle § 265b odst. 1 písm. m)",
+          "aliases": []
+        }
+      ],
+      "minimum_coverage": 1.0,
+      "allow_partial": false,
+      "expected_citation_count_min": 1,
+      "difficulty": "hard",
+      "language": "cs",
+      "expected_long_context": true,
+      "minimum_context_chars": 200,
+      "pilot_case_id": "nsoud-positive-04"
+    },
+    {
+      "id": "client-longform-05",
+      "question": "V exekuční věci není jasné, který okresní soud má být místně příslušný. Povinný nemá dohledatelný pobyt v České republice, případně není jasné, kde se skutečně zdržuje nebo kde má majetek. Nižší soud nechce věc řešit, protože neví, podle čeho určit místní příslušnost. Potřebuji najít judikaturu Nejvyššího soudu k tomu, co se dělá, když české soudy mají věc projednat, ale místní příslušnost nejde běžně určit.",
+      "expected_answer_type": "short_fact",
+      "test_type": "multi_document",
+      "source_scope": {
+        "scope_type": "multi_document",
+        "document_ids": [
+          "ECLI:CZ:NS:2024:21.ND.514.2024.1",
+          "ECLI:CZ:NS:2024:22.ND.435.2024.1",
+          "ECLI:CZ:NS:2024:29.ND.461.2024.1",
+          "ECLI:CZ:NS:2025:20.ND.18.2025.1",
+          "ECLI:CZ:NS:2025:20.ND.65.2025.1"
+        ]
+      },
+      "required_evidence": [
+        {
+          "marker": "místní příslušnosti chybějí nebo je nelze zjistit",
+          "aliases": []
+        }
+      ],
+      "minimum_coverage": 1.0,
+      "allow_partial": false,
+      "expected_citation_count_min": 1,
+      "difficulty": "hard",
+      "language": "cs",
+      "expected_long_context": true,
+      "minimum_context_chars": 200,
+      "pilot_case_id": "nsoud-positive-05"
+    },
+    {
+      "id": "client-longform-06",
+      "question": "Klient byl v konfliktu, kde druhá osoba bouchala do auta, bránila mu odjet a vyzývala ho ke rvačce. Klient pak z auta vystoupil a došlo k fyzickému střetu. Soudy to posoudily jako běžné vzájemné napadání, ale klient tvrdí, že se jen bránil trvajícímu útoku. Potřebuji najít rozhodnutí Nejvyššího soudu, které rozlišuje, kdy ještě jde o vzájemnou potyčku a kdy může jít o obranu proti útoku.",
+      "expected_answer_type": "short_fact",
+      "test_type": "short_fact",
+      "source_scope": {
+        "scope_type": "document",
+        "document_ids": [
+          "ECLI:CZ:NS:2024:11.TDO.679.2024.1"
+        ]
+      },
+      "required_evidence": [
+        {
+          "marker": "nutná obrana v úvahu v případech vzájemného napadání",
+          "aliases": []
+        }
+      ],
+      "minimum_coverage": 1.0,
+      "allow_partial": false,
+      "expected_citation_count_min": 1,
+      "difficulty": "hard",
+      "language": "cs",
+      "expected_long_context": true,
+      "minimum_context_chars": 200,
+      "pilot_case_id": "nsoud-positive-06"
+    },
+    {
+      "id": "client-longform-07",
+      "question": "Klient prohrál dovolací řízení a Nejvyšší soud dovolání odmítl. Teď řeší, jestli mu může být uloženo zaplatit druhé straně náklady dovolacího řízení a jak soud takový výrok typicky formuluje. Nejde mi o samotnou hmotněprávní otázku sporu, ale o procesní výsledek dovolacího řízení a náklady po odmítnutí dovolání. Potřebuji najít podobná rozhodnutí, kde Nejvyšší soud rozhodoval o nákladech po odmítnutí dovolání.",
+      "expected_answer_type": "short_fact",
+      "test_type": "multi_document",
+      "source_scope": {
+        "scope_type": "multi_document",
+        "document_ids": [
+          "ECLI:CZ:NS:2024:20.CDO.2839.2024.1",
+          "ECLI:CZ:NS:2024:20.CDO.3061.2024.1",
+          "ECLI:CZ:NS:2024:21.CDO.2178.2024.1"
+        ]
+      },
+      "required_evidence": [
+        {
+          "marker": "náhradě nákladů dovolacího řízení",
+          "aliases": []
+        }
+      ],
+      "minimum_coverage": 1.0,
+      "allow_partial": false,
+      "expected_citation_count_min": 1,
+      "difficulty": "hard",
+      "language": "cs",
+      "expected_long_context": true,
+      "minimum_context_chars": 200,
+      "pilot_case_id": "nsoud-positive-07"
+    },
+    {
+      "id": "client-longform-08",
+      "question": "Klient koupil rodinný dům a po koupi zjistil vady, o kterých tvrdí, že při podpisu smlouvy nebyly zjevné. Mluví o vlhkosti, plísních, špatném zdivu, vadných rozvodech nebo dalších problémech domu. Chce po prodávajícím peníze zpět jako snížení ceny, protože dům podle něj neměl vlastnosti, které při koupi očekával. Potřebuji najít judikaturu Nejvyššího soudu k odpovědnosti prodávajícího za vady nemovitosti a ke slevě z kupní ceny.",
+      "expected_answer_type": "short_fact",
+      "test_type": "short_fact",
+      "source_scope": {
+        "scope_type": "document",
+        "document_ids": [
+          "ECLI:CZ:NS:2024:23.CDO.3170.2024.1"
+        ]
+      },
+      "required_evidence": [
+        {
+          "marker": "odpovědnosti za vady jako slevy z kupní ceny",
+          "aliases": []
+        }
+      ],
+      "minimum_coverage": 1.0,
+      "allow_partial": false,
+      "expected_citation_count_min": 1,
+      "difficulty": "hard",
+      "language": "cs",
+      "expected_long_context": true,
+      "minimum_context_chars": 200,
+      "pilot_case_id": "nsoud-positive-08"
+    }
+  ],
+  "source_documents": [
+    {
+      "document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+      "content": "5. Odvolací soud, s odkazem na rozsudek Nejvyššího soudu ze dne 18. 10. 2011, sp. zn. 26 Cdo 2354/2010, uzavřel, že žalobkyně ani po poučení dle § 118a odst. 1, 3 zákona č. 99/1963 Sb., občanský soudní řád, ve znění pozdějších předpisů (dále též jen „o. s. ř.“) netvrdila konkrétním způsobem a neoznačila důkazy k prokázání takových tvrzení, že by žalovanému zajistila náhradní byt ve smyslu § 712a odst. 6 zákona č. 40/1964 Sb., občanský zákoník (dále též jen „obč. zák.“). Nemohl jí tak vzniknout „ve svém základu důvodný nárok na vydání bezdůvodného obohacení za užívání bytu“, neboť vznik bezdůvodného obohacení je vázán (rozsudek Nejvyššího soudu ze dne 24. 10. 2002, sp. zn. 26 Cdo 492/2001) (až) na zajištění bytové náhrady. Až od tohoto okamžiku užívá bývalý nájemce byt bez právního důvodu a tento vztah se již neřídí ustanovením § 712a obč. zák. Do té doby mu svědčí právo bydlení a jemu odpovídající povinnost platit úhradu za užívání bytu ve výši, která odpovídá výši nájemného sjednaného za trvání nájemního poměru. Jestliže žalobkyně tvrdila, že žalovanému zajistila bytovou náhradu nejpozději ke dni 25. 6. 2013, „a proto požaduje za (rozhodné) období zaplacení žalované částky (360 000 Kč), která odpovídá výši obvyklého nájemného v daném místě a čase“, byl odvolací soud povinen vycházet z těchto skutkových tvrzení; byl „vázán skutkovými tvrzeními, jimiž žalobkyně vymezila žalobní nárok na zaplacení částky 360 000 Kč“. K jejich „změně“ nedošlo, „a to ani po poučení žalobkyně“. 6. Co do částky 66 489,23 Kč s příslušenstvím, představující náhradu nákladů za platby spojené s užíváním předmětného bytu za rozhodné období, odvolací soud shledal rozsudek soudu prvního stupně „nepřezkoumatelný z důvodu nedostatku skutkových zjištění relevantních pro jeho správné právní posouzení“. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:3.TDO.650.2024.1",
+      "content": "23. Z hlediska rozhodování dovolacího soudu je vhodné připomenout, že Nejvyšší soud je vázán uplatněnými dovolacími důvody a jejich odůvodněním (§ 265f odst. 1 tr. ř.) a není povolán k revizi napadeného rozhodnutí z vlastní iniciativy. Fundovanou argumentaci tohoto mimořádného opravného prostředku má zajistit povinné zastoupení obviněného obhájcem–advokátem (§ 265d odst. 2 tr. ř.). 24. Na podkladě obviněným uplatněných důvodů dovolání a uvedených východisek mezí dovolacího přezkumu pak mohl Nejvyšší soud přistoupit k posouzení jednotlivých dovolacích námitek obviněného. IV. Důvodnost dovolání 25. Z předloženého dovolání se podává, že obviněný M. H. jím brojí proti výroku o vině přečinem obecného ohrožení z nedbalosti podle § 273 odst. 1, odst. 2 písm. b) tr. zákoníku, přičemž v rámci několika okruhů dovolacích námitek rozporuje závěr odvolacího soudu o naplnění objektivní stránky přisouzeného přečinu. 26. Po prostudování napadených rozhodnutí soudů nižších stupňů a předloženého spisového materiálu v konfrontaci s obviněným vytýkanými vadami může Nejvyšší soud konstatovat, že dovolací námitky obviněného jsou jak skutkové, tak právní povahy. Takovéto konstatování činí Nejvyšší soud současně s výhradou, že obviněný tyto své námitky z hlediska uplatněných dovolacích důvodů v podaném dovolání příliš srozumitelně pod jednotlivé dovolací důvody nepodřadil. Výhrady lze mít i ke kvalitě příslušné dovolací argumentace (z hlediska jejího vztahu k jednotlivým uplatněným dovolacím důvodům). O tom svědčí již bod III./4 dovolání, ve kterém obviněný uvádí, že „své dovolání opírá o dovolací důvod podle § 265b odst. 1 písm. g) a h) tr. ř., tedy že rozhodnutí spočívá na nesprávném právním posouzení skutku nebo jiném nesprávném hmotněprávním posouzení. V této části, stejně jako v dalších částech dovolání, však absentuje upřesnění, kterou variantu důvodu dovolání podle § 265b odst. 1 písm. g) tr. ř. obviněný uplatňuje [což není zřejmé ani u dovolacího důvodu podle § 265b odst. 1 písm. h) tr. ř.]. Formálně tak není vyjádřeno, zda se obviněný domnívá, že uvedený dovolací důvod je naplněn proto, že rozhodná skutková zjištění, která jsou určující pro naplnění znaků trestného činu, jsou ve zjevném rozporu s obsahem provedených důkazů (první varianta) nebo proto, že rozhodná skutková zjištění jsou založena na procesně nepoužitelných důkazech (druhá varianta) nebo ve vztahu k nim nebyly nedůvodně provedeny navrhované podstatné důkazy (třetí varianta). "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:3.TDO.980.2024.1",
+      "content": "42. Obviněný v podaném dovolání rovněž brojil proti skutkovým závěrům soudů, které podle něj neodpovídají provedeným důkazům a nemohou vést k závěru o jeho vině. Skutková zjištění u obou skutků kladených mu za vinu označuje jako extrémně rozporná s obsahem provedených důkazů. Nepřímé důkazy podle něj netvoří ucelený na sebe navazující řetězec, jenž by prokazoval jeho vinu. 43. Dovolací důvod podle § 265b odst. 1 písm. g) tr. ř. je dán tehdy, jestliže rozhodná skutková zjištění, která jsou určující pro naplnění znaků trestného činu, jsou ve zjevném rozporu s obsahem provedených důkazů nebo jsou založena na procesně nepoužitelných důkazech nebo ve vztahu k nim nebyly nedůvodně provedeny navrhované podstatné důkazy . 44. Uvedený dovolací důvod dopadá na případy, kdy soudy pochybily naprosto markantním a křiklavým způsobem narážejícím na limity práv spojených se spravedlivým procesem, jež jsou chráněny právními předpisy nejvyšší právní síly. Rozlišuje tři základní situace – opomenutý důkaz, nepřípustný důkaz, skutková zjištění nemají návaznost na provedené dokazování (viz nález Ústavního soudu ze dne 18. 11. 2004, sp. zn. III. ÚS 177/04). Jedná se tedy o situace, kdy se nesprávná realizace důkazního řízení dostává do kolize s postuláty spravedlivého procesu (srov. např. usnesení Ústavního soudu ze dne 23. 9. 2005, sp. zn. III. ÚS 359/05, nález Ústavního soudu ze dne 23. 3. 2004, sp. zn. I. ÚS 4/04). Je však třeba mít na paměti, že právo na spravedlivý proces není možno vykládat tak, že obviněnému garantuje úspěch v řízení či zaručuje právo na rozhodnutí, jež odpovídá jeho představám (srov. nález Ústavního soudu ze dne 4. 5. 2005, sp. zn. II. ÚS 681/04). Uvedeným základním právem je „pouze“ zajišťováno právo na spravedlivé soudní řízení, v němž se uplatní všechny zásady soudního rozhodování podle zákona a v souladu s ústavními principy . "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+      "content": "14. Protože platí, že dovolání lze podat jen z některého z důvodů taxativně vymezených v § 265b tr. řádu, musel dále Nejvyšší soud posoudit, zda obviněným uplatněnou argumentaci lze podřadit pod některý z dovolacích důvodů, jejichž existence je – mimo jiné – podmínkou provedení přezkumu napadeného rozhodnutí dovolacím soudem (§ 265i odst. 3 tr. řádu). 15. Jak již bylo uvedeno, obviněný své dovolání výslovně opírá o dovolací důvody podle § 265b odst. 1 písm. g) a h) tr. řádu. V dovolání lze současně vysledovat též dovolací důvod podle § 265b odst. 1 písm. m) tr. řádu, a to ve vazbě na dovolací důvody podle § 265b odst. 1 písm. g) a h) tr. řádu. Je tomu tak proto, že jím tvrzené a zde uvedené vady vztahuje i k rozsudku soudu prvního stupně, jehož přezkumu se v dovolacím řízení lze zásadně domoci pouze skrze dovolací důvod podle § 265b odst. 1 písm. m) tr. řádu. 16. Z logiky věci se Nejvyšší soud nejprve zabýval dovolacím důvodem podle § 265b odst. 1 písm. m) tr. řádu , který je dán tehdy, jestliže bylo rozhodnuto o zamítnutí nebo odmítnutí řádného opravného prostředku proti rozsudku nebo usnesení uvedenému v § 265a odst. 2 písm. a) až g) tr. řádu, aniž byly splněny procesní podmínky stanovené zákonem pro takové rozhodnutí (první alternativa) nebo přestože byl v řízení mu předcházejícím dán důvod dovolání uvedený v písmenech a) až l) tr. řádu (druhá alternativa) . 17. Jestliže v posuzované věci odvolací soud rozhodl tak, že podle § 256 tr. řádu odvolání obviněného zamítl, tj. rozhodl po věcném přezkoumání, je zjevné, že dovolací důvod podle § 265b odst. 1 písm. m) tr. řádu přichází v úvahu pouze v té jeho variantě, jež předpokládá spojení s některým z dovolacích důvodů podle § 265b odst. 1 písm. a) až l) tr. řádu. 18. Tímto dovolacím důvodem je pak jednak obviněným uplatněný dovolací důvod podle § 265b odst. 1 písm. g) tr. řádu , jenž je naplněn tehdy, jestliže rozhodná skutková zjištění, která jsou určující pro naplnění znaků trestného činu, jsou ve zjevném rozporu s obsahem provedených důkazů ( první varianta ) nebo jsou založena na procesně nepoužitelných důkazech ( druhá varianta ) nebo ve vztahu k nim nebyly nedůvodně provedeny navrhované podstatné důkazy ( třetí varianta ). "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:3.TDO.984.2024.1",
+      "content": "8. Pokud jde o dovolací důvod podle § 265b odst. 1 písm. h) tr. ř., extrémní rozpor obviněný spatřuje v uložení trestu spojeného s přímým odnětím svobody, když soudy nepřihlédly k relevantním okolnostem týkajícím se dotčené trestné činnosti. Podmíněný trest odnětí svobody by byl pro obviněného „úměrnější“. Ustanovení § 38 odst. 2 tr. zákoníku v sobě výslovně obsahuje princip subsidiarity přísnější trestní sankce a „doktrína také současně dovozuje, že přiměřenost trestní sankce, tj. proporcionalita mezi zájmem na ochraně společnosti před pachatelem trestného činu a zásahem do základních práv pachatele způsobených uloženou trestní sankcí, má ústavní právní podobu“. Krajský soud dovodil, že trest uložený soudem prvního stupně je nepřiměřeně přísný, v odůvodnění svého rozsudku uvedl, že okresní soud u obviněného, který je formálně bezúhonný, přecenil represivní stránku ukládaného trestu, celý výrok o trestu proto zrušil a při shodném právním hodnocení obviněnému uložil mírnější úhrnný trest odnětí svobody na tři roky, avšak konkrétněji se nevypořádal s námitkami obviněného uvedenými v odvolání, které směřovaly proti formě trestání uložením trestu odnětí svobody jako nepodmíněného. Nedostatečně odůvodněné a nedostatečně ospravedlněné rozhodnutí o udělení přísnějšího druhu trestu je přitom porušením zákonné povinnosti ukládat přiměřené trestní sankce (např. I. ÚS 631/23 ze dne 11. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+      "content": "19. Další námitky v dovolání obviněný opřel též o důvody podle § 265b odst. 1 písm. g), h) tr. ř., k nimž je třeba nejprve uvést, že důvod podle § 265b odst. 1 písm. g) tr. ř. se uplatní, když rozhodná skutková zjištění, která jsou určující pro naplnění znaků trestného činu, jsou ve zjevném rozporu s obsahem provedených důkazů nebo jsou založena na procesně nepoužitelných důkazech nebo ve vztahu k nim nebyly nedůvodně provedeny navrhované podstatné důkazy. Tento důvod je dán třemi alternativami procesních vad a vždy je třeba, aby v jejich důsledku byla vytýkána skutková zjištění, která mají určující význam pro naplnění znaků trestného činu, jenž je na nich založen. Postačí, když je naplněna alespoň jedna z těchto tří alternativ. Prostřednictvím tohoto důvodu nelze napadat jakoukoliv skutkovou okolnost, s níž se obviněný neztotožnil, ale jen takovou, která je rozhodná pro naplnění některého ze znaků skutkové podstaty posuzovaného trestného činu. Uvedenou podmínku proto nemůže splnit tvrzení existence vad týkajících se skutkových zjištění jiných, byť také významných pro rozhodnutí ve věci, která pro naplnění znaků trestného činu určující nejsou (srov. rozhodnutí č. 19/2023 Sb. rozh. tr., usnesení Nejvyššího soudu ze dne 19. 1. 2022, sp. zn. 8 Tdo 1377/2021, ze dne 9. 2. 2022, sp. zn. 8 Tdo 32/2022 aj.). 20. Dovolací důvod podle § 265b odst. 1 písm. h) tr. ř. slouží k odstranění právních vad, protože jeho prostřednictvím je možné namítat, že rozhodnutí spočívá na nesprávném právním posouzení skutku nebo jiném nesprávném hmotněprávním posouzení. Ke zjištěnému skutku lze proto vytýkat výlučně vady právní, tedy to, že skutek, jak byl soudem zjištěn, byl nesprávně právně kvalifikován jako trestný čin, ačkoli o trestný čin nejde nebo jde o jiný trestný čin, než kterým byl obviněný uznán vinným. Vedle vad, které se týkají právního posouzení skutku, lze vytýkat též „jiné nesprávné hmotně právní posouzení“. Rozumí se jím zhodnocení otázky, která nespočívá přímo v právní kvalifikaci skutku, ale v právním posouzení jiné skutkové okolnosti mající význam z hlediska hmotného práva. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+      "content": "II. Dovolání a vyjádření k němu 4. Proti usnesení odvolacího soudu ze dne 4. 6. 2024, č. j. 7 To 144/2024-235, ve spojení s rozsudkem Okresního soudu v Litoměřicích ze dne 2. 2. 2024, č. j. 2 T 71/2023-204, podal obviněný prostřednictvím obhájce dovolání z důvodů uvedených v § 265b odst. 1 písm. g), h) a m) tr. ř. Důvod dovolání podle § 265b odst. 1 písm. g) tr. ř. spatřuje obviněný v tom, že rozhodná skutková zjištění, která jsou určující pro naplnění znaků trestného činu, jsou ve zjevném rozporu s obsahem provedených důkazů, některé důkazy soud neučinil předmětem svých úvah a hodnocení, ačkoliv byly řádně provedeny, a nadto nebyly nedůvodně provedeny obhajobou navrhované podstatné důkazy. Dovolací důvod podle § 265b odst. 1 písm. h) tr. ř., dovozuje obviněný z toho, že rozhodnutí spočívá na nesprávném právním posouzení skutku nebo jiném nesprávném hmotněprávním posouzení. Dovolací důvod podle § 265b odst. 1 písm. m) tr. ř. je založen na tom, že bylo nesprávně rozhodnuto o zamítnutí jeho odvolání pro nedůvodnost, přestože v řízení předcházejícím byl dán dovolací důvod uvedený v § 265b odst. 1 písm. g) tr. ř. 5. Obviněný poté poukazuje na průběh trestního řízení a základní skutkové okolnosti, včetně toho, jakým skutkem byl uznán vinným trestním příkazem soudu prvního stupně ze dne 26. 7. 2023, sp. zn. 2 T 71/2023, a jaký mu byl uložen trest. Akcentuje, že proti trestnímu příkazu podal odpor s odkazem na to, z jakých důvodů. Následně odkazuje na rozsudek soudu prvního stupně ze dne 2. 2. 2024, včetně jeho odůvodnění a na obsah svého odvolání a postup odvolacího soudu, včetně odůvodnění rozhodnutí odvolacího soudu ze dne 4. 6. 2024, sp. zn. 7 To 144/2024. 6. Podle dovolatele soudy nižších stupňů porušily jeho práva na obhajobu a nestranné posouzení věci, když jednostranně a nesprávně hodnotily provedené důkazy a bez přiměřených důvodů odmítly jeho návrhy na doplnění dokazování, které mohly přispět k náležitému objasnění věci. Soudy tak zcela rezignovaly na povinnost zjistit skutkový stav bez důvodných pochybností. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:6.TDO.827.2024.1",
+      "content": "14. Závěrem dovolatelé navrhli, aby Nejvyšší soud podle § 265k odst. 1 tr. ř. zrušil rozsudek odvolacího soudu a tomuto přikázal, aby věc v potřebném rozsahu znovu projednal a rozhodl. 15. Nejvyšší státní zástupce se k dovolání obviněných vyjádřil prostřednictvím státního zástupce činného u Nejvyššího státního zastupitelství (dále jen „státní zástupce“). Namítl, že dovolatelé nezohlednili výrok, jímž bylo o jejich odvoláních rozhodnuto podle § 256 tr. ř. Pokud v dovolání uplatňují, že již rozsudek prvostupňového soudu byl založen na rozhodných skutkových zjištěních, jež jsou ve zjevném rozporu s obsahem provedených důkazů, měli správně označit i dovolací důvod podle § 265b odst. 1 písm. m) tr. ř. v jeho druhé variantě. 16. K vlastnímu dovolání státní zástupce poukázal na to, že to je v podstatě opakováním obhajoby obviněných prezentované před soudy obou stupňů, s níž se tyto soudy věcně správně vypořádaly. Námitky obviněných brojící proti závěru, že movitá věc převážená přes hranice z Německa do České republiky byla odpadem, vycházejí ze skutkového stavu, který byl na základě provedeného dokazování nižšími soudy odmítnut. Ty přitom v odůvodnění svých rozhodnutí označily důkazy, jejichž obsah při svém závěru zohlednily a jejich hodnotící úvahy nevykazují žádné zjevné nelogičnosti ani vnitřní rozpory. Jedním ze skutkových závěrů je, že nadrcené pneumatiky ani vzdáleně neodpovídaly obsahu dokumentů, které je provázely. Soudy také mohly vycházet z ohledání nadrcených pneumatik, kde z pořízené fotodokumentace, kterou dovolatelé zcela pomíjejí, vyplývá, že se na hromadě nacházely i větší kusy v řádech několika desítek centimetrů včetně ocelových výztuží a textilií. Argumentují-li dovolatelé, že předložili relevantní doklady o tom, že tato drť je výrobkem, pomíjejí zjištění, že tyto doklady se týkaly deklarované přepravy, která však nenašla odraz ve skutečně převáženém materiálu. Dovolatelé současně ignorují i další důkazy podporující logické závěry soudů o charakteru převážených částí pneumatik – konkrétně zprávu Ministerstva životního prostředí z 25. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:6.TDO.976.2024.1",
+      "content": "13. Z obsahu dovolání je patrné, že nejvyšší státní zástupce vnímal intenzitu naplnění znaků skutkové podstaty přečinu ohrožení pod vlivem návykové látky podle § 274 odst. 1 tr. zákoníku jako zcela obvyklou, a to s ohledem na technické parametry použitého elektrického skútru i s ohledem na stupeň ovlivnění obviněného alkoholem. Bylo tak dosaženo nutné hranice, při níž má být již uplatňována trestněprávní odpovědnost, nikoli pouze přestupková. Dospěl-li prvostupňový soud k závěru opačnému, zatížil tím své rozhodnutí vadou naplňující dovolací důvod podle § 265b odst. 1 písm. h) a f) tr. ř. Pokud druhostupňový soud odvolání státního zástupce zamítl, založil tím dovolací důvod podle § 265b odst. 1 písm. m) tr. ř. v jeho druhé alternativě. S touto argumentací se Nejvyšší soud ztotožnil. K dovolacímu důvodu podle § 265b odst. 1 písm. h) tr. ř. 14. Namítl-li státní zástupce, že soudy obou stupňů se dopustily vadného právního posouzení charakteru vozidla obviněného jako věci, kterou se obviněný nemohl v tomto konkrétním případě dopustit ohrožení, uplatnil tím argumentaci spadající pod uvedený dovolací důvod, neboť napadá správnost hmotněprávního posouzení skutku. 15. Vzhledem k právní kvalifikaci uvedené v návrhu na potrestání, učiněným skutkovým zjištěním, ale také zaměření právních úvah soudů obou nižších stupňů, Nejvyšší soud v prvé řadě konstatuje následující. V obecné rovině lze odkázat na velmi podrobné a důkladné odůvodnění uvedené v usnesení Nejvyššího soudu ze dne 30. 11. 2022, sp. zn. 8 Tdo 904/2022, o něž nejvyšší státní zástupce (stejně jako již předtím státní zástupce okresního státního zastupitelství ve stížnosti do usnesení soudu prvního stupně) opřel svou argumentaci. Přečinu ohrožení pod vlivem návykové látky podle § 274 odst. 1 tr. zákoníku se dopustí ten, kdo vykonává ve stavu vylučujícím způsobilost, který si přivodil vlivem návykové látky, zaměstnání nebo jinou činnost, při kterých by mohl ohrozit život nebo zdraví lidí nebo způsobit značnou škodu na majetku. Již z této formulace vyplývá, že daná skutková podstata může pojmout celou řadu lidských činností vykonaných pod vlivem alkoholu, omamných nebo psychotropních látek (drog) či jiných návykových látek (§ 130 tr. zákoníku) s tím, že ani v případě tohoto deliktního jednání v dopravě se výslovně neomezuje pouze na řízení velkých, těžkých a rychlých dopravních prostředků, jako např. osobního automobilu, velkého motocyklu, autobusu či kamionu. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:21.ND.514.2024.1",
+      "content": "5. Podle ustanovení § 11 odst. 3 o. s. ř. jde-li o věc, která patří do pravomoci soudů České republiky, ale podmínky místní příslušnosti chybějí nebo je nelze zjistit, určí Nejvyšší soud, který soud věc projedná a rozhodne. 6. V daném případě je zřejmé, že nelze určit soud povinné ve smyslu § 45 odst. 2 exekučního řádu, neboť povinná podle obsahu spisu nemá místo trvalého pobytu ani pobytu cizince na území České republiky a není ani známo místo, kde má nějaký majetek postižitelný exekucí. Skutečnost, zda má povinná exekučně postižitelný majetek na území České republiky, který by mohl být po nařízení exekuce soudním exekutorem zajištěn a zpeněžen, vyjde najevo až při činnosti soudem pověřeného soudního exekutora v rámci provádění exekuce. Exekuční soud proto před nařízením exekuce a pověřením exekutora jejím provedením nezjišťuje existenci majetku povinné (k tomu srov. usnesení velkého senátu občanskoprávního a obchodního kolegia Nejvyššího soudu ze dne 12. 9. 2012, sp. zn. 31 Nd 200/2012, uveřejněné pod č. 4/2013 Sb. rozh. obč.). 7. Vzhledem k tomu, že v projednávané věci nelze zjistit skutečnosti rozhodné pro určení místní příslušnosti, Nejvyšší soud, po předložení věci Okresním soudem v Chomutově (§ 105 odst. 2 o. s. ř.) podle ustanovení § 11 odst. 3 o. s. ř., přihlížeje k zásadě hospodárnosti řízení, rozhodl tak, že věc projedná a rozhodne Okresní soud v Chomutově, u něhož byla podána žádost o pověření a nařízení exekuce, a který ve věci provedl prvotní úkony. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:22.ND.435.2024.1",
+      "content": "5. Podle § 11 odst. 3 o. s. ř., který se použije i pro exekuční řízení (§ 52 odst. 1 exekučního řádu), jde-li o věc, která patří do pravomoci soudů České republiky, ale podmínky místní příslušnosti chybějí nebo je nelze zjistit, určí Nejvyšší soud, který soud věc projedná a rozhodne. 6. Nejvyšší soud v usnesení velkého senátu občanskoprávního a obchodního kolegia ze dne 12. 11. 2014, sp. zn. 31 Nd 316/2013, uveřejněném pod č. 11/2015 Sbírky soudních rozhodnutí a stanovisek, část civilní, vyložil a odůvodnil závěr, že je-li Nejvyšší soud žádán o určení místně příslušného soudu podle § 11 odst. 3 o. s. ř. na základě pravomocného rozhodnutí, jímž soud prvního stupně vyslovil svou místní nepříslušnost a rozhodl o postoupení věci Nejvyššímu soudu za účelem určení místně příslušného soudu, Nejvyšší soud určí místně příslušný soud, aniž zkoumá (aniž je oprávněn zkoumat), zda je dána pravomoc českých soudů k projednání a rozhodnutí věci. Ustanovení § 105 odst. 2 o. s. ř. totiž předpokládá, že se otázkou pravomoci českých soudů s kladným závěrem zabýval předkládající soud. 7. V daném případě je zřejmé, že nelze určit soud povinného ve smyslu § 45 odst. 2 exekučního řádu, neboť nemá známé místo pobytu na území České republiky. V usnesení ze dne 12. 9. 2012, sp. zn. 31 Nd 200/2012, uveřejněném pod č. 4/2013 Sbírky soudních rozhodnutí a stanovisek, část civilní, Nejvyšší soud dovodil, že exekuční soud před nařízením exekuce a pověřením exekutora jejím provedením nezjišťuje existenci majetku povinného. 8. Protože jsou splněny předpoklady uvedené v § 11 odst. 3 o. s. ř. pro určení místní příslušnosti, Nejvyšší soud v souladu se zásadou rychlosti a hospodárnosti řízení rozhodl, že věc projedná a rozhodne soud, v jehož obvodu je sídlo exekutora, který má být podle návrhu oprávněných pověřen provedením exekuce, tj. Městský soud v Brně [srovnej např. usnesení Nejvyššího soudu ze dne 12. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:29.ND.461.2024.1",
+      "content": "Odůvodnění: 1. Exekučním návrhem ze dne 10. července 2024 podaným u soudního exekutora JUDr. Lukáše Jíchy, Exekutorský úřad Přerov, se oprávněný (CENTROPOL ENERGY, a. s.) domáhá provedení exekuce vůči povinnému (E. Č. ) pro vymožení pohledávky ve výši 206 390 Kč s příslušenstvím. D ne 17. července 2024 požádal soudní exekutor Okresní soud v Ústí nad Labem o pověření a nařízení exekuce na majetek povinného. Exekučním titulem je rozsudek Okresního soudu v Ústí nad Labem ze dne 13. března 2024, č. j. 22 C 111/2023-33. 2. Usnesením ze dne 6. září 2024, č. j. 73 EXE 2135/2024-23, vyslovil Okresní soud v Ústí nad Labem svou místní nepříslušnost (bod I. výroku) a rozhodl, že po (marném) uplynutí lhůty k podání odvolání oprávněnému bude věc předložena Nejvyššímu soudu k určení, který soud věc projedná a rozhodne (bod II. výroku). 3. Podle § 11 odst. 3 zákona č. 99/1963 Sb., občanského soudního řádu, jde-li o věc, která patří do pravomoci soudů České republiky, ale podmínky místní příslušnosti chybějí nebo je nelze zjistit, určí Nejvyšší soud, který soud věc projedná a rozhodne. K tomu srov. usnesení velkého senátu občanskoprávního a obchodního kolegia Nejvyššího soudu ze dne 12. listopadu 2014, sp. zn. 31 Nd 316/2013, uveřejněné pod číslem 11/2015 Sbírky soudních rozhodnutí a stanovisek (dále jen „Sb. rozh. obč.“). 4. Nejvyšší soud vycházeje z obsahu spisu a přihlížeje k zásadě hospodárnosti řízení (srov. usnesení velkého senátu občanskoprávního a obchodního kolegia Nejvyššího soudu ze dne 12. září 2012, sp. zn. 31 Nd 200/2012, uveřejněné pod číslem 4/2013 Sb. rozh. obč.), rozhodl podle citovaného ustanovení tak, že jako místně příslušný soud v této věci určil Okresní soud v Ústí nad Labem, který vydal exekuční titul a k němuž soudní exekutor podal žádost o pověření a nařízení exekuce. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2025:20.ND.18.2025.1",
+      "content": "99/1963 Sb., občanský soudní řád, ve znění pozdějších předpisů – dále též jen „o. s. ř.“). V exekučním návrhu oprávněné a stejně tak v žádosti soudního exekutora je uvedena adresa povinného XY. Lustrací v informačním systému základních registrů (centrální evidenci obyvatel ČR) nebyla osoba povinného nalezena ani jako cizinec s povolením k pobytu v ČR, přičemž z vyjádření Ministerstva vnitra bylo zjištěno, že poslední nahlášený pobyt v České republice měl povinný na adrese XY, od 18. listopadu 2021 do 25. listopadu 2021 a od 1. prosince 2024 do 1. prosince 2027 je povinný veden v evidenci nežádoucích osob. Poslední známý pobyt povinného dle evidence Ministerstva vnitra je v zahraničí na adrese XY, zde je povinný přihlášen i k trvalému pobytu. Podle § 11 odst. 3 o. s. ř. jde-li o věc, která patří do pravomoci soudů České republiky, ale podmínky místní příslušnosti chybějí nebo je nelze zjistit, určí Nejvyšší soud, který soud věc projedná a rozhodne. Podle § 105 odst. 2 o. s. ř. vysloví-li soud, že není příslušný, postoupí věc po právní moci tohoto usnesení příslušnému soudu nebo ji za podmínek § 11 odst. 3 předloží Nejvyššímu soudu. Nejvyšší soud v usnesení velkého senátu občanskoprávního a obchodního kolegia ze dne 12. listopadu 2014, sp. zn. 31 Nd 316/2013 (uveřejněném pod číslem 11/2015 Sb. rozh. obč.), vyslovil právní názor, že je-li Nejvyšší soud žádán o určení místně příslušného soudu podle § 11 odst. 3 o. s. ř., Nejvyšší soud určí místně příslušný soud, aniž zkoumá (aniž je oprávněn zkoumat), zda je dána pravomoc českých soudů k projednání a rozhodnutí věci. Na základě uvedeného rozhodnutí a své další rozhodovací praxe Nejvyšší soud za vylíčeného stavu se zřetelem (především) k zásadě hospodárnosti řízení rozhodl tak, že věc projedná a rozhodne Okresní soud v Ostravě, u něhož byl podán návrh na nařízení exekuce a který již ve věci provedl prvotní úkony (ohledně hledisek „hospodárnosti“ srov. např. usnesení velkého senátu Nejvyššího soudu ze dne 12. září 2012, sp. zn. 31 Nd 200/2012, uveřejněné pod číslem 4/2013 Sb. rozh. obč. - dále „R 4/2013“). Tím není předurčeno, že exekuci na území České republiky bude také možné reálně provést; připomíná se, že v této fázi exekučního řízení a pro jeho potřeby se „majetek povinného“, ať už coby relevantní faktor pro založení místní příslušnosti soudu nebo jakožto postižitelný předmět exekuce, nezjišťuje (viz R 4/2013, dále rovněž např. usnesení Nejvyššího soudu ze dne 29. září 2016, sp. zn. 20 Nd 317/2016). "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2025:20.ND.65.2025.1",
+      "content": "6. Podle § 11 odst. 3 o. s. ř. jde-li o věc, která patří do pravomoci soudů České republiky, ale podmínky místní příslušnosti chybějí nebo je nelze zjistit, určí Nejvyšší soud, který soud věc projedná a rozhodne. 7. Nejvyšší soud v usnesení ze dne 12. 11. 2014, sp. zn. 31 Nd 316/2013 (uveřejněném pod číslem 11/2015 Sbírky soudních rozhodnutí a stanovisek), uzavřel, že je-li Nejvyšší soud žádán o určení místně příslušného soudu podle ustanovení § 11 odst. 3 o. s. ř. na základě pravomocného rozhodnutí, jímž soud prvního stupně vyslovil svou místní nepříslušnost a rozhodl o postoupení věci Nejvyššímu soudu za účelem určení místně příslušného soudu, Nejvyšší soud určí místně příslušný soud, aniž zkoumá (aniž je oprávněn zkoumat), zda je dána pravomoc českých soudů k projednání a rozhodnutí věci. Ustanovení § 105 odst. 2 o. s. ř. totiž předpokládá, že se otázkou pravomoci českých soudů dostatečně a s kladným závěrem zabýval předkládající soud. 8. Z obsahu spisu vyplývá, že povinný má v České republice od 24. 2. 2023 ukončený trvalý pobyt, na poslední známé adrese trvalého pobytu v České republice (XY) se již delší dobu nezdržuje, v březnu a v dubnu 2024 pobýval a pracoval v XY, od května 2024 pracuje a pobývá ve XY. 9. Nejvyšší soud proto rozhodl podle § 11 odst. 3 o. s. ř., přihlížeje k zásadě hospodárnosti, tak, že věc projedná a rozhodne Okresní soud ve Žďáru nad Sázavou, v jehož obvodu měl povinný poslední adresu trvalého pobytu v České republice a u něhož byla podána žádost o pověření a nařízení exekuce a který již ve věci provedl prvotní úkony. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+      "content": "19. Státní zástupce souhlasí s obviněným i v tom, že čelil útoku ze strany poškozeného. Soudy podle něj pochybily v důsledku nesprávné aplikace judikatury Nejvyššího soudu, podle které nepřichází nutná obrana v úvahu v případech vzájemného napadání tam, kde nelze identifikovat na straně jedné obránce, na straně druhé útočníka; tedy zejména kdy jsou obě osoby připraveny vzájemně na sebe útočit či když dojde k akceptování výzvy k potyčce (k čemuž odkazuje na usnesení Nejvyššího soudu ze dne 28. 11. 2002, sp. zn. 6 Tdo 851/2002). Nicméně ve věci činnými soudy zmíněná pravidla vyplývající z judikatury se v posuzované kauze vůbec nemohou uplatnit, protože v této trestní věci je řešena odlišná situace. Jde totiž o to, že obviněný v řešeném případě neakceptoval výzvu k potyčce, a tedy se nepodílel o své vlastní vůli na zahájení či vzniku potyčky, nýbrž ze svého vozidla vystoupil v situaci, kdy trval útok ze strany poškozeného. Čelil tedy trvajícímu útoku, jak správně, byť poněkud složitěji, zdůrazňuje obviněný ve svém dovolání; o vzájemné napadání se tedy nejednalo. 20. Fakt, že obviněný po právní stránce čelil trvajícímu útoku ve smyslu § 29 odst. 1 tr. zákoníku, podle státního zástupce bezpečně vyplývá z provedených důkazů, což dokonce explicitně konstatuje i sám soud prvního stupně, aniž by to však zohlednil v právní kvalifikaci. K tomu státní zástupce odkazuje zejména na bod 12. rozsudku soudu prvního stupně, kde tento soud s odkazem na výpověď svědkyně dovozuje, že „Poškozený bouchal do vozidla obžalovaného (…) s tím, aby obžalovaný vystoupil, že si to spolu fyzicky vyřídí“ a na bod 6. tamtéž, kde soud prvního stupně uvádí, že poškozený před vozidlem, ve kterém seděl obviněný, „křičel, bouchal pánovi do kapoty, kopal mu do auta… načež pán vystoupil z auta“ a oba aktéři potyčky se „proti sobě postavili hned do bojového postavení“ a přišla rána pěstí, kterou obviněný srazil poškozeného k zemi. V tomtéž bodě je navíc uvedeno, že obviněný chtěl vozem odjet z místa, avšak poškozený mu v tom bránil. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:20.CDO.2839.2024.1",
+      "content": "4/2000 Sbírky soudních rozhodnutí a stanovisek), usnesení Nejvyššího soudu ze dne 4. dubna 2001, sp. zn. 21 Cdo 2707/2000, či usnesení Nejvyššího soudu ze dne 28. června 2011, sp. zn. 20 Cdo 5068/2009. Nejvyšší soud však rovněž opakovaně vysvětlil, že z notářského zápisu musí být objektivně, to znamená jednoznačně a určitě (a to i z pohledu třetích - od smluvních stran notářského zápisu odlišných - osob) zřejmý důvod plnění. Jinak řečeno, z notářského zápisu musí být objektivně seznatelné, proč má povinná osoba oprávněné osobě určité plnění poskytnout a na základě jakého právního důvodu tak má učinit, přičemž tento právní důvod by neměl být zaměnitelný s jiným právním důvodem. Úsudek, zda je konkrétní náležitost řádně vymezena, je třeba učinit s ohledem na celý obsah notářského zápisu (srov. usnesení Nejvyššího soudu ze dne 1. července 2016, sp. zn. 20 Cdo 280/2016, usnesení Nejvyššího soudu ze dne 20. října 2005, sp. zn. 20 Cdo 124/2005, usnesení Nejvyššího soudu ze dne 2. ledna 2018, sp. zn. 20 Cdo 5319/2017, či usnesení Nejvyššího soudu ze dne 25. září 2018, sp. zn. 20 Cdo 3076/2018). Skutečností, na níž se má pohledávka zakládat v projednávané věci, je podle notářského zápisu řada ústních smluv o zápůjčce, na jejichž základě měla oprávněná poskytnout povinnému částku ve výši 2 500 000 Kč. Dále bylo v notářském zápise konstatováno, že povinný má vůči oprávněné dluh z titulu peněžité zápůjčky ze dne 14. června 2023 ve výši 375 714,23 Kč, přičemž následně byla část dluhu povinným oprávněné vrácena a dne 9. ledna 2024 povinný uznal svůj dluh ve výši 2 124 285,77 Kč, který se zavázal uhradit oprávněné ve splátkách nejpozději do 28. února 2030. Dovolací soud se ztotožňuje se závěrem odvolacího soudu (jakož i soudního exekutora), že takto vymezené skutečnosti nelze považovat za objektivně seznatelné ani určité, a notářský zápis proto s ohledem na shora popsanou ustálenou rozhodovací praxi dovolacího soudu nemůže obstát. Z pohledu třetích osob totiž není zřejmé a nezaměnitelné – a to ani z kontextu celého notářského zápisu – kdy a v jakých dílčích částkách oprávněná poskytla povinnému plnění ve výši 2 500 000 Kč a bez pochyb není ani důvod, proč k poskytnutí těchto blíže neidentifikovaných dílčích plnění došlo. Z obsahu notářského zápisu dále nevyplývá skutečnost, kdy a jaká část dluhu byla povinným vrácena; rovněž není zřejmé, k jakému titulu se váže následné uznání dluhu. Závěr odvolací soudu, že bylo namístě exekuční návrh zamítnout, je proto správný. Jelikož napadené usnesení odvolacího soudu je v souladu s ustálenou rozhodovací praxí dovolacího soudu, od níž není důvod se v projednávané věci odchýlit, Nejvyšší soud dovolání oprávněné podle § 243c odst. 1 o. s. ř. odmítl. Právní názor vyslovený v tomto usnesení je závazný (§ 243g odst. 1 část věty první za středníkem o. s. ř.). Výrok o náhradě nákladů dovolacího řízení se neodůvodňuje (§ 243f odst. 3 věta druhá o. s. ř.) "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:20.CDO.3061.2024.1",
+      "content": "takto: I. Dovolání se odmítá . II. Žalobkyně je povinna zaplatit žalovanému na náhradě nákladů dovolacího řízení částku 300 Kč do tří dnů od právní moci usnesení. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:21.CDO.2178.2024.1",
+      "content": "takto: I. Dovolání žalobce se odmítá . II. Žalobce je povinen zaplatit žalované na náhradě nákladů dovolacího řízení 9 922 Kč do 3 dnů od právní moci tohoto usnesení k rukám Mgr. Martiny Knické, advokátky se sídlem v Děčíně I, Tyršova č. 1434/4. Stručné odůvodnění (§ 243f odst. 3 o. s. ř.): 1. Dovolání žalobce proti rozsudku Krajského soudu v Ústí nad Labem ze dne 20. 9. 2023, č. j. 12 Co 60/2023-130, je zčásti vadné, neboť neobsahuje údaje o tom, v čem dovolatel spatřuje splnění předpokladů přípustnosti dovolání ve smyslu ustanovení § 241a odst. 2 o. s. ř., a v dovolacím řízení proto nelze v této části pokračovat, a z části není přípustné podle ustanovení § 237 o. s. ř., neboť není splněn žádný z předpokladů přípustnosti dovolání uvedených v tomto ustanovení, podle něhož není-li stanoveno jinak, je dovolání přípustné proti každému rozhodnutí odvolacího soudu, kterým se odvolací řízení končí, jestliže napadené rozhodnutí závisí na vyřešení otázky hmotného nebo procesního práva, při jejímž řešení se odvolací soud odchýlil od ustálené rozhodovací praxe dovolacího soudu nebo která v rozhodování dovolacího soudu dosud nebyla vyřešena nebo je dovolacím soudem rozhodována rozdílně anebo má-li být dovolacím soudem vyřešená právní otázka posouzena jinak. 2. Požadavek, aby dovolatel v dovolání uvedl, v čem spatřuje splnění předpokladů přípustnosti dovolání, je podle ustanovení § 241a odst. 2 o. s. ř. obligatorní náležitostí dovolání. K přípustnosti dovolání nepostačuje vymezení jednotlivých dovolacích námitek, aniž by společně s nimi byly vymezeny předpoklady přípustnosti dovolání, neboť dovolací řízení nemá být bezbřehým přezkumem, v němž procesní aktivitu stran nahrazuje soud. Předpoklady přípustnosti dovolání si není oprávněn vymezit sám dovolací soud, neboť tím by narušil zásady, na nichž spočívá dovolací řízení, zejména zásadu dispoziční a zásadu rovnosti účastníků řízení. "
+    },
+    {
+      "document_id": "ECLI:CZ:NS:2024:23.CDO.3170.2024.1",
+      "content": "Odůvodnění: 1. Žalobce se podanou žalobou na žalované domáhal zaplacení částky 336 744 Kč z titulu odpovědnosti za vady jako slevy z kupní ceny, kterou zaplatil na základě kupní smlouvy uzavřené mezi žalobcem a žalovanou dne 8. 11. 2017. Předmětem koupě byl ve smlouvě označený pozemek, jehož součástí byla budova (rodinný dům). Žalobce svůj nárok odůvodňoval tím, že předmětný rodinný dům vykazoval skryté vady: zdivo bylo částečně postaveno z nepálených cihel (a nikoli z cihel pálených), v různých částech domu se vyskytovaly plísně a vlhkost. Žalobce dále jako vady vytýkal zkorodované vodovodní trubky, nerozdělené či křivé zdi, stav rekonstrukce domu, který neodpovídal ujištění žalované, a nefunkční komínové těleso. 2. Okresní soud v Nymburce jako soud prvního stupně rozsudkem ze dne 24. 11. 2023, č. j. 10 C 166/2020-447, uložil žalované zaplatit žalobci částku 213 264 Kč (výrok I), zamítl žalobu v rozsahu částky 123 480 Kč (výrok II) a rozhodl o náhradě nákladů řízení mezi účastníky (výrok III) a o náhradě nákladů řízení státu (výroky IV a V). 3. Krajský soud v Praze jako soud odvolací k odvolání žalobce, žalované i vedlejší účastnice napadeným rozsudkem, ve znění opravného usnesení, změnil rozsudek soudu prvního stupně ve výrocích I a II tak, že žalobu dále zamítl co do částky 184 800 Kč, jinak v těchto výrocích rozsudek soudu prvního stupně potvrdil (výrok I napadeného rozsudku), a rozhodl o náhradě nákladů řízení mezi účastníky před soudem prvního stupně (výrok II napadeného rozsudku) a před soudem odvolacím (výrok III napadeného rozsudku) a o náhradě nákladů řízení státu (výroky IV a V napadeného rozsudku). 4. Proti rozsudku odvolacího soudu podali žalobce a vedlejší účastnice společné dovolání. 5. Dovolatelé považují své dovolání za přípustné, neboť „ dovolacím soudem vyřešená právní otázka by měla být dovolacím soudem posouzena jinak “. Žalobce a vedlejší účastnice namítají, že odvolací soud nesprávně zhodnotil provedené důkazy a nepřihlédl k rozhodným důkazům provedeným soudem prvního stupně a k důkazním materiálům, které žalobce soudu předložil poté, co bylo řízení před soudem prvního stupně zkoncentrováno. S odkazem na usnesení Nejvyššího soudu ze dne 26. "
+    }
+  ]
+}
