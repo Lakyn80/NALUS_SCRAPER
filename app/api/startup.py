@@ -26,6 +26,7 @@ from app.data.runtime_corpus import (
     build_seed_runtime_corpus,
     load_results_from_json,
 )
+from app.rag.clarification.orchestrator import ClarifyingOrchestratorService
 from app.rag.execution.execution_service import ExecutionService
 from app.rag.ingest.qdrant_ingest import (
     POINT_ID_SCHEME,
@@ -50,7 +51,7 @@ VECTOR_DIM = 10
 
 @dataclass(frozen=True)
 class LiveOrchestratorBuild:
-    orchestrator: OrchestratorService
+    orchestrator: Any
     corpus_version: str
     deferred_ingest: Callable[[], None] | None = None
     ingest_status: str = "idle"
@@ -197,13 +198,13 @@ def _build(qdrant_url: str) -> LiveOrchestratorBuild:
 
     if not runtime_corpus.chunks:
         return LiveOrchestratorBuild(
-            orchestrator=orchestrator,
+            orchestrator=ClarifyingOrchestratorService(orchestrator),
             corpus_version=corpus_version,
         )
 
     if _collection_supports_stable_sync(client, collection_name):
         return LiveOrchestratorBuild(
-            orchestrator=orchestrator,
+            orchestrator=ClarifyingOrchestratorService(orchestrator),
             corpus_version=corpus_version,
             deferred_ingest=_make_deferred_sync(
                 qdrant_url,
@@ -224,7 +225,7 @@ def _build(qdrant_url: str) -> LiveOrchestratorBuild:
     )
     logger.warning("[startup] %s", message)
     return LiveOrchestratorBuild(
-        orchestrator=orchestrator,
+        orchestrator=ClarifyingOrchestratorService(orchestrator),
         corpus_version=corpus_version,
         ingest_status="blocked",
         ingest_message=message,
@@ -403,7 +404,7 @@ def _build_text_llm():
     return MockTextLLM()
 
 
-def _stub_orchestrator(runtime_corpus: RuntimeCorpus) -> OrchestratorService:
+def _stub_orchestrator(runtime_corpus: RuntimeCorpus) -> Any:
     """Minimal working orchestrator with keyword-only fallback (no Qdrant needed)."""
 
     retrieval = RetrievalService(
@@ -414,10 +415,12 @@ def _stub_orchestrator(runtime_corpus: RuntimeCorpus) -> OrchestratorService:
         ),
         keyword=KeywordRetriever(corpus=list(runtime_corpus.keyword_corpus)),
     )
-    return OrchestratorService(
+    return ClarifyingOrchestratorService(
+        OrchestratorService(
         planner=PlannerService(llm=MockPlannerLLM()),
         execution=ExecutionService(retrieval_service=retrieval),
         synthesis=SynthesisService(llm=MockSynthesisLLM()),
+        )
     )
 
 

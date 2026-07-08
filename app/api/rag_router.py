@@ -24,6 +24,7 @@ from app.api.query_cache import CachedQueryResponse, build_cache_key, query_cach
 from app.core.logging import get_logger
 from app.core.tracing import trace_event
 from app.rag.answer.answer_service import AnswerService
+from app.rag.clarification.orchestrator import ClarifyingOrchestratorService
 from app.rag.execution.execution_service import ExecutionService
 from app.rag.orchestration.pipeline import RetrievalPipeline
 from app.rag.orchestrator.orchestrator_service import OrchestratorResult, OrchestratorService
@@ -181,10 +182,12 @@ def get_orchestrator() -> OrchestratorService:
     )
     keyword = KeywordRetriever(corpus=[])
     retrieval = RetrievalService(dense=dense, keyword=keyword)
-    return OrchestratorService(
-        planner=PlannerService(llm=MockPlannerLLM()),
-        execution=ExecutionService(retrieval_service=retrieval),
-        synthesis=SynthesisService(llm=MockSynthesisLLM()),
+    return ClarifyingOrchestratorService(
+        OrchestratorService(
+            planner=PlannerService(llm=MockPlannerLLM()),
+            execution=ExecutionService(retrieval_service=retrieval),
+            synthesis=SynthesisService(llm=MockSynthesisLLM()),
+        )
     )
 
 
