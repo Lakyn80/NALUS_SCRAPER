@@ -307,6 +307,14 @@
       "doc_count": 245,
       "complete": true,
       "saved_at": "2026-04-03T19:13:18"
+    },
+    {
+      "file": "year_2026_20260708_124949.json",
+      "year": 2026,
+      "doc_count": 1486,
+      "complete": true,
+      "saved_at": "2026-07-08T12:49:49",
+      "note": "incremental re-walk of year 2026 (pages 1-174), ID-deduped against all prior batches (245 dup skipped); supplements year_2026_20260403_191318.json, does not replace it"
     }
   ],
   "progress": [

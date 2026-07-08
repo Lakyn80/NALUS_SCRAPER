@@ -1251,6 +1251,249 @@ Aktualni real-RAG runtime update popsany v tomto dokumentu:
 - live kolekce `nalus` ma `12638` pointu v `768` dimenzi
 - Docker image uz netaha CUDA/NVIDIA baliky
 
+### 7.1 Posledni dulezity handoff update
+
+**Datum a cas zapisu:** `2026-07-08 13:06:24 +03:00`
+
+Toto je dulezity handoff pro dalsiho agenta. Nize je presne popsano, co bylo dodelano,
+co je commitnute, co je zamerne oddelene, co se nesmi rozbit a kde jsou hlavni artifacty.
+
+#### Commit 1 — clarification gate
+
+`4a4b10b Add legal query clarification gate`
+
+Hotove:
+
+- novy modul `app/rag/clarification/`
+- pre-retrieval clarification wrapper nad real API/orchestrator flow
+- nejasne long-form pravni dotazy se umi zastavit **pred retrievalem**
+- similar ambiguous query umi reuse pres clarification cache / semantic reuse
+- post-retrieval guard umi zastavit mixed `CDO/TDO` preview
+- API wiring hotove v:
+  - `app/api/rag_router.py`
+  - `app/api/startup.py`
+- focused API testy:
+  - `tests/api/test_clarification_query_api.py`
+- clarification unit testy:
+  - `tests/rag/clarification/test_legal_query_clarification.py`
+- E2E verifier script:
+  - `scripts/run_clarification_e2e.py`
+- report:
+  - `artifacts/rag_eval/client_longform_v1/clarification_e2e_report.md`
+
+Co se **nemenilo**:
+
+- retrieval scoring / ranking logika
+- Qdrant judgment retrieval
+- Qdrant judgment collections
+- Redis se nepouziva pro judgment embeddings
+- clarification cache/pattern vrstva je oddelena od judgment retrievalu
+
+Dulezite chovani:
+
+- `client-longform-04` se ma zastavit a polozit upresnujici otazku
+- jasny trestni dotaz ma projit do retrievalu
+- jasny civilni dotaz ma projit do retrievalu
+- family-law ambiguity nesmi omylem reuse dovolani clarification
+- mixed civil/trestni preview nesmi byt vracen jako spolehlivy finalni answer
+
+Posledni overene testy pro clarification vrstvu:
+
+- `python -m pytest tests/rag/clarification/test_legal_query_clarification.py tests/api/test_clarification_query_api.py -q`
+  - `15 passed, 1 warning`
+- `python scripts/run_clarification_e2e.py`
+  - `6/6 PASS`
+- sirsi relevantni suite:
+  - `56 passed, 1 warning`
+
+Poznamka k test environmentu:
+
+- produkcni Docker image standardne **neobsahuje pytest**
+- pro verifikaci byl `requirements-ci.txt` doinstalovan **jen do beziciho kontejneru**
+- toto nebyla produkcni code/dependency zmena
+
+#### Commit 2 — client long-form benchmark assets
+
+`cc7055d Add client long-form benchmark assets`
+
+Commitnute stabilni benchmark assety:
+
+- kanonicky dataset:
+  - `artifacts/rag_eval/nalus_client_longform_eval_v1.json`
+- builder datasetu:
+  - `artifacts/rag_eval/build_client_longform_dataset.py`
+- reproducible benchmark configy:
+  - `artifacts/rag_eval/client_longform_v1/configs/*.yaml`
+- helper skripty:
+  - `artifacts/rag_eval/client_longform_v1/run_benchmark.sh`
+  - `artifacts/rag_eval/client_longform_v1/merge_rankings.py`
+  - `artifacts/rag_eval/client_longform_v1/finalize_winner.py`
+- stabilni analyza failed case:
+  - `artifacts/rag_eval/client_longform_v1/failed_case_analysis.md`
+
+Zamerne **necommitnute** generated outputy:
+
+- `artifacts/rag_eval/client_longform_v1/out_*/`
+- `artifacts/rag_eval/client_longform_v1/ranking.json`
+- `artifacts/rag_eval/client_longform_v1/combined_report.md`
+- `artifacts/rag_eval/client_longform_v1/winner_qa.json`
+- `artifacts/rag_eval/client_longform_v1/winner_qa.md`
+- `artifacts/rag_eval/client_longform_v1/winner_legal_eval.json`
+- `artifacts/rag_eval/client_longform_v1/legal_quality_report.md`
+- `artifacts/rag_eval/client_longform_v1/logs/`
+
+Pro generated outputy byly pridany uzke `.gitignore` zaznamy:
+
+- `artifacts/rag_eval/client_longform_v1/logs/`
+- `artifacts/rag_eval/client_longform_v1/out_*/`
+- `artifacts/rag_eval/client_longform_v1/ranking.json`
+- `artifacts/rag_eval/client_longform_v1/combined_report.md`
+- `artifacts/rag_eval/client_longform_v1/winner_qa.json`
+- `artifacts/rag_eval/client_longform_v1/winner_qa.md`
+- `artifacts/rag_eval/client_longform_v1/winner_legal_eval.json`
+- `artifacts/rag_eval/client_longform_v1/legal_quality_report.md`
+
+Cleanup:
+
+- `run_retrieval_query.diff` byl smazan jako obsolete scratch diff
+- bylo overeno, ze jeho obsah uz byl aplikovan do `app/nsoud/run_retrieval_query.py`
+
+#### Co ma dalsi agent vedet, aby to neposral
+
+1. **Nesahat** na retrieval ranking jen kvuli clarification gate.
+2. Clarification vrstva je guard **pred retrievalem**, ne nahrada retrieveru.
+3. Qdrant main collection zustava pro judgment retrieval.
+4. Redis zustava jen pro clarification cache/payload reuse.
+5. Optional clarification pattern similarity neni judgment retrieval index.
+6. `nalus_client_longform_eval_v1.json` je ted kanonicky dataset pro client long-form benchmark.
+7. `artifacts/rag_eval/client_longform_v1/configs/*.yaml` + helper skripty jsou reproducible benchmark source assety.
+8. `out_*`, `winner_*`, `ranking.json`, `combined_report.md`, `legal_quality_report.md` jsou generated outputy, ne source-of-truth.
+9. Pokud nekdo bude delat dalsi benchmark commit, ma oddelovat:
+   - source assets / scripts / dataset
+   - generated outputs
+10. Pokud nekdo bude menit clarification flow, musi znovu overit:
+   - stop before retrieval pro `client-longform-04`
+   - clear criminal proceed
+   - clear civil proceed
+   - semantic reuse
+   - no wrong family-law reuse
+   - mixed-domain guard
+
+#### Prakticky seznam nejdulezitejsich souboru
+
+- clarification kod:
+  - `app/rag/clarification/`
+- API wiring:
+  - `app/api/rag_router.py`
+  - `app/api/startup.py`
+- clarification testy:
+  - `tests/rag/clarification/test_legal_query_clarification.py`
+  - `tests/api/test_clarification_query_api.py`
+- clarification E2E:
+  - `scripts/run_clarification_e2e.py`
+  - `artifacts/rag_eval/client_longform_v1/clarification_e2e_report.md`
+- benchmark dataset + builder:
+  - `artifacts/rag_eval/nalus_client_longform_eval_v1.json`
+  - `artifacts/rag_eval/build_client_longform_dataset.py`
+- benchmark source assety:
+  - `artifacts/rag_eval/client_longform_v1/configs/`
+  - `artifacts/rag_eval/client_longform_v1/run_benchmark.sh`
+  - `artifacts/rag_eval/client_longform_v1/merge_rankings.py`
+  - `artifacts/rag_eval/client_longform_v1/finalize_winner.py`
+  - `artifacts/rag_eval/client_longform_v1/failed_case_analysis.md`
+
+### 7.2 Handoff update — NSoud winner audit + Ustavni soud incremental scrape
+
+**Datum a cas zapisu:** `2026-07-08 16:14:00`
+
+Dve nezavisle ulohy provedene ve stejne session. Zadna z nich nemenila retrieval
+logiku, clarification gate, API, ani produkcni Qdrant kolekce.
+
+#### A) Oprava spatne cilene E2E RAG evaluace — NSoud benchmark winner audit
+
+Puvodni chyba: 30 klientskych pravnich dotazu bylo nejdriv omylem otestovano
+proti **produkcnimu API** (`localhost:8029/api/rag/query`), ktere jede nad
+aliasem `nalus_live` -> kolekci `nalus_stable_20260326` (mpnet embedding, plny
+archiv **Ustavniho soudu**). To neni totez co "aktualni vitezna benchmark
+konfigurace" — vitez client long-form benchmarku (`bge_m3__dense_plus_bm25`)
+existuje jen jako samostatna Qdrant kolekce
+`nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1`
+(bge_m3, dense_plus_bm25/RRF, 150 rozhodnuti **Nejvyssiho soudu**) a **neni
+zapojen do API** (potvrzeno cetenim `app/api/rag_router.py` a
+`app/api/startup.py`).
+
+Oprava: dotazy znovu spusteny primo proti spravne kolekci pres existujici,
+nezmeneny `SqlQdrantRagEvalBackend.retrieve()` z balicku
+`rag-embedding-benchmark` (jiz nainstalovan v `api` kontejneru), spustene
+uvnitr Dockeru pres docasny negitovany skript. Overeno programove: 240/240
+vracenych hitu (30 dotazu x top_k 8) pochazi vyhradne ze spravne kolekce,
+240/240 `source_document_id` zacina `ECLI:CZ:NS:` — nulova kontaminace z
+Ustavniho soudu / produkce.
+
+Report: `artifacts/rag_eval/client_longform_v1/nsoud_winner_30q_audit_report.md`
+
+Zaver: `bge_m3__dense_plus_bm25` funguje dobre tam, kde 150-dokumentovy pilotni
+korpus tema pokryva (vylouceni soudce, hodnoceni svedku, nepouzitelne dukazy,
+odklon od judikatury, spravedlivy proces). Selhava systematicky tam, kde
+korpus pokryti nema (spravni pravo, obnova rizeni) — to je mezera v datasetu,
+ne chyba retrievalu.
+
+**Dulezite pro dalsiho agenta:** nikdy nepredpokladat, ze produkcni API =
+"aktualni vitezna konfigurace". V Qdrantu bezi soucasne produkcni korpus
+(Ustavni soud, `nalus_live`) i nekolik benchmarkovych/pilotnich kolekci
+(`nalus_client_lf__*`, `nalus_rag_eval__*`, `nsoud_chunks_*`) — vzdy overit
+presny collection name / model / retrieval mode pred spustenim evaluace.
+
+#### B) Inkrementalni scrape Ustavniho soudu (NALUS) — 2026 dorovnano
+
+Cil: dorovnat rok 2026 v existujicim korpusu (`batches/*.json`), beze zmeny
+embeddingu/ingestu/Qdrantu/API.
+
+Zjisteni pred behem:
+- Posledni lokalni `decision_date` byl **2026-03-25** (245 rozhodnuti pro rok
+  2026 z behu 2026-04-03).
+- Zivy zdroj (nalus.usoud.cz) mel pro rok 2026 celkem 1731 vysledku (174
+  stran) — nejnovejsi rozhodnuti **2026-06-25** (`III.US 3315/25 #2`,
+  zverejneno 2026-07-07).
+- `batches/manifest.json` mel rok 2026 oznaceny `complete: true`, takze
+  primy beh `scripts/scrape_all_nalus.py --year 2026` by nic neudelal.
+  Reseno docasnym, negitovanym ovladacem
+  (`artifacts/nalus_incremental_batches/_driver.py`), ktery nezmeneny
+  `scripts/scrape_all_nalus.py` naimportuje a jen presmeruje
+  `BATCHES_DIR`/`CHECKPOINT_PATH` na zapisovatelnou kopii (`batches/` je
+  uvnitr `api` kontejneru read-only mount) — samotny scraper skript nebyl
+  zmenen.
+
+Vysledek behu:
+- **1486 novych rozhodnuti** stazeno (0 trvalych selhani, 6 prechodnych
+  timeoutu auto-opraveno retry logikou, 245 duplikatu spravne preskoceno).
+- Datovy rozsah novych zaznamu: 2026-01-06 az 2026-06-25 (nekolik "starsich"
+  lednovych/unorovych rozhodnuti bylo zverejneno pozde, proto se objevila az
+  ted — naivni filtr "jen od data X" by je propasl).
+- Behem behu se 2x objevila race condition ve vlastnim watchdog/relaunch
+  mechanismu (dva souběžne procesy si prepisovaly stejny `.tmp` soubor pri
+  `_atomic_write_json`) — opraveno na urovni orchestrace (pockat na skutecne
+  ukonceni predchoziho procesu), ne upravou trackovaneho scraperu.
+- Merge do realneho korpusu proveden na hostu (ne v kontejneru, protoze
+  `batches/` je tam read-only): novy soubor
+  `batches/year_2026_20260708_124949.json` (nikdy nic neprepsal) + jeden novy
+  appendovany zaznam v `batches/manifest.json` (git diff: presne +8 radku, 0
+  smazano/zmeneno).
+
+Report: `artifacts/nalus_update/usoud_incremental_scrape_report.md`
+
+**Co se nemenilo:** Qdrant (jen read-only kontroly, `nalus_live` alias i
+pocet bodu 776 424 beze zmeny), API, retrieval/reranker logika, NSoud
+benchmark kolekce, `docker-compose.yml`, `scripts/scrape_all_nalus.py`,
+`checkpoint.json` (nesouvisejici pre-existujici stav z dubnoveho behu).
+
+**Dalsi krok (nevykonano, vyzaduje explicitni zadani):** novych 1486
+rozhodnuti je zatim jen raw scrape — potrebuji samostatny ingest/embedding
+beh pres `scripts/ingest_batch.py` (realny 768-dim
+`sentence-transformers/paraphrase-multilingual-mpnet-base-v2` embedder, **ne**
+`_ingest_file()`/`_run_ingest()`, ktere pouzivaji `MockEmbedder(dim=10)`), nez
+budou viditelna v RAG API / `nalus_live`.
+
 ---
 
 ## 8. ARCHITEKTONICKE PRINCIPY
