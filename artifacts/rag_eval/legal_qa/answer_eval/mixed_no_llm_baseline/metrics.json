@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-07-09T19:50:12Z",
+  "dataset": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\legal_qa\\datasets\\mixed_qa_v1.jsonl",
+  "retrieval_results": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\legal_qa\\runs\\mixed_gold_eval\\retrieval_results.jsonl",
+  "gold_review": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\legal_qa\\gold_source_review_20260709.md",
+  "no_llm": true,
+  "citation_required": true,
+  "total_questions": 10,
+  "gold_available_count": 2,
+  "direct_support_count": 0,
+  "partial_support_count": 0,
+  "gap_count": 0,
+  "boilerplate_noise_count": 0,
+  "corpus_only_count": 2,
+  "citation_available_rate": 0.0,
+  "answer_eval_pass_rate": 0.0,
+  "answer_eval_partial_rate": 0.2,
+  "answer_eval_gap_rate": 0.0,
+  "unsupported_answer_risk_count": 0,
+  "skipped_count": 8,
+  "needs_review_count": 0
+}
