@@ -125,7 +125,10 @@ class QuestionRetrievalResult:
     hit_at_10: bool
     keyword_coverage: float
     source_constraint_match: float | None
-    passed: bool
+    source_hit_at_1: bool | None = None
+    source_hit_at_3: bool | None = None
+    source_hit_at_5: bool | None = None
+    passed: bool = False
     failure_reason: str | None = None
 
 
@@ -139,6 +142,11 @@ class BenchmarkMetrics:
     mean_keyword_coverage: float
     mean_source_constraint_match: float | None
     pass_rate: float
+    source_pending_count: int = 0
+    gold_question_count: int = 0
+    source_hit_at_1: float | None = None
+    source_hit_at_3: float | None = None
+    source_hit_at_5: float | None = None
 
 
 def validate_dataset_item(payload: dict[str, Any]) -> None:
@@ -257,10 +265,39 @@ def source_constraint_match_ratio(
     return 0.0
 
 
+def _metadata_field_value(metadata: dict[str, Any], field_name: str) -> Any:
+    chunk_meta = _parse_chunk_metadata(metadata)
+    if field_name == "source_document_id":
+        for key in ("source_document_id", "document_id", "ecli"):
+            value = metadata.get(key) or chunk_meta.get(key) or chunk_meta.get("source_document_id")
+            if value not in {None, ""}:
+                return value
+        return None
+    if field_name == "case_reference":
+        for key in ("case_reference", "spisova_znacka", "case_number"):
+            value = metadata.get(key) or chunk_meta.get(key)
+            if value not in {None, ""}:
+                return value
+        return None
+    if field_name == "source":
+        value = metadata.get("source") or metadata.get("retrieved_corpus")
+        if str(value or "").strip() == "usoud":
+            return metadata.get("source") or "usoud / nalus"
+        return value
+    if field_name == "court":
+        corpus = str(metadata.get("retrieved_corpus") or "").strip()
+        if corpus == "usoud":
+            return "Ústavní soud"
+        if corpus == "nsoud":
+            return "Nejvyšší soud"
+        return metadata.get("court")
+    return metadata.get(field_name)
+
+
 def _hit_matches_constraints(hit: RetrievedHitRecord, active: dict[str, str]) -> bool:
     metadata = hit.metadata
     for field_name, expected in active.items():
-        actual = metadata.get(field_name)
+        actual = _metadata_field_value(metadata, field_name)
         if actual is None:
             return False
         if normalize_for_match(str(actual)) != normalize_for_match(expected):
@@ -268,18 +305,40 @@ def _hit_matches_constraints(hit: RetrievedHitRecord, active: dict[str, str]) ->
     return True
 
 
+def _source_hit_at_k(
+    constraints: SourceConstraints,
+    hits: list[RetrievedHitRecord],
+    k: int,
+) -> bool | None:
+    if not constraints.active_constraints():
+        return None
+    return source_constraint_match_ratio(constraints, hits[:k]) == 1.0
+
+
 def evaluate_question(
     item: LegalQaItem,
     hits: list[RetrievedHitRecord],
 ) -> QuestionRetrievalResult:
-    if item.source_pending or not item.expected_source_constraints.active_constraints():
+    constraints = item.expected_source_constraints
+    has_gold = not item.source_pending and bool(constraints.active_constraints())
+    source_hit_1 = _source_hit_at_k(constraints, hits, 1)
+    source_hit_3 = _source_hit_at_k(constraints, hits, 3)
+    source_hit_5 = _source_hit_at_k(constraints, hits, 5)
+
+    if item.source_pending or not constraints.active_constraints():
         passed = keywords_hit(item.expected_keywords, hits)
         source_match = None
         failure_reason = None if passed else "No expected keyword found in top hits."
     else:
-        source_match = source_constraint_match_ratio(item.expected_source_constraints, hits)
-        passed = source_match == 1.0
-        failure_reason = None if passed else "Source constraints not satisfied in top hits."
+        source_match = source_constraint_match_ratio(constraints, hits)
+        keyword_ok = keywords_hit(item.expected_keywords, hits)
+        passed = source_match == 1.0 and keyword_ok
+        if not keyword_ok:
+            failure_reason = "No expected keyword found in top hits."
+        elif source_match != 1.0:
+            failure_reason = "Source constraints not satisfied in top hits."
+        else:
+            failure_reason = None
 
     return QuestionRetrievalResult(
         item=item,
@@ -290,6 +349,9 @@ def evaluate_question(
         hit_at_10=keywords_hit(item.expected_keywords, hits[:10]),
         keyword_coverage=keyword_coverage(item.expected_keywords, hits),
         source_constraint_match=source_match,
+        source_hit_at_1=source_hit_1 if has_gold else None,
+        source_hit_at_3=source_hit_3 if has_gold else None,
+        source_hit_at_5=source_hit_5 if has_gold else None,
         passed=passed,
         failure_reason=failure_reason,
     )
@@ -302,6 +364,13 @@ def aggregate_metrics(results: list[QuestionRetrievalResult]) -> BenchmarkMetric
         for value in (result.source_constraint_match for result in results)
         if value is not None
     ]
+    gold_results = [result for result in results if result.source_hit_at_1 is not None]
+
+    def _mean_source_hit(field: str) -> float | None:
+        if not gold_results:
+            return None
+        return sum(bool(getattr(result, field)) for result in gold_results) / len(gold_results)
+
     return BenchmarkMetrics(
         question_count=count,
         hit_at_1=sum(result.hit_at_1 for result in results) / count,
@@ -313,6 +382,11 @@ def aggregate_metrics(results: list[QuestionRetrievalResult]) -> BenchmarkMetric
             sum(source_values) / len(source_values) if source_values else None
         ),
         pass_rate=sum(result.passed for result in results) / count,
+        source_pending_count=sum(1 for result in results if result.item.source_pending),
+        gold_question_count=len(gold_results),
+        source_hit_at_1=_mean_source_hit("source_hit_at_1"),
+        source_hit_at_3=_mean_source_hit("source_hit_at_3"),
+        source_hit_at_5=_mean_source_hit("source_hit_at_5"),
     )
 
 
@@ -385,6 +459,9 @@ def write_run_outputs(
                         "hit_at_10": result.hit_at_10,
                         "keyword_coverage": result.keyword_coverage,
                         "source_constraint_match": result.source_constraint_match,
+                        "source_hit_at_1": result.source_hit_at_1,
+                        "source_hit_at_3": result.source_hit_at_3,
+                        "source_hit_at_5": result.source_hit_at_5,
                         "hits": [asdict(hit) for hit in result.hits],
                     },
                     ensure_ascii=False,
@@ -451,6 +528,14 @@ def write_run_outputs(
         summary_lines.append(
             f"- mean source constraint match: {metrics.mean_source_constraint_match:.3f}"
         )
+    if metrics.gold_question_count:
+        summary_lines.append(f"- gold questions: {metrics.gold_question_count}")
+    if metrics.source_hit_at_1 is not None:
+        summary_lines.append(f"- source_hit@1: {metrics.source_hit_at_1:.3f}")
+    if metrics.source_hit_at_3 is not None:
+        summary_lines.append(f"- source_hit@3: {metrics.source_hit_at_3:.3f}")
+    if metrics.source_hit_at_5 is not None:
+        summary_lines.append(f"- source_hit@5: {metrics.source_hit_at_5:.3f}")
     (output_dir / "summary.md").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
 
 
@@ -524,9 +609,13 @@ class MixedQuestionRetrievalResult:
     corpus_hit_at_3: bool | None
     corpus_hit_at_5: bool | None
     keyword_coverage: float
-    passed: bool
-    usoud_at_1: bool
-    nsoud_at_1: bool
+    source_constraint_match: float | None = None
+    source_hit_at_1: bool | None = None
+    source_hit_at_3: bool | None = None
+    source_hit_at_5: bool | None = None
+    passed: bool = False
+    usoud_at_1: bool = False
+    nsoud_at_1: bool = False
     failure_reason: str | None = None
 
 
@@ -547,6 +636,11 @@ class MixedBenchmarkMetrics:
     ambiguous_count: int
     source_pending_count: int
     corpus_scored_question_count: int
+    gold_question_count: int = 0
+    mean_source_constraint_match: float | None = None
+    source_hit_at_1: float | None = None
+    source_hit_at_3: float | None = None
+    source_hit_at_5: float | None = None
 
 
 @dataclass(frozen=True)
@@ -792,8 +886,26 @@ def evaluate_mixed_question(
     hits: list[MixedRetrievedHitRecord],
 ) -> MixedQuestionRetrievalResult:
     keyword_hits = _mixed_hits_to_keyword_records(hits)
-    passed = keywords_hit(item.expected_keywords, keyword_hits)
-    failure_reason = None if passed else "No expected keyword found in top hits."
+    constraints = item.expected_source_constraints
+    has_gold = not item.source_pending and bool(constraints.active_constraints())
+    source_hit_1 = _source_hit_at_k(constraints, keyword_hits, 1)
+    source_hit_3 = _source_hit_at_k(constraints, keyword_hits, 3)
+    source_hit_5 = _source_hit_at_k(constraints, keyword_hits, 5)
+    keyword_ok = keywords_hit(item.expected_keywords, keyword_hits)
+
+    if item.source_pending or not constraints.active_constraints():
+        passed = keyword_ok
+        source_match = None
+        failure_reason = None if passed else "No expected keyword found in top hits."
+    else:
+        source_match = source_constraint_match_ratio(constraints, keyword_hits)
+        passed = source_match == 1.0 and keyword_ok
+        if not keyword_ok:
+            failure_reason = "No expected keyword found in top hits."
+        elif source_match != 1.0:
+            failure_reason = "Source constraints not satisfied in top hits."
+        else:
+            failure_reason = None
 
     return MixedQuestionRetrievalResult(
         item=item,
@@ -806,6 +918,10 @@ def evaluate_mixed_question(
         corpus_hit_at_3=corpus_hit_at_k(item.expected_target_corpus, hits, 3),
         corpus_hit_at_5=corpus_hit_at_k(item.expected_target_corpus, hits, 5),
         keyword_coverage=keyword_coverage(item.expected_keywords, keyword_hits),
+        source_constraint_match=source_match,
+        source_hit_at_1=source_hit_1 if has_gold else None,
+        source_hit_at_3=source_hit_3 if has_gold else None,
+        source_hit_at_5=source_hit_5 if has_gold else None,
         passed=passed,
         usoud_at_1=bool(hits) and hits[0].retrieved_corpus == "usoud",
         nsoud_at_1=bool(hits) and hits[0].retrieved_corpus == "nsoud",
@@ -822,6 +938,19 @@ def aggregate_mixed_metrics(results: list[MixedQuestionRetrievalResult]) -> Mixe
         if corpus_count == 0:
             return 0.0
         return sum(bool(getattr(result, field)) for result in corpus_scored) / corpus_count
+
+    def _mean_source_hit(field: str) -> float | None:
+        gold_results = [result for result in results if getattr(result, field) is not None]
+        if not gold_results:
+            return None
+        return sum(bool(getattr(result, field)) for result in gold_results) / len(gold_results)
+
+    source_values = [
+        value
+        for value in (result.source_constraint_match for result in results)
+        if value is not None
+    ]
+    gold_results = [result for result in results if result.source_hit_at_1 is not None]
 
     return MixedBenchmarkMetrics(
         question_count=count,
@@ -841,6 +970,13 @@ def aggregate_mixed_metrics(results: list[MixedQuestionRetrievalResult]) -> Mixe
         ),
         source_pending_count=sum(1 for result in results if result.item.source_pending),
         corpus_scored_question_count=corpus_count,
+        gold_question_count=len(gold_results),
+        mean_source_constraint_match=(
+            sum(source_values) / len(source_values) if source_values else None
+        ),
+        source_hit_at_1=_mean_source_hit("source_hit_at_1"),
+        source_hit_at_3=_mean_source_hit("source_hit_at_3"),
+        source_hit_at_5=_mean_source_hit("source_hit_at_5"),
     )
 
 
@@ -932,6 +1068,10 @@ def write_mixed_run_outputs(
                         "corpus_hit_at_3": result.corpus_hit_at_3,
                         "corpus_hit_at_5": result.corpus_hit_at_5,
                         "keyword_coverage": result.keyword_coverage,
+                        "source_constraint_match": result.source_constraint_match,
+                        "source_hit_at_1": result.source_hit_at_1,
+                        "source_hit_at_3": result.source_hit_at_3,
+                        "source_hit_at_5": result.source_hit_at_5,
                         "usoud_at_1": result.usoud_at_1,
                         "nsoud_at_1": result.nsoud_at_1,
                         "hits": [asdict(hit) for hit in result.hits],
@@ -1014,6 +1154,19 @@ def write_mixed_run_outputs(
         f"- nsoud_win_rate@1: {metrics.nsoud_win_rate_at_1:.3f}",
         "",
     ]
+    if metrics.gold_question_count:
+        summary_lines.append(f"- gold questions: {metrics.gold_question_count}")
+    if metrics.mean_source_constraint_match is not None:
+        summary_lines.append(
+            f"- mean source constraint match: {metrics.mean_source_constraint_match:.3f}"
+        )
+    if metrics.source_hit_at_1 is not None:
+        summary_lines.append(f"- source_hit@1: {metrics.source_hit_at_1:.3f}")
+    if metrics.source_hit_at_3 is not None:
+        summary_lines.append(f"- source_hit@3: {metrics.source_hit_at_3:.3f}")
+    if metrics.source_hit_at_5 is not None:
+        summary_lines.append(f"- source_hit@5: {metrics.source_hit_at_5:.3f}")
+    summary_lines.append("")
     (output_dir / "summary.md").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
 
 

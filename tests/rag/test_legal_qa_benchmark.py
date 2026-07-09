@@ -210,19 +210,39 @@ def test_source_constraint_match_when_not_pending() -> None:
     item = _sample_item(
         source_pending=False,
         expected_source_constraints={
-            "court": "Ústavní soud",
+            "court": None,
             "source": None,
             "case_reference": None,
-            "source_document_id": None,
+            "source_document_id": "ECLI:CZ:US:2026:1.US.927.25.1",
             "decision_date": None,
         },
         expected_keywords=["spravedlivý"],
     )
     hits = [_hit("spravedlivý proces", chunk_id="1")]
-    hits[0].metadata["court"] = "Ústavní soud"
+    hits[0].metadata["document_id"] = "ECLI:CZ:US:2026:1.US.927.25.1"
     result = evaluate_question(item, hits)
     assert result.source_constraint_match == 1.0
+    assert result.source_hit_at_1 is True
     assert result.passed is True
+
+
+def test_gold_pass_requires_keyword_and_source_match() -> None:
+    item = _sample_item(
+        source_pending=False,
+        expected_source_constraints={
+            "court": None,
+            "source": None,
+            "case_reference": None,
+            "source_document_id": "ECLI:CZ:US:2026:1.US.927.25.1",
+            "decision_date": None,
+        },
+        expected_keywords=["spravedlivý"],
+    )
+    wrong_doc = _hit("spravedlivý proces", chunk_id="1")
+    wrong_doc.metadata["document_id"] = "ECLI:CZ:US:2026:9.US.999.99.1"
+    result = evaluate_question(item, [wrong_doc])
+    assert result.passed is False
+    assert result.source_constraint_match == 0.0
 
 
 def _mixed_item(**overrides) -> LegalQaItem:

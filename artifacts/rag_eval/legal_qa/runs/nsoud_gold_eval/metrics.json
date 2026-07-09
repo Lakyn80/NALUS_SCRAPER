@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-07-09T17:23:46Z",
+  "dataset": "/app/artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl",
+  "collection_name": "nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1",
+  "top_k": 10,
+  "retrieval_only": true,
+  "use_redis_cache": false,
+  "question_count": 10,
+  "hit_at_1": 0.7,
+  "hit_at_3": 0.9,
+  "hit_at_5": 1.0,
+  "hit_at_10": 1.0,
+  "mean_keyword_coverage": 0.8333333333333334,
+  "mean_source_constraint_match": 1.0,
+  "pass_rate": 1.0,
+  "source_pending_count": 7,
+  "gold_question_count": 3,
+  "source_hit_at_1": 1.0,
+  "source_hit_at_3": 1.0,
+  "source_hit_at_5": 1.0
+}

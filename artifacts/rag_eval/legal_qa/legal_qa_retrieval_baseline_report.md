@@ -108,11 +108,26 @@ Run artifacts: `artifacts/rag_eval/legal_qa/runs/mixed_two_pass_baseline/`
 
 ## 5. Next steps
 
-1. Manually verify top-3 hits for representative questions → set `source_pending=false` + gold constraints
-2. Re-run single-corpus and mixed baselines with strict source-constraint metrics
-3. Design production corpus router (optional) based on frozen benchmark evidence
-4. Add LLM answer synthesis evaluation (separate phase)
-5. Optional: Redis cache A/B (`EMBEDDING_CACHE_ENABLED=1`) after gold-source review
+1. ~~Manually verify top-3 hits for representative questions → set `source_pending=false` + gold constraints~~ **Done (10 items, see gold review)**
+2. Expand gold coverage to remaining NSoud items once rank-1 payloads carry stable ECLI
+3. Add per-corpus document gold for mixed comparative questions (optional)
+4. Design production corpus router (optional) based on frozen benchmark evidence
+5. Add LLM answer synthesis evaluation (separate phase)
+6. Optional: Redis cache A/B (`EMBEDDING_CACHE_ENABLED=1`) after gold-source review
+
+---
+
+## 5b. Gold source annotation (2026-07-09)
+
+| Corpus | Gold items | source_hit@1 | source_hit@3 | Notes |
+|--------|------------|--------------|--------------|-------|
+| ÚS | 5 / 20 | 1.000 | 1.000 | ECLI from verified rank-1 |
+| NSoud | 3 / 10 | 1.000 | 1.000 | ECLI from verified rank-1 |
+| Mixed | 2 / 10 | n/a | n/a | corpus-only (`source_pending=false`, no ECLI) |
+
+Review doc: `artifacts/rag_eval/legal_qa/gold_source_review_20260709.md`  
+Gold eval runs: `runs/usoud_gold_eval/`, `runs/nsoud_gold_eval/`, `runs/mixed_gold_eval/`  
+Re-apply script: `scripts/apply_gold_source_annotations.py`
 
 ---
 
