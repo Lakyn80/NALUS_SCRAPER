@@ -30,7 +30,8 @@ from app.rag.ingest.qdrant_ingest import POINT_ID_SCHEME, point_id_from_original
 from app.rag.llm.provider_factory import get_text_llm
 from app.rag.orchestrator.orchestrator_service import OrchestratorService
 from app.rag.planner.planner_service import MockPlannerLLM, PlannerService
-from app.rag.retrieval.bge_m3_embedder import BgeM3Embedder
+from app.rag.retrieval.cached_bge_m3_embedder import build_cached_bge_m3_embedder
+from app.rag.retrieval.embedding_cache import EmbeddingCacheBuild
 from app.rag.retrieval.bm25_sidecar import Bm25Sidecar
 from app.rag.retrieval.hybrid_bge_m3_retriever import HybridBgeM3Retriever
 from app.rag.retrieval.production_profile import (
@@ -54,6 +55,9 @@ class LiveOrchestratorBuild:
     deferred_ingest: Callable[[], None] | None = None
     ingest_status: str = "idle"
     ingest_message: str | None = None
+    embedding_cache_backend: str = "none"
+    embedding_cache_enabled: bool = False
+    embedding_cache_error: str | None = None
 
 
 class _QdrantSearchAdapter:
@@ -114,7 +118,7 @@ def _build(qdrant_url: str) -> LiveOrchestratorBuild:
 
     batches_dir = _resolve_batches_dir()
     corpus_version = _runtime_corpus_version(batches_dir)
-    retrieval = _build_production_retrieval(client, config)
+    retrieval, embedding_cache_build = _build_production_retrieval(client, config)
 
     text_llm = _build_text_llm()
     synthesis_llm = text_llm if not isinstance(text_llm, MockTextLLM) else MockSynthesisLLM()
@@ -140,6 +144,9 @@ def _build(qdrant_url: str) -> LiveOrchestratorBuild:
             "Production retrieval uses prebuilt BGE-M3 Qdrant collection and BM25 sidecar; "
             "API startup performs no ingest or Qdrant writes."
         ),
+        embedding_cache_backend=embedding_cache_build.backend,
+        embedding_cache_enabled=embedding_cache_build.enabled,
+        embedding_cache_error=embedding_cache_build.error,
     )
 
 
@@ -207,8 +214,11 @@ def _assert_bm25_sidecar_ready(config: ProductionRetrievalConfig) -> None:
     ).assert_ready()
 
 
-def _build_production_retrieval(client: Any, config: ProductionRetrievalConfig) -> HybridBgeM3Retriever:
-    embedder = BgeM3Embedder(config)
+def _build_production_retrieval(
+    client: Any,
+    config: ProductionRetrievalConfig,
+) -> tuple[HybridBgeM3Retriever, EmbeddingCacheBuild]:
+    embedder, cache_build = build_cached_bge_m3_embedder(config)
     bm25 = Bm25Sidecar(
         config.bm25_sidecar_path,
         k1=config.profile.bm25_k1,
@@ -216,7 +226,7 @@ def _build_production_retrieval(client: Any, config: ProductionRetrievalConfig) 
         index_id=config.bm25_index_id,
     )
     dense = QdrantDenseStore(client=client, embedder=embedder, config=config)
-    return HybridBgeM3Retriever(dense_store=dense, bm25_sidecar=bm25, config=config)
+    return HybridBgeM3Retriever(dense_store=dense, bm25_sidecar=bm25, config=config), cache_build
 
 
 def _load_runtime_corpus_from_batches(batches_dir: Path) -> RuntimeCorpus:

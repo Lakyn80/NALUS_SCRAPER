@@ -101,6 +101,9 @@ _corpus_version: str = "unknown"
 _query_cache = None
 _query_cache_backend: str = "none"
 _query_cache_error: str | None = None
+_embedding_cache_enabled: bool = False
+_embedding_cache_backend: str = "none"
+_embedding_cache_error: str | None = None
 _SOURCE_FILTER_ALIASES: dict[str, set[str]] = {
     "constitutional": {"constitutional", "nalus"},
     "supreme": {"supreme"},

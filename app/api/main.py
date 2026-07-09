@@ -47,6 +47,9 @@ async def _initialize_orchestrator() -> None:
     rtr._query_cache = cache_build.cache
     rtr._query_cache_backend = cache_build.backend
     rtr._query_cache_error = cache_build.error
+    rtr._embedding_cache_backend = build.embedding_cache_backend
+    rtr._embedding_cache_enabled = build.embedding_cache_enabled
+    rtr._embedding_cache_error = build.embedding_cache_error
     rtr._background_ingest_status = build.ingest_status
     rtr._background_ingest_error = build.ingest_message
     logger.info("[main] live orchestrator ready")
@@ -110,6 +113,9 @@ async def lifespan(app: FastAPI):
     rtr._query_cache = None
     rtr._query_cache_backend = "none"
     rtr._query_cache_error = None
+    rtr._embedding_cache_backend = "none"
+    rtr._embedding_cache_enabled = False
+    rtr._embedding_cache_error = None
     _deferred_ingest_task = None
     startup_task = asyncio.create_task(_build_orchestrator_bg())
 
@@ -159,5 +165,8 @@ def health() -> dict:
         "corpus_version": rtr._corpus_version,
         "query_cache_backend": rtr._query_cache_backend,
         "query_cache_error": rtr._query_cache_error,
+        "embedding_cache_enabled": rtr._embedding_cache_enabled,
+        "embedding_cache_backend": rtr._embedding_cache_backend,
+        "embedding_cache_error": rtr._embedding_cache_error,
         "strict_real_mode": _strict_real_mode_enabled(),
     }

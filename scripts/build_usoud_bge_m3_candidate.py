@@ -824,7 +824,12 @@ def run_execute(args: argparse.Namespace) -> dict[str, Any]:
         raise SafetyError("No chunks generated; refusing to create an empty smoke collection.")
 
     model = _load_bge_m3_model()
-    vectors = _encode_chunks(model, [chunk.text for chunk in chunks], batch_size=args.embedding_batch_size)
+    vectors = _encode_chunks(
+        model,
+        [chunk.text for chunk in chunks],
+        batch_size=args.embedding_batch_size,
+        content_checksums=[str(chunk.payload.get("content_checksum") or "") for chunk in chunks],
+    )
     validate_vector_dimension(vectors)
     summary["vector_dimension_validation"] = f"PASS ({BGE_M3_DIMENSION})"
 
@@ -1016,6 +1021,7 @@ def run_execute_full_batched(args: argparse.Namespace) -> dict[str, Any]:
             model,
             [chunk.text for chunk in chunks],
             batch_size=args.embedding_batch_size,
+            content_checksums=[str(chunk.payload.get("content_checksum") or "") for chunk in chunks],
         )
         validate_vector_dimension(vectors)
         if not dimension_validated:
@@ -1712,12 +1718,53 @@ def _load_bge_m3_model() -> Any:
     return SentenceTransformer(BGE_M3_MODEL_NAME, device=device)
 
 
-def _encode_chunks(model: Any, texts: list[str], *, batch_size: int) -> list[list[float]]:
-    vectors: list[list[float]] = []
-    for start in range(0, len(texts), batch_size):
-        batch = texts[start : start + batch_size]
-        encoded = model.encode(batch, batch_size=batch_size, normalize_embeddings=True, show_progress_bar=False)
-        vectors.extend(_to_float_vector(vector) for vector in encoded)
+def _encode_chunks(
+    model: Any,
+    texts: list[str],
+    *,
+    batch_size: int,
+    content_checksums: list[str] | None = None,
+) -> list[list[float]]:
+    from app.rag.retrieval.embedding_cache import (
+        build_embedding_cache,
+        embed_texts_with_cache,
+        embedding_cache_config_from_env,
+    )
+
+    cache_build = build_embedding_cache(
+        profile_name=PRODUCTION_RETRIEVAL_PROFILE,
+        embedding_model=BGE_M3_MODEL_NAME,
+        embedding_dim=BGE_M3_DIMENSION,
+    )
+    cache_config = embedding_cache_config_from_env(
+        profile_name=PRODUCTION_RETRIEVAL_PROFILE,
+        embedding_model=BGE_M3_MODEL_NAME,
+        embedding_dim=BGE_M3_DIMENSION,
+    )
+
+    def encode_batch(batch: list[str]) -> list[list[float]]:
+        encoded = model.encode(
+            batch,
+            batch_size=batch_size,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        return [_to_float_vector(vector) for vector in encoded]
+
+    vectors = embed_texts_with_cache(
+        texts=texts,
+        content_checksums=content_checksums,
+        cache=cache_build.cache,
+        config=cache_config,
+        encode_batch=encode_batch,
+        batch_size=batch_size,
+    )
+    for index, vector in enumerate(vectors):
+        if len(vector) != BGE_M3_DIMENSION:
+            raise SafetyError(
+                f"BGE-M3 embedding dimension mismatch at vector {index}: "
+                f"{len(vector)} != {BGE_M3_DIMENSION}"
+            )
     return vectors
 
 

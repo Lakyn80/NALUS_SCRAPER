@@ -1898,3 +1898,52 @@ Migration warning (stále platí):
 5. Do not delete old MPNet collections during migration.
 6. Production API startup is read-only for retrieval data.
 
+---
+
+## 2026-07-09 — Redis embedding cache (BGE-M3 vectors)
+
+**Co:** Volitelná Redis cache pro BGE-M3 query/chunk vektory. Qdrant zůstává primární dense store; Redis **není** vector DB.
+
+**Moduly:**
+
+- `app/rag/retrieval/embedding_cache.py` — `RedisEmbeddingCache`, `InMemoryEmbeddingCache`, key helpers
+- `app/rag/retrieval/cached_bge_m3_embedder.py` — wrapper nad lokálním `BgeM3Embedder`
+
+**Integrace:**
+
+| Cesta | Kde |
+|-------|-----|
+| Query embedding | `startup.py` → `QdrantDenseStore.embed_query` |
+| Chunk embedding | `build_usoud_bge_m3_candidate.py` → `_encode_chunks` |
+
+**Klíče:**
+
+```text
+nalus:embedding:{profile}:query:{sha256}
+nalus:embedding:{profile}:chunk:{content_checksum}
+```
+
+**Config (default vypnuto):**
+
+```env
+EMBEDDING_CACHE_ENABLED=0
+REDIS_URL=redis://redis:6379/1
+EMBEDDING_CACHE_KEY_PREFIX=nalus:embedding
+QUERY_EMBEDDING_CACHE_TTL_SECONDS=604800
+CHUNK_EMBEDDING_CACHE_TTL_SECONDS=0
+```
+
+**Zapnutí:**
+
+```env
+EMBEDDING_CACHE_ENABLED=1
+```
+
+`/health` vrací `embedding_cache_enabled`, `embedding_cache_backend`, `embedding_cache_error`.
+
+**Report:** `artifacts/nalus_update/redis_embedding_cache_report.md`
+
+**Testy:** `python -m pytest tests/rag/test_embedding_cache.py -q`
+
+**Pravidla:** žádný MPNet/hash fallback; wrong-dim vector fail; `nalus-legal-rag` se neimportuje; Redis DB 1 odděleno od query cache DB 0.
+
