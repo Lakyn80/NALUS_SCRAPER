@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -379,7 +379,7 @@ def evaluate_winner_export(
     )
 
     return {
-        "evaluated_at": datetime.now(UTC).isoformat(),
+        "evaluated_at": datetime.now(timezone.utc).isoformat(),
         "source_export": str(winner_qa_path),
         "source_dataset": str(dataset_path),
         "winner_config_id": export.get("winner_config_id"),

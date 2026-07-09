@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from rag_eval.adapters.factory import build_backend
@@ -112,7 +112,7 @@ def export_winner_qa() -> Path:
         )
 
     payload = {
-        "exported_at": datetime.now(UTC).isoformat(),
+        "exported_at": datetime.now(timezone.utc).isoformat(),
         "eval_style": "client_longform",
         "winner_config_id": config_id,
         "model_code": model_code,

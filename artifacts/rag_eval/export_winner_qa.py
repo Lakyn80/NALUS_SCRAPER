@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from rag_eval.adapters.factory import build_backend
@@ -92,7 +92,7 @@ def main() -> None:
         )
 
     payload = {
-        "exported_at": datetime.now(UTC).isoformat(),
+        "exported_at": datetime.now(timezone.utc).isoformat(),
         "winner_config_id": winner["config_id"],
         "model_code": winner["model_code"],
         "collection_name": collection_name,
