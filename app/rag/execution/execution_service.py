@@ -17,17 +17,22 @@ Usage:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 
 from app.core.logging import get_logger
 from app.core.tracing import trace_event
 from app.rag.planner.planner_service import Plan
 from app.rag.retrieval.models import RetrievedChunk
-from app.rag.retrieval.retrieval_service import RetrievalService
 
 logger = get_logger(__name__)
 
 StepResult = dict[str, Any]  # {"query": str, "reason": str, "results": list[RetrievedChunk]}
+
+
+class _RetrievalServiceProtocol(Protocol):
+    def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]: ...
+
+    def search_dense(self, query: str, top_k: int = 5) -> list[RetrievedChunk]: ...
 
 
 @dataclass
@@ -47,7 +52,7 @@ class ExecutionResult:
 class ExecutionService:
     """Executes every step of a Plan and returns per-step retrieval results."""
 
-    def __init__(self, retrieval_service: RetrievalService, top_k: int = 5) -> None:
+    def __init__(self, retrieval_service: _RetrievalServiceProtocol, top_k: int = 5) -> None:
         self._retrieval = retrieval_service
         self._top_k = top_k
 

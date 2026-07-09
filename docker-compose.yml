@@ -11,13 +11,15 @@ services:
 
   api:
     build: .
+    env_file:
+      - .env
     ports:
       - "8029:8000"
     environment:
       - PYTHONPATH=/app
       - LOG_LEVEL=INFO
       - QDRANT_URL=http://qdrant:6333
-      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-nalus}
+      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-nalus_bge_m3_chunks_v1}
       - RAG_QUERY_CACHE_BACKEND=${RAG_QUERY_CACHE_BACKEND:-none}
       - RAG_QUERY_CACHE_URL=${RAG_QUERY_CACHE_URL:-redis://redis:6379/0}
       - RAG_QUERY_CACHE_TTL_SECONDS=${RAG_QUERY_CACHE_TTL_SECONDS:-604800}
@@ -29,17 +31,31 @@ services:
       - LLM_MAX_TOKENS=800
       - RAG_STRICT_REAL_MODE=1
       - NALUS_BATCHES_DIR=/app/batches
-      - EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2
-      - EMBEDDING_BATCH_SIZE=32
-      - EMBEDDING_NORMALIZE=1
+      - EMBEDDING_PROVIDER=sentence_transformer
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-/app/models/BAAI/bge-m3}
+      - EMBEDDING_DIMENSION=1024
+      - EMBEDDING_LOCAL_FILES_ONLY=1
+      - EMBEDDING_TRUST_REMOTE_CODE=0
+      - EMBEDDING_DEVICE=cpu
+      - HF_HUB_OFFLINE=1
+      - TRANSFORMERS_OFFLINE=1
+      - HF_DATASETS_OFFLINE=1
+      - RETRIEVAL_PROFILE=nalus_bge_m3_dense_bm25_rrf_v1
+      - RETRIEVAL_MODE=dense_plus_bm25
+      - BM25_SIDECAR_PATH=${BM25_SIDECAR_PATH:-/app/storage/rag/bm25/nalus_bge_m3_dense_bm25_rrf_v1.sqlite}
+      - BM25_INDEX_ID=${BM25_INDEX_ID:-nalus_bge_m3_dense_bm25_rrf_v1}
     depends_on:
       - qdrant
       - redis
     volumes:
       - huggingface_cache:/root/.cache/huggingface
+      - ./app:/app/app
+      - ./scripts:/app/scripts
       - ./app/artifacts:/app/app/artifacts
       - ./artifacts:/app/artifacts
       - ./batches:/app/batches:ro
+      - ./storage:/app/storage
+      - ./models:/app/models:ro
       - ../eternal-world/packages/rag-embedding-benchmark:/packages/rag-embedding-benchmark:ro
     restart: unless-stopped
 

@@ -11,5 +11,5 @@ class RetrievedChunk:
     id: str
     text: str
     score: float
-    source: str  # "dense" | "keyword"
+    source: str  # e.g. "dense" | "bm25" | "hybrid" | "keyword" (legacy)
     metadata: dict[str, Any] = field(default_factory=dict)

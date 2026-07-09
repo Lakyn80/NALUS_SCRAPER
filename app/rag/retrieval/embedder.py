@@ -7,6 +7,9 @@ the retriever.
 
 MockEmbedder returns a fixed vector — useful for tests and local dev
 until a real model is configured.
+
+Production API retrieval uses app.rag.retrieval.bge_m3_embedder.BgeM3Embedder, not this legacy
+generic wrapper.
 """
 
 from __future__ import annotations
@@ -41,15 +44,19 @@ class MockEmbedder(BaseEmbedder):
 
 
 class SentenceTransformersEmbedder(BaseEmbedder):
-    """Real dense embedder backed by sentence-transformers."""
+    """Legacy generic dense embedder backed by sentence-transformers.
+
+    Production NALUS retrieval must use BgeM3Embedder instead. MPNet is refused.
+    """
 
     def __init__(
         self,
-        model_name: str = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+        model_name: str = "BAAI/bge-m3",
         model: Any | None = None,
         batch_size: int = 32,
         normalize_embeddings: bool = True,
     ) -> None:
+        _refuse_mpnet_model(model_name)
         if model is None:
             from sentence_transformers import SentenceTransformer  # type: ignore[import]
 
@@ -94,3 +101,11 @@ def _to_float_list(vector: Any) -> list[float]:
     if hasattr(vector, "tolist"):
         vector = vector.tolist()
     return [float(value) for value in vector]
+
+
+def _refuse_mpnet_model(model_name: str) -> None:
+    normalized = model_name.lower()
+    if "mpnet" in normalized or "paraphrase-multilingual-mpnet" in normalized:
+        raise ValueError(
+            f"MPNet is forbidden in this project. Use BGE-M3 (BAAI/bge-m3). Got: {model_name}"
+        )

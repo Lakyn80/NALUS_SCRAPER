@@ -1,0 +1,2794 @@
+{
+  "generated_at": "2026-07-08T15:05:32Z",
+  "builder_version": "usoud-bge-m3-guarded-v2",
+  "script_path": "scripts/build_usoud_bge_m3_candidate.py",
+  "mode": "pilot",
+  "action": "execute",
+  "command": "python scripts/build_usoud_bge_m3_candidate.py --mode pilot --limit 500 --collection-name nalus_us_bge_m3_pilot_20260708 --source-batch batches/year_2026_20260708_124949.json --output-dir artifacts/nalus_update/usoud_bge_m3_pilot_20260708 --execute --recreate-pilot-collection --no-alias-update --top-k-smoke-test 5",
+  "input": "batches/year_2026_20260708_124949.json",
+  "collection_name": "nalus_us_bge_m3_pilot_20260708",
+  "limit": 500,
+  "selected_record_count": 500,
+  "generated_chunk_count": 4081,
+  "estimated_qdrant_points": 4081,
+  "estimated_embedding_texts": 4081,
+  "embedding_model": "BAAI/bge-m3",
+  "expected_vector_dimension": 1024,
+  "vector_dimension_validation": "PASS (1024)",
+  "qdrant": {
+    "collection_point_count_before": null,
+    "collection_point_count_after": 4081,
+    "inserted_point_count": 4081,
+    "nalus_live_before": 784812,
+    "nalus_live_after": 784812,
+    "nalus_stable_20260326_before": 784812,
+    "nalus_stable_20260326_after": 784812,
+    "aliases_before": [
+      {
+        "alias_name": "nalus_live",
+        "collection_name": "nalus_stable_20260326"
+      }
+    ],
+    "aliases_after": [
+      {
+        "alias_name": "nalus_live",
+        "collection_name": "nalus_stable_20260326"
+      }
+    ],
+    "nalus_live_target_before": "nalus_stable_20260326",
+    "nalus_live_target_after": "nalus_stable_20260326",
+    "aliases_changed": false
+  },
+  "qdrant_write_occurred": true,
+  "payload_metadata_validation": "PASS",
+  "sample_payloads": [
+    {
+      "point_id": "000e3391-9036-555f-954a-3a0e5cfd0392",
+      "source_document_id": "ECLI:CZ:US:2026:2.US.3666.25.1",
+      "decision_date": "29. 4. 2026",
+      "case_reference": null,
+      "ecli": "ECLI:CZ:US:2026:2.US.3666.25.1",
+      "chunk_id": 3130,
+      "chunk_index": 5,
+      "origin_file": "year_2026_20260708_124949.json",
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "text_snippet": "2024, za což je stíhán v souběžně vedeném trestním řízení. Ústavní soud v tomto řízení pod sp. zn. I. ÚS 2438/25 nezpochybnil, že v některých případech skutečně lze ze samotného..."
+    },
+    {
+      "point_id": "001424d1-48ac-5478-8570-fa16b20c5e0e",
+      "source_document_id": "ECLI:CZ:US:2026:3.US.1653.25.1",
+      "decision_date": "11. 6. 2026",
+      "case_reference": null,
+      "ecli": "ECLI:CZ:US:2026:3.US.1653.25.1",
+      "chunk_id": 294,
+      "chunk_index": 12,
+      "origin_file": "year_2026_20260708_124949.json",
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "text_snippet": "Listiny). 28. Proto Ústavní soud ústavní stížnosti vyhověl podle § 82 odst. 1 zákona o Ústavním soudu a napadená usnesení okresního i krajského soudu zrušil podle § 82 odst. 3 p..."
+    },
+    {
+      "point_id": "0022e90c-1dea-58bf-a14b-bf6720c77f01",
+      "source_document_id": "ECLI:CZ:US:2026:2.US.685.26.1",
+      "decision_date": "22. 4. 2026",
+      "case_reference": null,
+      "ecli": "ECLI:CZ:US:2026:2.US.685.26.1",
+      "chunk_id": 4057,
+      "chunk_index": 2,
+      "origin_file": "year_2026_20260708_124949.json",
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "text_snippet": "52/2023, byli J. V. a J. J. uznáni vinnými ze spáchání zločinu dotačního podvodu podle § 212 odst. 1, odst. 6 písm. a) trestního zákoníku, spáchaného ve spolupachatelství, dále ..."
+    }
+  ],
+  "bm25_status": "available",
+  "hybrid_status": "available_rrf",
+  "smoke_queries": [
+    {
+      "query": "právo na spravedlivý proces",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.927.25.1",
+          "decision_date": "13. 5. 2026",
+          "score": 0.684431,
+          "snippet": "spravedlivý proces. Právo na soudní ochranu (čl. 36 odst. 1 Listiny), potažmo právo na spravedlivý proces (čl. 6 Úmluvy o ochraně lidských práv a základních svobod), představuje právo procesního charakteru. Právo na s...",
+          "chunk_id": 2343
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3174.25.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.610062,
+          "snippet": "Stěžovatel nesouhlasí se závěry správních soudů a namítá, že napadenými rozsudky bylo porušeno jeho právo na spravedlivý proces dle čl. 36 odst. 1 Listiny, čl. 6 odst. 1 Úmluvy a čl. 47 Listiny základních práv EU, prá...",
+          "chunk_id": 2726
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.952.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 0.589194,
+          "snippet": "221 odst. 2 o. s. ř. nařídil, aby v dalším řízení věc projednal a rozhodl jiný samosoudce. II. Argumentace stěžovatelky 8. Stěžovatelka spatřuje porušení svého práva na spravedlivý proces podle čl. 36 odst. 1 Listiny ...",
+          "chunk_id": 1113
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.3326.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 0.577962,
+          "snippet": "nepostavil své rozhodnutí na jiných než tvrzených a dokazovaných skutečnostech a poučovací povinnost nemá vést k předjímání rozhodnutí. Stěžovatelka se v soudním řízení mohla seznámit se stanovisky, tvrzeními vedlejší...",
+          "chunk_id": 3733
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.8.26.2",
+          "decision_date": "20. 5. 2026",
+          "score": 0.57298,
+          "snippet": "v paralelní věci bylo nálezem ze dne 30. 11. 2021 sp. zn. III. ÚS 361/21 (N 210/109 SbNU 268) konstatováno porušení jeho práva na soudní ochranu a potvrzeny závěry zmiňovaných dřívějších nálezů, podle nichž nelze čini...",
+          "chunk_id": 1481
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.927.25.1",
+          "decision_date": "13. 5. 2026",
+          "score": 5.949997,
+          "snippet": "spravedlivý proces. Právo na soudní ochranu (čl. 36 odst. 1 Listiny), potažmo právo na spravedlivý proces (čl. 6 Úmluvy o ochraně lidských práv a základních svobod), představuje právo procesního charakteru. Právo na s...",
+          "chunk_id": 2343
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.952.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 4.945225,
+          "snippet": "jen tehdy, bude-li to pro účastníky řízení z hlediska naplnění jejich práva na spravedlivý proces příznivější. [srov. např. nález ze dne 19. 4. 2021 sp. zn. II. ÚS 52/21 (N 79/105 SbNU 322); usnesení ze dne 21. 10. 20...",
+          "chunk_id": 1118
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3174.25.1",
+          "decision_date": "6. 5. 2026",
+          "score": 4.604819,
+          "snippet": "Stěžovatel nesouhlasí se závěry správních soudů a namítá, že napadenými rozsudky bylo porušeno jeho právo na spravedlivý proces dle čl. 36 odst. 1 Listiny, čl. 6 odst. 1 Úmluvy a čl. 47 Listiny základních práv EU, prá...",
+          "chunk_id": 2726
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1320.25.1",
+          "decision_date": "11. 6. 2026",
+          "score": 4.064673,
+          "snippet": "usnesení ze dne 30. 3. 2021 sp. zn. IV. ÚS 1142/20 , odkazující na závěry stanoviska pléna ze dne 28. 11. 2017 sp. zn. Pl. ÚS-st. 45/16 (ST 45/87 SbNU 905; 460/2017 Sb.). Z něj mj. plyne, že vadu řízení lze v dovolání...",
+          "chunk_id": 351
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.2862.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 3.853259,
+          "snippet": "stíhání), jehož stěžovatelka nebyla účastníkem, a tato rozhodnutí nemohla nijak účinně zpochybnit. Sama navrhovala výslech svědků, aby byl skutkový stav postaven najisto a byla zachována kontradiktornost řízení. 19. Ú...",
+          "chunk_id": 3539
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.927.25.1",
+          "decision_date": "13. 5. 2026",
+          "score": 0.032787,
+          "snippet": "spravedlivý proces. Právo na soudní ochranu (čl. 36 odst. 1 Listiny), potažmo právo na spravedlivý proces (čl. 6 Úmluvy o ochraně lidských práv a základních svobod), představuje právo procesního charakteru. Právo na s...",
+          "chunk_id": 2343
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3174.25.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.032002,
+          "snippet": "Stěžovatel nesouhlasí se závěry správních soudů a namítá, že napadenými rozsudky bylo porušeno jeho právo na spravedlivý proces dle čl. 36 odst. 1 Listiny, čl. 6 odst. 1 Úmluvy a čl. 47 Listiny základních práv EU, prá...",
+          "chunk_id": 2726
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.952.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 0.016129,
+          "snippet": "jen tehdy, bude-li to pro účastníky řízení z hlediska naplnění jejich práva na spravedlivý proces příznivější. [srov. např. nález ze dne 19. 4. 2021 sp. zn. II. ÚS 52/21 (N 79/105 SbNU 322); usnesení ze dne 21. 10. 20...",
+          "chunk_id": 1118
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.952.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 0.015873,
+          "snippet": "221 odst. 2 o. s. ř. nařídil, aby v dalším řízení věc projednal a rozhodl jiný samosoudce. II. Argumentace stěžovatelky 8. Stěžovatelka spatřuje porušení svého práva na spravedlivý proces podle čl. 36 odst. 1 Listiny ...",
+          "chunk_id": 1113
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.3326.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 0.015625,
+          "snippet": "nepostavil své rozhodnutí na jiných než tvrzených a dokazovaných skutečnostech a poučovací povinnost nemá vést k předjímání rozhodnutí. Stěžovatelka se v soudním řízení mohla seznámit se stanovisky, tvrzeními vedlejší...",
+          "chunk_id": 3733
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "opomenuté důkazy",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.3310.25.1",
+          "decision_date": "28. 4. 2026",
+          "score": 0.545561,
+          "snippet": "Obecné soudy naopak skutkový stav ustálený na základě řádně provedeného dokazování subsumovaly správně pod zákonné znaky skutkové podstaty loupeže podle § 173 odst. 1 trestního zákoníku (b. 28 a b. 32 až 33 odůvodnění...",
+          "chunk_id": 3605
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.719.26.2",
+          "decision_date": "22. 4. 2026",
+          "score": 0.504426,
+          "snippet": "výhrůžkami buď nereagovali vůbec a dívali se jinam, nebo přikyvovali a maximálně ke konci pobytu v nemocnici stěžovatele napomenuli, ať nedělá ostudu a zanechá svého dosavadního jednání. Z provedeného dokazování tedy ...",
+          "chunk_id": 3985
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.418.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.503727,
+          "snippet": "pochybení nezjistil. 13. Na základě uvedeného je zřejmé, že stěžovatel v ústavní stížnosti opakovaně předkládá shodnou argumentaci, jako v obhajobě a v opravných prostředcích, jíž se obecné soudy dostatečně zabývaly a...",
+          "chunk_id": 3172
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.3843.25.1",
+          "decision_date": "22. 5. 2026",
+          "score": 0.500002,
+          "snippet": "ani nařizován být nemohl. 12. Při posuzování námitky opomenutí provedení navrhovaných důkazů je třeba zohlednit, že povinnost obecných soudů vyhovět návrhu na provedení důkazu není bezbřehá. V prvé řadě obviněný musí ...",
+          "chunk_id": 1141
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1007.25.1",
+          "decision_date": "11. 6. 2026",
+          "score": 0.498451,
+          "snippet": "předložené stěžovatelkou zobrazují předmětný pozemek jako - zjednodušeně řečeno - osázenou součást sousedního pole. Prima facie tak šlo o důkazy, které byly s to prokázat skutečnosti významné pro rozhodnutí ve věci, n...",
+          "chunk_id": 317
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.773.26.1",
+          "decision_date": "28. 4. 2026",
+          "score": 3.691448,
+          "snippet": "odst. 3, čl. 30 odst. 1, čl. 36 odst. 1 a čl. 38 odst. 2 Listiny základních práv a svobod (dále jen \"Listina\") a dále namítá, že příslušné orgány nepostupovaly v souladu s čl. 2 odst. 3, čl. 4 a čl. 90 Ústavy a čl. 2 ...",
+          "chunk_id": 3589
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1007.25.1",
+          "decision_date": "11. 6. 2026",
+          "score": 3.573758,
+          "snippet": "NALUS - databáze rozhodnutí Ústavního soudu III.ÚS 1007/25 ze dne 11. 6. 2026 Opomenuté důkazy ve sporu o (mimořádném) vydržení vlastnického práva Česká republika NÁLEZ Ústavního soudu Jménem republiky Ústavní soud ro...",
+          "chunk_id": 295
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1007.25.1",
+          "decision_date": "11. 6. 2026",
+          "score": 3.35954,
+          "snippet": "SbNU 51); nález sp. zn. III. ÚS 95/97 ze dne 12. 6. 1997 (N 76/8 SbNU 231)]. Požadavek na relevanci, způsobilost prokázat tvrzenou skutečnost a nezbytnost provedení navrženého důkazu současně brání tomu, aby byla posk...",
+          "chunk_id": 310
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.413.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 2.948433,
+          "snippet": "dne 8. prosince 2009 sp. zn. I. ÚS 118/09 (N 254/55 SbNU 455)]. 9. Okresní soud v nyní posuzované věci vysvětlil, že další důkazní návrhy byly nadbytečné. Ve vztahu k návrhu výslechu JUDr. Hronové okresní soud uvedl, ...",
+          "chunk_id": 3228
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.715.26.1",
+          "decision_date": "28. 5. 2026",
+          "score": 1.92826,
+          "snippet": "kterým se snaží dosáhnout přehodnocení právních závěrů přijatých obecnými soudy. Staví tak Ústavní soud do pozice další přezkumné instance v systému obecného soudnictví, která mu však nepřísluší. Výhradně obecné soudy...",
+          "chunk_id": 801
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.3310.25.1",
+          "decision_date": "28. 4. 2026",
+          "score": 0.016393,
+          "snippet": "Obecné soudy naopak skutkový stav ustálený na základě řádně provedeného dokazování subsumovaly správně pod zákonné znaky skutkové podstaty loupeže podle § 173 odst. 1 trestního zákoníku (b. 28 a b. 32 až 33 odůvodnění...",
+          "chunk_id": 3605
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.773.26.1",
+          "decision_date": "28. 4. 2026",
+          "score": 0.016393,
+          "snippet": "odst. 3, čl. 30 odst. 1, čl. 36 odst. 1 a čl. 38 odst. 2 Listiny základních práv a svobod (dále jen \"Listina\") a dále namítá, že příslušné orgány nepostupovaly v souladu s čl. 2 odst. 3, čl. 4 a čl. 90 Ústavy a čl. 2 ...",
+          "chunk_id": 3589
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.719.26.2",
+          "decision_date": "22. 4. 2026",
+          "score": 0.016129,
+          "snippet": "výhrůžkami buď nereagovali vůbec a dívali se jinam, nebo přikyvovali a maximálně ke konci pobytu v nemocnici stěžovatele napomenuli, ať nedělá ostudu a zanechá svého dosavadního jednání. Z provedeného dokazování tedy ...",
+          "chunk_id": 3985
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1007.25.1",
+          "decision_date": "11. 6. 2026",
+          "score": 0.016129,
+          "snippet": "NALUS - databáze rozhodnutí Ústavního soudu III.ÚS 1007/25 ze dne 11. 6. 2026 Opomenuté důkazy ve sporu o (mimořádném) vydržení vlastnického práva Česká republika NÁLEZ Ústavního soudu Jménem republiky Ústavní soud ro...",
+          "chunk_id": 295
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.418.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.015873,
+          "snippet": "pochybení nezjistil. 13. Na základě uvedeného je zřejmé, že stěžovatel v ústavní stížnosti opakovaně předkládá shodnou argumentaci, jako v obhajobě a v opravných prostředcích, jíž se obecné soudy dostatečně zabývaly a...",
+          "chunk_id": 3172
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "odůvodnění rozhodnutí",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1779.25.2",
+          "decision_date": "3. 6. 2026",
+          "score": 0.623365,
+          "snippet": "nález ze dne 20. 6. 1995 sp. zn. III. ÚS 84/94 ). Prostřednictvím odůvodnění totiž soud seznamuje účastníky řízení s úvahami, které jej vedly k vydání rozhodnutí. Soud se musí vypořádat se všemi relevantními okolnostm...",
+          "chunk_id": 624
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.995.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.595898,
+          "snippet": "nelze pojímat jako rozhodování o vině obviněného a jemu uloženém trestu. 13. Z čl. 36 Listiny a z čl. 6 Úmluvy o ochraně lidských práv a základních svobod vyplývá, že rozhodnutí soudu, na jehož základě došlo k zbavení...",
+          "chunk_id": 595
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.3093.25.1",
+          "decision_date": "19. 5. 2026",
+          "score": 0.589874,
+          "snippet": "rozhodnutí řádně odůvodnit a adekvátně se vypořádat s argumenty uplatněnými účastníky řízení (srov. např. nález ze dne 23. 6. 2006 sp. zn. III. ÚS 521/05 ). Závazek odůvodnit rozhodnutí však nemůže být chápán tak, že ...",
+          "chunk_id": 1755
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.263.26.3",
+          "decision_date": "13. 5. 2026",
+          "score": 0.589865,
+          "snippet": "rozhodnutí, svědčí to o libovůli či svévoli v soudním rozhodování, jež není v právním státě (čl. 1 odst. 1 Ústavy) akceptovatelná. Jinak řečeno, soudní rozhodnutí je třeba srozumitelně, v adekvátním rozsahu (tj. v roz...",
+          "chunk_id": 2382
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.866.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 0.585216,
+          "snippet": "nebo kterým hrozil) a zda účelu vazby není možno dosáhnout jinak. Rozhodování o vazbě přitom nelze pojímat jako rozhodování o vině obviněného a jemu uloženém trestu. 14. Z čl. 36 Listiny a z čl. 6 Úmluvy o ochraně lid...",
+          "chunk_id": 1132
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1193.26.1",
+          "decision_date": "18. 5. 2026",
+          "score": 1.486173,
+          "snippet": "(SU) s tím, že je takové využití charakteristické pro konkrétní území města. Dále jen odkázal na budoucí soutěžní dialog, v němž bude řešena konkrétní podoba využití území. Nejvyšší správní soud zmínil vlastní judikat...",
+          "chunk_id": 1818
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.742.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 1.424841,
+          "snippet": "68 odst. 3 správního řádu modifikované speciální úpravou v § 169m zákona o pobytu cizinců vyplývá, že pokud podklady rozhodnutí obsahují utajované skutečnosti, v odůvodnění rozhodnutí se na tyto podklady odkáže takový...",
+          "chunk_id": 1700
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3645.25.1",
+          "decision_date": "3. 6. 2026",
+          "score": 1.330625,
+          "snippet": "přípustnosti dovolání v souladu s § 241a odst. 2 o. s. ř. prostřednictvím otázky hmotného nebo procesního práva, na které závisí (resp. v případě jejího zohlednění mělo záviset) rozhodnutí odvolacího soudu a která byl...",
+          "chunk_id": 662
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.732.26.2",
+          "decision_date": "29. 4. 2026",
+          "score": 1.290804,
+          "snippet": "napadeného rozsudku krajského soudu Ústavní soud zjistil, že otec hradil matce nejen výdaje za její bydlení, ale částkou 8 980 Kč přispíval i na bydlení dětí, čímž se podílel na jejich výživném (strana 7 bod 6 rozsudk...",
+          "chunk_id": 3474
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.449.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 1.282218,
+          "snippet": "vydána rozhodnutí napadená ústavní stížností. Ústavní soud je k jejímu projednání příslušný. Stěžovatel je právně zastoupen v souladu s § 29 až 31 zákona o Ústavním soudu. Stěžovatel vyčerpal všechny zákonné procesní ...",
+          "chunk_id": 2475
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1779.25.2",
+          "decision_date": "3. 6. 2026",
+          "score": 0.016393,
+          "snippet": "nález ze dne 20. 6. 1995 sp. zn. III. ÚS 84/94 ). Prostřednictvím odůvodnění totiž soud seznamuje účastníky řízení s úvahami, které jej vedly k vydání rozhodnutí. Soud se musí vypořádat se všemi relevantními okolnostm...",
+          "chunk_id": 624
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1193.26.1",
+          "decision_date": "18. 5. 2026",
+          "score": 0.016393,
+          "snippet": "(SU) s tím, že je takové využití charakteristické pro konkrétní území města. Dále jen odkázal na budoucí soutěžní dialog, v němž bude řešena konkrétní podoba využití území. Nejvyšší správní soud zmínil vlastní judikat...",
+          "chunk_id": 1818
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.995.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.016129,
+          "snippet": "nelze pojímat jako rozhodování o vině obviněného a jemu uloženém trestu. 13. Z čl. 36 Listiny a z čl. 6 Úmluvy o ochraně lidských práv a základních svobod vyplývá, že rozhodnutí soudu, na jehož základě došlo k zbavení...",
+          "chunk_id": 595
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.742.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.016129,
+          "snippet": "68 odst. 3 správního řádu modifikované speciální úpravou v § 169m zákona o pobytu cizinců vyplývá, že pokud podklady rozhodnutí obsahují utajované skutečnosti, v odůvodnění rozhodnutí se na tyto podklady odkáže takový...",
+          "chunk_id": 1700
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.3093.25.1",
+          "decision_date": "19. 5. 2026",
+          "score": 0.015873,
+          "snippet": "rozhodnutí řádně odůvodnit a adekvátně se vypořádat s argumenty uplatněnými účastníky řízení (srov. např. nález ze dne 23. 6. 2006 sp. zn. III. ÚS 521/05 ). Závazek odůvodnit rozhodnutí však nemůže být chápán tak, že ...",
+          "chunk_id": 1755
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "porušení základních práv",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1295.26.1",
+          "decision_date": "18. 5. 2026",
+          "score": 0.677265,
+          "snippet": "ředitelství policie Středočeského kraje, Služby kriminální policie a vyšetřování, Odboru hospodářské kriminality (policejní orgán), Krajského státního zastupitelství v Praze a Krajského soudu v Praze v rámci trestního...",
+          "chunk_id": 1801
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.2196.25.1",
+          "decision_date": "19. 6. 2026",
+          "score": 0.645268,
+          "snippet": "Domažlicích ze dne 23. května 2024 č. j. 6 C 59/2018-685 a rozsudkem Nejvyššího soudu ze dne 13. března 2024 č. j. 28 Cdo 3880/2023-656, bylo porušeno základní právo stěžovatelky na soudní ochranu podle čl. 36 odst. 1...",
+          "chunk_id": 155
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.30.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.634675,
+          "snippet": "záhlaví uvedeným usnesením odmítl stěžovatelovo dovolání. III. Argumentace stěžovatele 6. Stěžovatel v ústavní stížnosti navrhl zrušení napadených rozhodnutí s tvrzením, že jimi byla porušena jeho ústavně zaručená prá...",
+          "chunk_id": 994
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1024.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.629094,
+          "snippet": "zákona o Ústavním soudu se stěžovatelka domáhá zrušení v záhlaví označených rozhodnutí s tvrzením, že jimi došlo k porušení jejích ústavně zaručených základních práv zakotvených v čl. 1, čl. 3 odst. 1, čl. 7 odst. 1 a...",
+          "chunk_id": 451
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.2824.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.623336,
+          "snippet": "II. Argumentace stěžovatele 6. Řádně zastoupený stěžovatel ve své včas podané ústavní stížnosti splňující požadavky zákona č. 182/1993 Sb., o Ústavním soudu, ve znění pozdějších předpisů (dále jen \"zákon o Ústavním so...",
+          "chunk_id": 3177
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.439.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 2.952593,
+          "snippet": "1470/24 ; nález ze dne 12. 1. 2005 sp. zn. III. ÚS 441/04 (N 6/36 SbNU 53)]. Z toho důvodu Ústavní soud typicky odmítá ústavní stížnosti podané proti dílčím (procesním) rozhodnutím pro nepřípustnost. 12. Princip subsi...",
+          "chunk_id": 1260
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.729.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 2.891494,
+          "snippet": "svobod není garance úspěchu v řízení. Na tom bez dalšího nemohou nic změnit ani tvrzená dotčení základních práv stěžovatelky a základních práv jejího syna. Stěžovatelka ostatně tyto své námitky v ústavní stížnosti ani...",
+          "chunk_id": 3214
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.729.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 2.880081,
+          "snippet": "nutnosti zohlednění nejlepšího zájmu dítěte. Odkázal dále na usnesení ze dne 13. 8. 2025 č. j. 21 Azs 58/2025-27, v němž se přiměřeností zásahu do soukromého a rodinného života stěžovatelky, potažmo nejlepšího zájmu j...",
+          "chunk_id": 3212
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3174.25.1",
+          "decision_date": "6. 5. 2026",
+          "score": 2.795512,
+          "snippet": "ze strany stavebníka mělo opakovaně dojít k zásahům do životního prostředí, zejména pak do stanoviště zvláště chráněného druhu zdrojovky, a uvádí, že \"v důsledku takového zásahu došlo k újmě na majetkových hodnotách s...",
+          "chunk_id": 2733
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.171.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 2.694942,
+          "snippet": "Stěžovatelka se ústavní stížností domáhá zrušení uvedeného sdělení. Tvrdí, že krajský soud porušil její ústavně zaručená práva podle čl. 11 a čl. 36 Listiny základních práv a svobod, čl. 6 odst. 1 Úmluvy o ochraně lid...",
+          "chunk_id": 3263
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1295.26.1",
+          "decision_date": "18. 5. 2026",
+          "score": 0.016393,
+          "snippet": "ředitelství policie Středočeského kraje, Služby kriminální policie a vyšetřování, Odboru hospodářské kriminality (policejní orgán), Krajského státního zastupitelství v Praze a Krajského soudu v Praze v rámci trestního...",
+          "chunk_id": 1801
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.439.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 0.016393,
+          "snippet": "1470/24 ; nález ze dne 12. 1. 2005 sp. zn. III. ÚS 441/04 (N 6/36 SbNU 53)]. Z toho důvodu Ústavní soud typicky odmítá ústavní stížnosti podané proti dílčím (procesním) rozhodnutím pro nepřípustnost. 12. Princip subsi...",
+          "chunk_id": 1260
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.2196.25.1",
+          "decision_date": "19. 6. 2026",
+          "score": 0.016129,
+          "snippet": "Domažlicích ze dne 23. května 2024 č. j. 6 C 59/2018-685 a rozsudkem Nejvyššího soudu ze dne 13. března 2024 č. j. 28 Cdo 3880/2023-656, bylo porušeno základní právo stěžovatelky na soudní ochranu podle čl. 36 odst. 1...",
+          "chunk_id": 155
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.729.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016129,
+          "snippet": "svobod není garance úspěchu v řízení. Na tom bez dalšího nemohou nic změnit ani tvrzená dotčení základních práv stěžovatelky a základních práv jejího syna. Stěžovatelka ostatně tyto své námitky v ústavní stížnosti ani...",
+          "chunk_id": 3214
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.30.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.015873,
+          "snippet": "záhlaví uvedeným usnesením odmítl stěžovatelovo dovolání. III. Argumentace stěžovatele 6. Stěžovatel v ústavní stížnosti navrhl zrušení napadených rozhodnutí s tvrzením, že jimi byla porušena jeho ústavně zaručená prá...",
+          "chunk_id": 994
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "extrémní nesoulad",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3645.25.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.507896,
+          "snippet": "se řídí neúčinnou právní úpravou. 8. Stěžovatelka namítá, že vedlejší účastnice v době jednání se stěžovatelkou o uzavření dodatku k pojistné smlouvě věděla, že pojistná smlouva má vady, které způsobují její absolutní...",
+          "chunk_id": 650
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.2824.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.496027,
+          "snippet": "možný (viz usnesení Nejvyššího soudu sp. zn. 8 Tdo 1409/2016).\" (bod 313, str. 52). Krajský soud rovněž odkázal na usnesení Nejvyššího soudu sp. zn. 3 Tdo 859/2018, podle kterého: \"Při posuzování rozhraničení vědomé n...",
+          "chunk_id": 3181
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.2144.25.1",
+          "decision_date": "28. 5. 2026",
+          "score": 0.489178,
+          "snippet": "souladu se zákonem. 34. V řízení nevyvstal stěžovateli tvrzený extrémní nesoulad mezi provedenými důkazy a skutkovými zjištěními. Ten by spočíval v racionálně neobhajitelném úsudku soudů o jejich vztahu. Extrémní rozp...",
+          "chunk_id": 756
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.897.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.486669,
+          "snippet": "dohody mezi společnostmi a informací od britského finančního úřadu, což krajský soud nevypořádal a neústavně opomněl tyto důkazy. 13. Řady neústavních pochybení se dopustil i Nejvyšší soud a jeho pochybení se z velké ...",
+          "chunk_id": 2912
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.3675.25.1",
+          "decision_date": "14. 5. 2026",
+          "score": 0.485833,
+          "snippet": "důvodem změny jejich chování. Oba nezletilí mají problémy se soustředěním a pozorností pod časovým tlakem, vyžadují klidný přístup, staršímu synovi byl diagnostikován ADD syndrom (pomalá forma poruchy aktivity a pozor...",
+          "chunk_id": 2043
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.945.26.1",
+          "decision_date": "28. 4. 2026",
+          "score": 5.199859,
+          "snippet": "se odvolací soud z hlediska dokazování fakticky nezabýval. Po Ústavním soudu tak stěžovatel požaduje, aby jako další přezkumná instance zhodnotil, zda shromáždění konkrétního důkazu je účelné či nikoliv. Taková role Ú...",
+          "chunk_id": 3659
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.862.26.1",
+          "decision_date": "23. 4. 2026",
+          "score": 4.450933,
+          "snippet": "není další instancí v systému obecného soudnictví (srov. např. nález sp. zn. III. ÚS 23/93 ). K zásahu do hodnocení důkazů přistupuje pouze tehdy, je-li dán extrémní nesoulad skutkových zjištění s právními závěry nebo...",
+          "chunk_id": 3843
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.2144.25.1",
+          "decision_date": "28. 5. 2026",
+          "score": 4.089425,
+          "snippet": "souladu se zákonem. 34. V řízení nevyvstal stěžovateli tvrzený extrémní nesoulad mezi provedenými důkazy a skutkovými zjištěními. Ten by spočíval v racionálně neobhajitelném úsudku soudů o jejich vztahu. Extrémní rozp...",
+          "chunk_id": 756
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1090.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 3.766453,
+          "snippet": "není zapovězeným kritériem pro určení výše trestu - doznání se k trestnému činu a upřímná lítost jsou výslovně uvedeny jako polehčující okolnosti v § 41 písm. l), resp. písm. o) trestního zákoníku. Stěžovateli tyto po...",
+          "chunk_id": 1208
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1185.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 3.530283,
+          "snippet": "nebo je v rozporu s požadavky spravedlivého (řádného) procesu či s obecně sdílenými zásadami spravedlnosti. Taková situace v posuzované věci nenastala. 6. Městský soud při rozhodování o odvolání stěžovatele navázal na...",
+          "chunk_id": 959
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.2144.25.1",
+          "decision_date": "28. 5. 2026",
+          "score": 0.031746,
+          "snippet": "souladu se zákonem. 34. V řízení nevyvstal stěžovateli tvrzený extrémní nesoulad mezi provedenými důkazy a skutkovými zjištěními. Ten by spočíval v racionálně neobhajitelném úsudku soudů o jejich vztahu. Extrémní rozp...",
+          "chunk_id": 756
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3645.25.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.016393,
+          "snippet": "se řídí neúčinnou právní úpravou. 8. Stěžovatelka namítá, že vedlejší účastnice v době jednání se stěžovatelkou o uzavření dodatku k pojistné smlouvě věděla, že pojistná smlouva má vady, které způsobují její absolutní...",
+          "chunk_id": 650
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.945.26.1",
+          "decision_date": "28. 4. 2026",
+          "score": 0.016393,
+          "snippet": "se odvolací soud z hlediska dokazování fakticky nezabýval. Po Ústavním soudu tak stěžovatel požaduje, aby jako další přezkumná instance zhodnotil, zda shromáždění konkrétního důkazu je účelné či nikoliv. Taková role Ú...",
+          "chunk_id": 3659
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.2824.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016129,
+          "snippet": "možný (viz usnesení Nejvyššího soudu sp. zn. 8 Tdo 1409/2016).\" (bod 313, str. 52). Krajský soud rovněž odkázal na usnesení Nejvyššího soudu sp. zn. 3 Tdo 859/2018, podle kterého: \"Při posuzování rozhraničení vědomé n...",
+          "chunk_id": 3181
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.862.26.1",
+          "decision_date": "23. 4. 2026",
+          "score": 0.016129,
+          "snippet": "není další instancí v systému obecného soudnictví (srov. např. nález sp. zn. III. ÚS 23/93 ). K zásahu do hodnocení důkazů přistupuje pouze tehdy, je-li dán extrémní nesoulad skutkových zjištění s právními závěry nebo...",
+          "chunk_id": 3843
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "rovnost účastníků řízení",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.567984,
+          "snippet": "srovnatelné skupiny členy zastupitelstev vykonávající souběžně funkce na různých úrovních územní samosprávy na straně jedné a členy zastupitelstev, kteří současně vykonávají odlišné veřejné funkce, jsou zaměstnanci ne...",
+          "chunk_id": 3524
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.3787.25.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.556444,
+          "snippet": "strukturální součást právní úpravy civilního dovolání, která významně napomáhá naplňovat zákonné a ústavní účely tohoto institutu. Omezení práva na přístup k soudu, jež z něj nutně plyne, je však vyváženo závažností v...",
+          "chunk_id": 1396
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.555948,
+          "snippet": "již dříve přezkoumával ústavnost souběhu funkcí v samosprávě s členstvím v zákonodárném či vládním sboru. Podle navrhovatelky Ústavní soud také výslovně zdůraznil, že právní úpravu shledává za ústavně přijatelnou s oh...",
+          "chunk_id": 3492
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.39.25.1",
+          "decision_date": "24. 6. 2026",
+          "score": 0.555808,
+          "snippet": "vymezený v čl. 3 odst. 1 Listiny. Jedná se o kritérium neutrální, nikoliv podezřelé, a tedy nevytvářející prostor pro posouzení diskriminace podle čl. 3 odst. 1 Listiny. Nelze než uzavřít, že toto ustanovení není apli...",
+          "chunk_id": 79
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1038.26.1",
+          "decision_date": "17. 6. 2026",
+          "score": 0.555265,
+          "snippet": "účastenství v řízení na podmínku vyčerpání procesních prostředků (§ 7 odst. 1 zákona č. 82/1998 Sb.), vyplývá přímo ze zákonné úpravy, která vyčerpání prostředků nápravy nezakotvuje bezvýhradně (§ 8 odst. 3 zákona č. ...",
+          "chunk_id": 263
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.403.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 3.187733,
+          "snippet": "NALUS - databáze rozhodnutí Ústavního soudu II.ÚS 403/26 ze dne 3. 6. 2026 Česká republika USNESENÍ Ústavního soudu Ústavní soud rozhodl v senátu složeném z předsedy Jiřího Přibáně, soudce zpravodaje Martina Smolka a ...",
+          "chunk_id": 599
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 3.128192,
+          "snippet": "99-102), podrobně zabýval vymezením toho, jakým způsobem je třeba přezkoumávat namítané zásahy do práva na rovné zacházení, s cílem sjednotit dosavadní judikaturní přístupy. 84. Jak plyne z citovaného nálezu Pl. ÚS 18...",
+          "chunk_id": 3521
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.420.26.1",
+          "decision_date": "13. 5. 2026",
+          "score": 3.038381,
+          "snippet": "NALUS - databáze rozhodnutí Ústavního soudu I.ÚS 420/26 ze dne 13. 5. 2026 Česká republika USNESENÍ Ústavního soudu Ústavní soud rozhodl soudcem zpravodajem Janem Wintrem o ústavní stížnosti B. V., zastoupeného advoká...",
+          "chunk_id": 2253
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.2461.25.1",
+          "decision_date": "19. 5. 2026",
+          "score": 2.985272,
+          "snippet": "vyhlášek se svým obsahem shodují a vychází ze shodných principů. Vada krajského soudu tak neměla vliv na zákonnost napadeného rozsudku krajského soudu (viz body 19 až 21 napadeného rozsudku Nejvyššího správního soudu)...",
+          "chunk_id": 1776
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.739.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 2.982038,
+          "snippet": "odepřít výpověď a procesní rovnost]. In: HUSSEINI, Faisal, BARTOŇ, Michal, KOKEŠ, Marian, KOPA, Martin a kol. Listina základních práv a svobod. 1. vyd. Praha: C. H. Beck, 2021, marg. č. 29.) Skutečnost, že v souběžně ...",
+          "chunk_id": 470
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016393,
+          "snippet": "srovnatelné skupiny členy zastupitelstev vykonávající souběžně funkce na různých úrovních územní samosprávy na straně jedné a členy zastupitelstev, kteří současně vykonávají odlišné veřejné funkce, jsou zaměstnanci ne...",
+          "chunk_id": 3524
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.403.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.016393,
+          "snippet": "NALUS - databáze rozhodnutí Ústavního soudu II.ÚS 403/26 ze dne 3. 6. 2026 Česká republika USNESENÍ Ústavního soudu Ústavní soud rozhodl v senátu složeném z předsedy Jiřího Přibáně, soudce zpravodaje Martina Smolka a ...",
+          "chunk_id": 599
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.3787.25.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.016129,
+          "snippet": "strukturální součást právní úpravy civilního dovolání, která významně napomáhá naplňovat zákonné a ústavní účely tohoto institutu. Omezení práva na přístup k soudu, jež z něj nutně plyne, je však vyváženo závažností v...",
+          "chunk_id": 1396
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016129,
+          "snippet": "99-102), podrobně zabýval vymezením toho, jakým způsobem je třeba přezkoumávat namítané zásahy do práva na rovné zacházení, s cílem sjednotit dosavadní judikaturní přístupy. 84. Jak plyne z citovaného nálezu Pl. ÚS 18...",
+          "chunk_id": 3521
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.015873,
+          "snippet": "již dříve přezkoumával ústavnost souběhu funkcí v samosprávě s členstvím v zákonodárném či vládním sboru. Podle navrhovatelky Ústavní soud také výslovně zdůraznil, že právní úpravu shledává za ústavně přijatelnou s oh...",
+          "chunk_id": 3492
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "semantic_or_weak_keyword_overlap_review_needed"
+    },
+    {
+      "query": "právo na zákonného soudce",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1901.25.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.667827,
+          "snippet": "variant, kterou stěžovatelé zmiňují (ať již vzájemná koordinace či přijetí \"pilotního\" rozhodnutí, které potom do jisté míry převezme těleso druhé), jejich námitka se s obsahem práva na zákonného soudce zcela míjí. Ob...",
+          "chunk_id": 1601
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2718.25.1",
+          "decision_date": "13. 5. 2026",
+          "score": 0.643879,
+          "snippet": "Listiny. Příslušnost soudu i soudce stanoví zákon. Podstatou této záruky je, že podávání návrhů soudům a přidělování případů soudcům se odehrává podle předem stanovených pravidel, čímž má být minimalizována možnost je...",
+          "chunk_id": 2334
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1901.25.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.618192,
+          "snippet": "tomto rozsahu téměř zcela překrývá s námitkami uplatněnými ostatními stěžovateli, musí Ústavní soud s ohledem na některé odlišnosti obou typů ústavní stížnosti věnovat zvláštní pozornost i komunálnímu rozměru věci. IV...",
+          "chunk_id": 1596
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.18.25.1",
+          "decision_date": "24. 6. 2026",
+          "score": 0.591069,
+          "snippet": "nespočívá pouze v právu jednotlivce zahájit řízení před soudem. Jde především o právo na to, aby soud o věci meritorně rozhodl, pokud jednotlivec dodržel zákonem stanovený (a ústavně souladný) postup a podmínky pro po...",
+          "chunk_id": 116
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.841.26.2",
+          "decision_date": "29. 4. 2026",
+          "score": 0.580697,
+          "snippet": "stěžovatelka uvádí, že po rozhodnutí požádala Nejvyšší soud o nahlédnutí do spisů vedených Nejvyšším soudem, ale nebylo jí to umožněno. 13. Čtvrtá stěžovatelka také namítá absenci upozornění na změnu právní kvalifikac...",
+          "chunk_id": 3310
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1901.25.1",
+          "decision_date": "20. 5. 2026",
+          "score": 5.40343,
+          "snippet": "variant, kterou stěžovatelé zmiňují (ať již vzájemná koordinace či přijetí \"pilotního\" rozhodnutí, které potom do jisté míry převezme těleso druhé), jejich námitka se s obsahem práva na zákonného soudce zcela míjí. Ob...",
+          "chunk_id": 1601
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 4.611953,
+          "snippet": "základních práv a svobod. Usnesení Nejvyššího soudu porušilo též stěžovatelovo základní právo na zákonného soudce podle čl. 38 odst. 1 Listiny. II. Usnesení Nejvyššího soudu ze dne 30. dubna 2025 č. j. 3 Tdo 242/2025-...",
+          "chunk_id": 3861
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 4.452283,
+          "snippet": "takových případů je, pokud trestní soudy hodnotí důkazy svévolně, poruší zásadu bezprostřednosti (přímosti) dokazování či pokud hodnocení (alespoň potenciálně významného) důkazu v napadeném rozhodnutí zcela chybí. 31....",
+          "chunk_id": 3876
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2718.25.1",
+          "decision_date": "13. 5. 2026",
+          "score": 4.324356,
+          "snippet": "Listiny. Příslušnost soudu i soudce stanoví zákon. Podstatou této záruky je, že podávání návrhů soudům a přidělování případů soudcům se odehrává podle předem stanovených pravidel, čímž má být minimalizována možnost je...",
+          "chunk_id": 2334
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.952.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 4.309264,
+          "snippet": "jen tehdy, bude-li to pro účastníky řízení z hlediska naplnění jejich práva na spravedlivý proces příznivější. [srov. např. nález ze dne 19. 4. 2021 sp. zn. II. ÚS 52/21 (N 79/105 SbNU 322); usnesení ze dne 21. 10. 20...",
+          "chunk_id": 1118
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1901.25.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.032787,
+          "snippet": "variant, kterou stěžovatelé zmiňují (ať již vzájemná koordinace či přijetí \"pilotního\" rozhodnutí, které potom do jisté míry převezme těleso druhé), jejich námitka se s obsahem práva na zákonného soudce zcela míjí. Ob...",
+          "chunk_id": 1601
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2718.25.1",
+          "decision_date": "13. 5. 2026",
+          "score": 0.031754,
+          "snippet": "Listiny. Příslušnost soudu i soudce stanoví zákon. Podstatou této záruky je, že podávání návrhů soudům a přidělování případů soudcům se odehrává podle předem stanovených pravidel, čímž má být minimalizována možnost je...",
+          "chunk_id": 2334
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 0.016129,
+          "snippet": "základních práv a svobod. Usnesení Nejvyššího soudu porušilo též stěžovatelovo základní právo na zákonného soudce podle čl. 38 odst. 1 Listiny. II. Usnesení Nejvyššího soudu ze dne 30. dubna 2025 č. j. 3 Tdo 242/2025-...",
+          "chunk_id": 3861
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1901.25.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.015873,
+          "snippet": "tomto rozsahu téměř zcela překrývá s námitkami uplatněnými ostatními stěžovateli, musí Ústavní soud s ohledem na některé odlišnosti obou typů ústavní stížnosti věnovat zvláštní pozornost i komunálnímu rozměru věci. IV...",
+          "chunk_id": 1596
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 0.015873,
+          "snippet": "takových případů je, pokud trestní soudy hodnotí důkazy svévolně, poruší zásadu bezprostřednosti (přímosti) dokazování či pokud hodnocení (alespoň potenciálně významného) důkazu v napadeném rozhodnutí zcela chybí. 31....",
+          "chunk_id": 3876
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "odmítnutí dovolání",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1074.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.694767,
+          "snippet": "dovolání stěžovatele jako nepřípustné. V odůvodnění usnesení přiléhavě poukázal na to, že podle § 238 odst. 1 písm. e) o. s. ř. není podle § 237 o. s. ř. dovolání přípustné proti usnesením, proti nimž je přípustná žal...",
+          "chunk_id": 2761
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1179.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.6495,
+          "snippet": "stížností téhož stěžovatele, která byla založena na totožné argumentaci, se zabýval v usnesení ze dne 6. 5. 2026 sp. zn. II. ÚS 1074/26 , kterým byla ústavní stížnost odmítnuta. Ústavní soud nemá důvod se od uvedených...",
+          "chunk_id": 876
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.851.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.644119,
+          "snippet": "jde o zjevně neopodstatněný návrh ve smyslu § 43 odst. 2 písm. a) zákona o Ústavním soudu. Uvedené ustanovení v zájmu racionality a efektivity řízení před Ústavním soudem dává tomuto soudu pravomoc posoudit opodstatně...",
+          "chunk_id": 2950
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1086.26.1",
+          "decision_date": "28. 4. 2026",
+          "score": 0.641359,
+          "snippet": "ÚS 1160/24 , kde jsou důvody odmítnutí obdobných ústavních stížností téže stěžovatelky podrobně vysvětleny. 3. Ústavní soud proto návrh odmítl pro vady za přiměřeného užití § 43 odst. 1 písm. a) zákona o Ústavním soud...",
+          "chunk_id": 3577
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.3579.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.639358,
+          "snippet": "Ústavní soud proto stížnost podle § 43 odst. 2 písm. a) zákona o Ústavním soudu odmítl jako návrh zjevně neopodstatněný. Poučení: Proti usnesení Ústavního soudu není odvolání přípustné. V Brně dne 29. dubna 2026 Dita ...",
+          "chunk_id": 3430
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1074.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 4.036034,
+          "snippet": "dovolání stěžovatele jako nepřípustné. V odůvodnění usnesení přiléhavě poukázal na to, že podle § 238 odst. 1 písm. e) o. s. ř. není podle § 237 o. s. ř. dovolání přípustné proti usnesením, proti nimž je přípustná žal...",
+          "chunk_id": 2761
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.142.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 3.742597,
+          "snippet": "mohou jít ku prospěchu dovolatele. Má-li platit rovnost účastníků řízení, nelze vstřícný přístup volit jen k dovolateli, to by bylo ve výsledku na úkor vedlejšího účastníka. 12. Krajský soud v Hradci Králové se necíti...",
+          "chunk_id": 1014
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1074.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 3.580707,
+          "snippet": "pak za situace, kdy je na něj přenesena státem část veřejnoprávních povinností. Jde-li o odměnu insolvenčního správce za přezkoumané přihlášky, je v současnosti rozhodovací praxe nejednotná. Podle stěžovatele není žád...",
+          "chunk_id": 2758
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1074.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 3.434472,
+          "snippet": "zapříčinit tvrzené porušení práv stěžovatele. V závěrech Nejvyššího soudu Ústavní soud nezjistil ani znaky libovůle, překvapivosti nebo nepředvídatelnosti, či přílišný formalistický postup, a proto neshledal důvod pro...",
+          "chunk_id": 2762
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1067.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 3.404879,
+          "snippet": "napadeného usnesení uvedl, že dovolání není v rozsahu některých dovolacích námitek projednatelné, neboť stěžovatel nevymezil předpoklady přípustnosti dovolání. 13. Ústavní soud v této souvislosti v prvé řadě poukazuje...",
+          "chunk_id": 1360
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1074.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.032787,
+          "snippet": "dovolání stěžovatele jako nepřípustné. V odůvodnění usnesení přiléhavě poukázal na to, že podle § 238 odst. 1 písm. e) o. s. ř. není podle § 237 o. s. ř. dovolání přípustné proti usnesením, proti nimž je přípustná žal...",
+          "chunk_id": 2761
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1179.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.016129,
+          "snippet": "stížností téhož stěžovatele, která byla založena na totožné argumentaci, se zabýval v usnesení ze dne 6. 5. 2026 sp. zn. II. ÚS 1074/26 , kterým byla ústavní stížnost odmítnuta. Ústavní soud nemá důvod se od uvedených...",
+          "chunk_id": 876
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.142.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.016129,
+          "snippet": "mohou jít ku prospěchu dovolatele. Má-li platit rovnost účastníků řízení, nelze vstřícný přístup volit jen k dovolateli, to by bylo ve výsledku na úkor vedlejšího účastníka. 12. Krajský soud v Hradci Králové se necíti...",
+          "chunk_id": 1014
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.851.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.015873,
+          "snippet": "jde o zjevně neopodstatněný návrh ve smyslu § 43 odst. 2 písm. a) zákona o Ústavním soudu. Uvedené ustanovení v zájmu racionality a efektivity řízení před Ústavním soudem dává tomuto soudu pravomoc posoudit opodstatně...",
+          "chunk_id": 2950
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1074.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.015873,
+          "snippet": "pak za situace, kdy je na něj přenesena státem část veřejnoprávních povinností. Jde-li o odměnu insolvenčního správce za přezkoumané přihlášky, je v současnosti rozhodovací praxe nejednotná. Podle stěžovatele není žád...",
+          "chunk_id": 2758
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "partial_keyword_overlap"
+    },
+    {
+      "query": "náklady řízení",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.614.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.61779,
+          "snippet": "částku 8 606 621,69 Kč (výrok I.) a na náhradu nákladů řízení částku 893 701,50 Kč (výrok II.) a dále na náhradu nákladů řízení vzniklých státu částku 6 231,50 Kč (výrok III.). 3. Vedlejší účastnice napadla rozsudek o...",
+          "chunk_id": 1664
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.307.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.607618,
+          "snippet": "sama o sobě nezpůsobuje protiústavnost napadených rozhodnutí. Soudy stanovily výši nákladů řízení na základě zákonných pravidel, která v rozhodnutích výslovně označily. Stěžovatel v ústavní stížnosti nezpochybnil ani ...",
+          "chunk_id": 3356
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.263.26.3",
+          "decision_date": "13. 5. 2026",
+          "score": 0.607322,
+          "snippet": "zaplatit žalobci na ztížení společenského uplatnění částku 2 900 000 Kč s příslušenstvím (výrok I.) a na bolestném částku 600 840 Kč s příslušenstvím (výrok II.). V částkách 3 790 000 Kč a 400 560 Kč bylo řízení zasta...",
+          "chunk_id": 2371
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.864.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.588893,
+          "snippet": "vyhlášen při druhém jednání, na jehož základě stěžovatelka zaslala soudu vyčíslení nákladů právního zastoupení v celkové výši 43 088,10 Kč. Písemné vyhotovení napadeného rozsudku bylo stěžovatelce doručeno dne 18. 2. ...",
+          "chunk_id": 2618
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.722.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.587775,
+          "snippet": "citelný dopad do majetkové sféry účastníků řízení, samotný spor o nákladech řízení zpravidla nedosahuje intenzity způsobilé porušit jejich základní práva a svobody (srov. např. nález ze dne 28. 8. 2024 sp. zn. I. ÚS 2...",
+          "chunk_id": 3096
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1570.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 2.565352,
+          "snippet": "požadoval pověřit exekutora pro náklady exekuce a náklady oprávněné v exekučním řízení, aniž určoval způsob vymožení těchto nákladů. 7. Okresní soud v Příbrami považoval stížnostní námitky za nedůvodné. Exekutor mohl ...",
+          "chunk_id": 3418
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.18.25.1",
+          "decision_date": "24. 6. 2026",
+          "score": 2.555231,
+          "snippet": "prostředky a zajišťovat efektivitu rozhodovacího procesu. Nezajištění tlumočníka prodlužuje řízení, zvyšuje náklady a blokuje rozhodování. V řízení o žádosti je naprosto adekvátní, aby náklady na tlumočníka nesl žadat...",
+          "chunk_id": 102
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.18.25.1",
+          "decision_date": "24. 6. 2026",
+          "score": 2.542805,
+          "snippet": "jinou osobu než zapsaného tlumočníka tehdy, není-li žádný zapsaný tlumočník k dispozici, nebo pokud by \"provedení tlumočnického úkonu tlumočníkem zapsaným do seznamu tlumočníků a překladatelů bylo spojeno s nepřiměřen...",
+          "chunk_id": 137
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.988.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 2.514028,
+          "snippet": "výdajů v částce 450 Kč podle § 13 AT (režijní paušál za jeden úkon právní služby) a 21 % DPH z odměny za zastupování a z nákladů hotových výdajů v částce 478,80 Kč, neboť účastníkem zvolená advokátka je plátcem DPH. T...",
+          "chunk_id": 2655
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.989.26.1",
+          "decision_date": "23. 4. 2026",
+          "score": 2.497435,
+          "snippet": "vhodné přistoupit k aplikaci § 150 zákona č. 99/1963 Sb., občanský soud řád, ve znění pozdějších předpisů (dále jen \"o. s. ř.\"). Krajský soud měl podle stěžovatelky přihlédnout k jejím argumentům odůvodňujícím aplikac...",
+          "chunk_id": 3939
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.614.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.016393,
+          "snippet": "částku 8 606 621,69 Kč (výrok I.) a na náhradu nákladů řízení částku 893 701,50 Kč (výrok II.) a dále na náhradu nákladů řízení vzniklých státu částku 6 231,50 Kč (výrok III.). 3. Vedlejší účastnice napadla rozsudek o...",
+          "chunk_id": 1664
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1570.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016393,
+          "snippet": "požadoval pověřit exekutora pro náklady exekuce a náklady oprávněné v exekučním řízení, aniž určoval způsob vymožení těchto nákladů. 7. Okresní soud v Příbrami považoval stížnostní námitky za nedůvodné. Exekutor mohl ...",
+          "chunk_id": 3418
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.307.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016129,
+          "snippet": "sama o sobě nezpůsobuje protiústavnost napadených rozhodnutí. Soudy stanovily výši nákladů řízení na základě zákonných pravidel, která v rozhodnutích výslovně označily. Stěžovatel v ústavní stížnosti nezpochybnil ani ...",
+          "chunk_id": 3356
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.18.25.1",
+          "decision_date": "24. 6. 2026",
+          "score": 0.016129,
+          "snippet": "prostředky a zajišťovat efektivitu rozhodovacího procesu. Nezajištění tlumočníka prodlužuje řízení, zvyšuje náklady a blokuje rozhodování. V řízení o žádosti je naprosto adekvátní, aby náklady na tlumočníka nesl žadat...",
+          "chunk_id": 102
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.263.26.3",
+          "decision_date": "13. 5. 2026",
+          "score": 0.015873,
+          "snippet": "zaplatit žalobci na ztížení společenského uplatnění částku 2 900 000 Kč s příslušenstvím (výrok I.) a na bolestném částku 600 840 Kč s příslušenstvím (výrok II.). V částkách 3 790 000 Kč a 400 560 Kč bylo řízení zasta...",
+          "chunk_id": 2371
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "vlastnické právo",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3174.25.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.531692,
+          "snippet": "zdrojovky. V důsledku toho mělo dojít k újmě na majetkových hodnotách stěžovatele, konkrétně ke snížení hodnoty jeho majetku. Stěžovatel odkazuje na nález Ústavního soudu sp. zn. II. ÚS 2144/14 ze dne 4. 2. 2016 a uvá...",
+          "chunk_id": 2727
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.947.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.518693,
+          "snippet": "vlastnického práva vedlejších účastnic není v konkrétních okolnostech dané věci zjevně excesivní, svévolný nebo zneužívající. Podle ustálené judikatury Ústavního soudu jsou obecné soudy povinny při střetu základních p...",
+          "chunk_id": 2768
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.384.26.1",
+          "decision_date": "13. 5. 2026",
+          "score": 0.518654,
+          "snippet": "výrok byl podle § 159a odst. 1 občanského soudního řádu závazný jen pro účastníky daného řízení, tedy pro tehdejší povinný subjekt (Zemědělské družstvo Kolovraty), nikoli pro současné vlastníky zapsané v katastru nemo...",
+          "chunk_id": 2230
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.2302.25.1",
+          "decision_date": "22. 4. 2026",
+          "score": 0.510867,
+          "snippet": "Pohledávku vůči stěžovatelce měla vydražit společnost AGHAMA. Rozhodným právem je právo slovenské, a byť jde o originární způsob nabytí, šlo o dobrovolnou dražbu se soukromoprávním charakterem. Nejvyšší soud Slovenské...",
+          "chunk_id": 4049
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3174.25.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.508758,
+          "snippet": "Stěžovatel nesouhlasí se závěry správních soudů a namítá, že napadenými rozsudky bylo porušeno jeho právo na spravedlivý proces dle čl. 36 odst. 1 Listiny, čl. 6 odst. 1 Úmluvy a čl. 47 Listiny základních práv EU, prá...",
+          "chunk_id": 2726
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1115.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 4.156031,
+          "snippet": "podmínky řádné držby, a nedošlo tak k vydržení. I kdyby právní předchůdci stěžovatelky předmětnou část pozemku vydrželi, stěžovatelka by si za této situace nemohla započítat dobu, po kterou měli předmětnou část pozemk...",
+          "chunk_id": 950
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1115.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 4.097996,
+          "snippet": "zda je takový výklad ústavně souladný, opakovaně zabýval. Dospěl přitom k závěru, že takový výklad není svévolný a neopodstatňuje jeho kasační zásah (srov. v podrobnostech usnesení ze dne 24. 11. 2023 sp. zn. IV. ÚS 1...",
+          "chunk_id": 953
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.384.26.1",
+          "decision_date": "13. 5. 2026",
+          "score": 3.719922,
+          "snippet": "výrok byl podle § 159a odst. 1 občanského soudního řádu závazný jen pro účastníky daného řízení, tedy pro tehdejší povinný subjekt (Zemědělské družstvo Kolovraty), nikoli pro současné vlastníky zapsané v katastru nemo...",
+          "chunk_id": 2230
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.384.26.1",
+          "decision_date": "13. 5. 2026",
+          "score": 3.590215,
+          "snippet": "nároku byl po právu. Námitku, že vedlejší účastník nemohl být v dobré víře, neshledal důvodnou. 4. Stěžovatelé podali proti rozsudku městského soudu dovolání, které Nejvyšší soud napadeným usnesením odmítl. Dovoláním ...",
+          "chunk_id": 2231
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3830.25.1",
+          "decision_date": "22. 4. 2026",
+          "score": 3.583639,
+          "snippet": "alespoň osvědčili své vlastnické právo k psovi), nezaložil své rozhodnutí na jiném právním závěru, než k jakému dospěl okresní soud. Nelze již jen proto hovořit o překvapivosti rozhodnutí, jak je má na mysli judikatur...",
+          "chunk_id": 4081
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.384.26.1",
+          "decision_date": "13. 5. 2026",
+          "score": 0.031746,
+          "snippet": "výrok byl podle § 159a odst. 1 občanského soudního řádu závazný jen pro účastníky daného řízení, tedy pro tehdejší povinný subjekt (Zemědělské družstvo Kolovraty), nikoli pro současné vlastníky zapsané v katastru nemo...",
+          "chunk_id": 2230
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3174.25.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.016393,
+          "snippet": "zdrojovky. V důsledku toho mělo dojít k újmě na majetkových hodnotách stěžovatele, konkrétně ke snížení hodnoty jeho majetku. Stěžovatel odkazuje na nález Ústavního soudu sp. zn. II. ÚS 2144/14 ze dne 4. 2. 2016 a uvá...",
+          "chunk_id": 2727
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1115.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.016393,
+          "snippet": "podmínky řádné držby, a nedošlo tak k vydržení. I kdyby právní předchůdci stěžovatelky předmětnou část pozemku vydrželi, stěžovatelka by si za této situace nemohla započítat dobu, po kterou měli předmětnou část pozemk...",
+          "chunk_id": 950
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.947.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.016129,
+          "snippet": "vlastnického práva vedlejších účastnic není v konkrétních okolnostech dané věci zjevně excesivní, svévolný nebo zneužívající. Podle ustálené judikatury Ústavního soudu jsou obecné soudy povinny při střetu základních p...",
+          "chunk_id": 2768
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1115.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.016129,
+          "snippet": "zda je takový výklad ústavně souladný, opakovaně zabýval. Dospěl přitom k závěru, že takový výklad není svévolný a neopodstatňuje jeho kasační zásah (srov. v podrobnostech usnesení ze dne 24. 11. 2023 sp. zn. IV. ÚS 1...",
+          "chunk_id": 953
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "partial_keyword_overlap"
+    },
+    {
+      "query": "svoboda projevu",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1055.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.505211,
+          "snippet": "státní zastupitelství stěžovateli sdělilo, že k výkonu vnitřního dohledu důvod neshledává. 3. V ústavní stížnosti stěžovatel brojí proti postupu policejního orgánu i státních zastupitelství. Namítá, že komunikace s ad...",
+          "chunk_id": 1897
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.995.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.491818,
+          "snippet": "obavy z jeho útěku. Upozorňuje, že je pro orgány činné v trestním řízení kontaktní, znají jeho email a telefonní číslo. Chtěl by sice bydlet a pracovat v Německu, avšak na adrese, kterou by sdělil, s příslibem, že se ...",
+          "chunk_id": 592
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1055.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.488707,
+          "snippet": "zastupitelství v Praze s žádostí o přezkum postupu policejního orgánu, v níž mimo jiné namítal, že komunikace s advokátem je chráněná, a požádal, \"aby plná audionahrávka této komunikace a přepis uvedené komunikace byl...",
+          "chunk_id": 1896
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.3315.25.2",
+          "decision_date": "25. 6. 2026",
+          "score": 0.483339,
+          "snippet": "soudu je v dané věci spojen rovněž s porušením práva na ochranu osobní svobody podle čl. 8 odst. 2 Listiny, neboť v důsledku ústavně nesouladného postupu zůstal pravomocným a vykonatelným podmíněný trest odnětí svobod...",
+          "chunk_id": 20
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.16.26.1",
+          "decision_date": "24. 6. 2026",
+          "score": 0.482934,
+          "snippet": "věci samé, ohledně předběžného opatření jsme dospěli k závěru, že silnější argumenty hovoří proti jeho nařízení než pro jeho nařízení. Jan Wintr Dita Řepková 1 Vyjádření prezidenta republiky z 23. června 2026, dostupn...",
+          "chunk_id": 29
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.2196.25.1",
+          "decision_date": "19. 6. 2026",
+          "score": 3.131625,
+          "snippet": "Tato podmínka byla vícekrát připomenuta i v souvislosti s dovoláním. Pokud Nejvyšší soud své rozhodnutí odůvodní nedostatečným způsobem, je takové rozhodnutí ve své podstatě nepřezkoumatelné a zasahuje do základního p...",
+          "chunk_id": 165
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.30.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 2.278346,
+          "snippet": "skutečnosti, jež je třeba osvědčit, resp. prokázat, tzn. 1. bezprostřednost závažné hrozby pro umístěného či jeho okolí a 2. nemožnost tuto hrozbu odvrátit jinak, jsou však totožné. 28. Ústavní soud dospěl k závěru, ž...",
+          "chunk_id": 1004
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.897.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 2.239194,
+          "snippet": "či institutech sám o sobě nemůže být důvodem pro rozpor s veřejným pořádkem. Stěžovatelkou citovaná judikatura je nepřiléhavá a týkala se svobody projevu. Britské rozhodnutí přiznává mimořádně vysokou částku, což je a...",
+          "chunk_id": 2908
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.715.26.1",
+          "decision_date": "28. 5. 2026",
+          "score": 2.233449,
+          "snippet": "projevu vůle vedlejší účastnice k uzavření smlouvy o bezúplatném převodu specifikovaného pozemku v katastrálním území T. a stěžovatelce byla uložena povinnost zaplatit vedlejší účastnici náklady řízení. Okresní soud z...",
+          "chunk_id": 797
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.847.25.1",
+          "decision_date": "27. 5. 2026",
+          "score": 2.230601,
+          "snippet": "souvislosti, neboť stěžovatel tento argument opět nijak blíže nerozvádí. 11. Ústavní soud konstatuje, že není jeho úkolem vyhledávat za stěžovatele možné argumenty svědčící o protiústavnosti napadeného rozhodnutí a zá...",
+          "chunk_id": 931
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1055.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.016393,
+          "snippet": "státní zastupitelství stěžovateli sdělilo, že k výkonu vnitřního dohledu důvod neshledává. 3. V ústavní stížnosti stěžovatel brojí proti postupu policejního orgánu i státních zastupitelství. Namítá, že komunikace s ad...",
+          "chunk_id": 1897
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.2196.25.1",
+          "decision_date": "19. 6. 2026",
+          "score": 0.016393,
+          "snippet": "Tato podmínka byla vícekrát připomenuta i v souvislosti s dovoláním. Pokud Nejvyšší soud své rozhodnutí odůvodní nedostatečným způsobem, je takové rozhodnutí ve své podstatě nepřezkoumatelné a zasahuje do základního p...",
+          "chunk_id": 165
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.995.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.016129,
+          "snippet": "obavy z jeho útěku. Upozorňuje, že je pro orgány činné v trestním řízení kontaktní, znají jeho email a telefonní číslo. Chtěl by sice bydlet a pracovat v Německu, avšak na adrese, kterou by sdělil, s příslibem, že se ...",
+          "chunk_id": 592
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.30.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.016129,
+          "snippet": "skutečnosti, jež je třeba osvědčit, resp. prokázat, tzn. 1. bezprostřednost závažné hrozby pro umístěného či jeho okolí a 2. nemožnost tuto hrozbu odvrátit jinak, jsou však totožné. 28. Ústavní soud dospěl k závěru, ž...",
+          "chunk_id": 1004
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1055.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.015873,
+          "snippet": "zastupitelství v Praze s žádostí o přezkum postupu policejního orgánu, v níž mimo jiné namítal, že komunikace s advokátem je chráněná, a požádal, \"aby plná audionahrávka této komunikace a přepis uvedené komunikace byl...",
+          "chunk_id": 1896
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "partial_keyword_overlap"
+    },
+    {
+      "query": "ochrana soukromí",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.837.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.526922,
+          "snippet": "stručně řečeno - upravil styk nezletilého se stěžovatelkou (výrok I). Okresní soud naopak nařídil předběžné opatření, jímž zakázal jakkoli zveřejňovat a přikázal odstranit již zveřejněné zvukové nebo obrazové záznamy,...",
+          "chunk_id": 2888
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.3424.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 0.51,
+          "snippet": "nepřísluší (...)\" [nález ze dne 8. 8. 2017 sp. zn. Pl. ÚS 32/16 (N 139/86 SbNU 369; 345/2018 Sb.), bod 67]. 23. Ochrana soukromé sféry jednotlivce je v Listině roztříštěna mezi několik vzájemně se doplňujících článků ...",
+          "chunk_id": 3900
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1055.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.505442,
+          "snippet": "státní zastupitelství stěžovateli sdělilo, že k výkonu vnitřního dohledu důvod neshledává. 3. V ústavní stížnosti stěžovatel brojí proti postupu policejního orgánu i státních zastupitelství. Namítá, že komunikace s ad...",
+          "chunk_id": 1897
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1055.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.503074,
+          "snippet": "zastupitelství v Praze s žádostí o přezkum postupu policejního orgánu, v níž mimo jiné namítal, že komunikace s advokátem je chráněná, a požádal, \"aby plná audionahrávka této komunikace a přepis uvedené komunikace byl...",
+          "chunk_id": 1896
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1113.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 0.502362,
+          "snippet": "NALUS - databáze rozhodnutí Ústavního soudu II.ÚS 1113/26 ze dne 22. 5. 2026 Česká republika USNESENÍ Ústavního soudu Ústavní soud rozhodl soudcem zpravodajem Jiřím Přibáněm o ústavní stížnosti stěžovatele JUDr. Pavla...",
+          "chunk_id": 1077
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.3424.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 4.437224,
+          "snippet": "nepřísluší (...)\" [nález ze dne 8. 8. 2017 sp. zn. Pl. ÚS 32/16 (N 139/86 SbNU 369; 345/2018 Sb.), bod 67]. 23. Ochrana soukromé sféry jednotlivce je v Listině roztříštěna mezi několik vzájemně se doplňujících článků ...",
+          "chunk_id": 3900
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.739.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 3.695773,
+          "snippet": "odepřít výpověď a procesní rovnost]. In: HUSSEINI, Faisal, BARTOŇ, Michal, KOKEŠ, Marian, KOPA, Martin a kol. Listina základních práv a svobod. 1. vyd. Praha: C. H. Beck, 2021, marg. č. 29.) Skutečnost, že v souběžně ...",
+          "chunk_id": 470
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1205.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 2.623765,
+          "snippet": "Stěžovatel podal ústavní stížnost a následná doplnění, ve kterých (1) navrhl zrušit všech osm popsaných rozhodnutí, (2) navrhl odklad vykonatelnosti výroků o povinnosti zaplatit soudní poplatek a (3) požádal o přiznán...",
+          "chunk_id": 1267
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1444.26.1",
+          "decision_date": "11. 6. 2026",
+          "score": 2.242278,
+          "snippet": "odepření soudní ochrany proti zásahu do jejích ústavně garantovaných práv. Poukazuje na význam ústního jednání v řízení o správním trestání, tedy že představuje základní prostředek realizace základních procesních práv...",
+          "chunk_id": 276
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.446.26.1",
+          "decision_date": "28. 5. 2026",
+          "score": 2.238186,
+          "snippet": "stálých obyvatel, které vyniká řadou environmentálních hledisek hodných ochrany. Vyjadřují lítost nad tím, že s organizátory referenda nedosáhli konsensu ohledně položené otázky, neboť úžeji podaný předmět ohledně nov...",
+          "chunk_id": 727
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.3424.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 0.032522,
+          "snippet": "nepřísluší (...)\" [nález ze dne 8. 8. 2017 sp. zn. Pl. ÚS 32/16 (N 139/86 SbNU 369; 345/2018 Sb.), bod 67]. 23. Ochrana soukromé sféry jednotlivce je v Listině roztříštěna mezi několik vzájemně se doplňujících článků ...",
+          "chunk_id": 3900
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.837.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016393,
+          "snippet": "stručně řečeno - upravil styk nezletilého se stěžovatelkou (výrok I). Okresní soud naopak nařídil předběžné opatření, jímž zakázal jakkoli zveřejňovat a přikázal odstranit již zveřejněné zvukové nebo obrazové záznamy,...",
+          "chunk_id": 2888
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.739.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.016129,
+          "snippet": "odepřít výpověď a procesní rovnost]. In: HUSSEINI, Faisal, BARTOŇ, Michal, KOKEŠ, Marian, KOPA, Martin a kol. Listina základních práv a svobod. 1. vyd. Praha: C. H. Beck, 2021, marg. č. 29.) Skutečnost, že v souběžně ...",
+          "chunk_id": 470
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1055.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.015873,
+          "snippet": "státní zastupitelství stěžovateli sdělilo, že k výkonu vnitřního dohledu důvod neshledává. 3. V ústavní stížnosti stěžovatel brojí proti postupu policejního orgánu i státních zastupitelství. Namítá, že komunikace s ad...",
+          "chunk_id": 1897
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1205.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 0.015873,
+          "snippet": "Stěžovatel podal ústavní stížnost a následná doplnění, ve kterých (1) navrhl zrušit všech osm popsaných rozhodnutí, (2) navrhl odklad vykonatelnosti výroků o povinnosti zaplatit soudní poplatek a (3) požádal o přiznán...",
+          "chunk_id": 1267
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "partial_keyword_overlap"
+    },
+    {
+      "query": "vazba",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.883.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.475454,
+          "snippet": "uvádí též nepřesné a zavádějící informace, ze spisu neplyne, že byl stěžovatel odsouzen v Nizozemí či v Německu. Začtvrté, soudy ignorovaly též to, že si stěžovatel zajistil v Česku nájemní bydlení, nezvažovaly dostat...",
+          "chunk_id": 2929
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.995.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.44865,
+          "snippet": "sp. zn. IV. ÚS 161/04 ). 11. Vazba představuje významný zásah do života obviněného, neboť jej izoluje od rodinného a sociálního prostředí a nezřídka jej stigmatizuje, což má pro něj závažné sociální, psychologické a e...",
+          "chunk_id": 594
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.192.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.44582,
+          "snippet": "doplnění ústavní stížnosti pak upozorňuje, že proti nepravomocně uloženému trestu sedmi let odnětí svobody se státní zástupce v jeho neprospěch neodvolal, a proto mu nehrozí vyšší trest. 6. Vrchní soud ve svém vyjádře...",
+          "chunk_id": 1910
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.906.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.444469,
+          "snippet": "rozhodováním vazebních soudů (srov. nálezy ze dne 12. 8. 2008 sp. zn. II. ÚS 897/08 , bod 19, či ze dne 18. 6. 2014 sp. zn. I. ÚS 980/14 , body 37 a 38). Stěžovatelem napadená rozhodnutí vazebních soudů však žádnou z ...",
+          "chunk_id": 889
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.850.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.442362,
+          "snippet": "obžalobou tvrzeného podvodu [...] Za situace, kdy ve vztahu ke skutku, který má dle obžaloby naplňovat znaky trestného činu účasti na organizované zločinecké skupině [...], jakož i ve vztahu k některým dílčím útokům (...",
+          "chunk_id": 2897
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.192.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 3.130416,
+          "snippet": "ve vztahu k vazbě předstižné opakuje, že nelze bez dalšího dovozovat důvodnou obavu, že obviněný bude trestnou činnost opakovat čistě z faktu, že ji již v minulosti páchal, či že je pro ni trestně stíhán (srov. nálezy...",
+          "chunk_id": 1912
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.449.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 2.312543,
+          "snippet": "vydána rozhodnutí napadená ústavní stížností. Ústavní soud je k jejímu projednání příslušný. Stěžovatel je právně zastoupen v souladu s § 29 až 31 zákona o Ústavním soudu. Stěžovatel vyčerpal všechny zákonné procesní ...",
+          "chunk_id": 2475
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.449.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 2.300615,
+          "snippet": "měl ve skupině obžalovaných postavení organizátora a navíc je stíhána celá řada osob z okruhu jeho rodiny a známých (otec, matka, družka, atd.). Žádný z institutů nahrazujících vazbu v tomto případě neskýtá dostatečno...",
+          "chunk_id": 2474
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.2330.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 2.294697,
+          "snippet": "vazby ani od příslibu ubytování stěžovatele na území České republiky (body 9 a 10 usnesení vrchního soudu). S ohledem na další předpokládané a nevyhnutelné průtahy (způsobenými řízením o mezinárodní ochraně, dožádáním...",
+          "chunk_id": 3774
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.990.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 2.242775,
+          "snippet": "platí, že je-li obviněný stíhán pro určitou trestnou činnost, nelze z toho automaticky dovozovat důvodnou obavu, že bude tuto trestnou činnost na svobodě opakovat i po zahájení trestního stíhání (nález sp. zn. I. ÚS 2...",
+          "chunk_id": 3403
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.883.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016393,
+          "snippet": "uvádí též nepřesné a zavádějící informace, ze spisu neplyne, že byl stěžovatel odsouzen v Nizozemí či v Německu. Začtvrté, soudy ignorovaly též to, že si stěžovatel zajistil v Česku nájemní bydlení, nezvažovaly dostat...",
+          "chunk_id": 2929
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.192.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.016393,
+          "snippet": "ve vztahu k vazbě předstižné opakuje, že nelze bez dalšího dovozovat důvodnou obavu, že obviněný bude trestnou činnost opakovat čistě z faktu, že ji již v minulosti páchal, či že je pro ni trestně stíhán (srov. nálezy...",
+          "chunk_id": 1912
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.995.26.1",
+          "decision_date": "3. 6. 2026",
+          "score": 0.016129,
+          "snippet": "sp. zn. IV. ÚS 161/04 ). 11. Vazba představuje významný zásah do života obviněného, neboť jej izoluje od rodinného a sociálního prostředí a nezřídka jej stigmatizuje, což má pro něj závažné sociální, psychologické a e...",
+          "chunk_id": 594
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.449.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.016129,
+          "snippet": "vydána rozhodnutí napadená ústavní stížností. Ústavní soud je k jejímu projednání příslušný. Stěžovatel je právně zastoupen v souladu s § 29 až 31 zákona o Ústavním soudu. Stěžovatel vyčerpal všechny zákonné procesní ...",
+          "chunk_id": 2475
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.192.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.015873,
+          "snippet": "doplnění ústavní stížnosti pak upozorňuje, že proti nepravomocně uloženému trestu sedmi let odnětí svobody se státní zástupce v jeho neprospěch neodvolal, a proto mu nehrozí vyšší trest. 6. Vrchní soud ve svém vyjádře...",
+          "chunk_id": 1910
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "trestní řízení",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.3452.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.61916,
+          "snippet": "trestního řízení volně intervenuje a supluje úvahy příslušných orgánů ve všech věcech, které spadají do působnosti práva trestního (nález ze dne 3. 9. 2025 sp. zn. IV. ÚS 2582/24 , bod 42). Tato teze platí o to silněj...",
+          "chunk_id": 2940
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.566.26.1",
+          "decision_date": "10. 6. 2026",
+          "score": 0.609219,
+          "snippet": "trestním řízení je zajistit, aby při praktické aplikaci ustanovení trestního řádu, jimiž je upraveno sjednávání a schvalování dohody o vině a trestu, byly zájmy poškozených (v míře zákonem vyžadované) skutečně chráněn...",
+          "chunk_id": 408
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.3579.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.605844,
+          "snippet": "řízení, a zda tohoto účelu nelze dosáhnout jinak. Ústavnímu soudu nepřísluší zasahovat do takto vymezené pravomoci orgánů činných v trestním řízení, pokud jejich postupem nedošlo k porušení základních práv a svobod (s...",
+          "chunk_id": 3429
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1196.26.1",
+          "decision_date": "13. 5. 2026",
+          "score": 0.593407,
+          "snippet": "řízení, ve kterém se rozhoduje o uložení penále, je řízením s typově zvýšeným významem předmětu řízení, neboť tato otázka nebyla dosud v judikatuře dovolacího soudu vyřešena. Dospěl přitom k závěru, že takové řízení, ...",
+          "chunk_id": 2226
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1149.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.584652,
+          "snippet": "porušení ústavně zaručeného základního práva nebo svobody (srov. např. nález ze dne 25. 1. 1995 sp. zn. II. ÚS 45/94 ). Pochybení ústavněprávního rozměru přitom Ústavní soud v dané věci neshledal. 6. Předně je nutné z...",
+          "chunk_id": 916
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 2.158732,
+          "snippet": "nařízením hlavního líčení, před zahájením jeho výslechu atd.). Po provedení jednotlivého důkazu má obviněný opět prostor, aby se vyjádřil. 22. Trestní řízení ovládá princip presumpce neviny. Ten zapovídá, aby orgány č...",
+          "chunk_id": 3872
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1898.25.1",
+          "decision_date": "20. 5. 2026",
+          "score": 2.146474,
+          "snippet": "rozh. tr., body 16-19 a bod 23). 28. Ani členění řízení do jednotlivých fází (stádií) nic nemění na jeho civilní povaze, ač se v první fázi přiměřeně použije trestní řád (srov. § 89 a § 89a zákona o soudnictví ve věce...",
+          "chunk_id": 1639
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 2.139872,
+          "snippet": "18. Nález IV. ÚS 1247/20 není přenositelný na trestní věci. Nález řešil civilní spor. Trestní řízení a civilní řízení se řídí odlišnými procesními principy i pravidly dokazování. Přistoupit na stěžovatelův požadavek p...",
+          "chunk_id": 3870
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.990.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 2.115584,
+          "snippet": "stěžovatele, na rozdíl od dalších dvou obviněných, doposud nebyly zaznamenány pokusy či tendence směřující k ovlivňování svědků, trestní soudy uvedly vícero okolností, které v případě stěžovatele důvodnou obavu podle ...",
+          "chunk_id": 3404
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.921.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 2.069799,
+          "snippet": "700 Kč (náklady konzervace rodinného domu dotčeného zajištěním majetku), 950 000 Kč (ušlý výdělek) a 50 000 Kč (zadostiučinění za druhé trestní stíhání). Ve zbývajícím rozsahu žalobu zamítl. Dále zamítl nárok stěžovat...",
+          "chunk_id": 2593
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.3452.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016393,
+          "snippet": "trestního řízení volně intervenuje a supluje úvahy příslušných orgánů ve všech věcech, které spadají do působnosti práva trestního (nález ze dne 3. 9. 2025 sp. zn. IV. ÚS 2582/24 , bod 42). Tato teze platí o to silněj...",
+          "chunk_id": 2940
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 0.016393,
+          "snippet": "nařízením hlavního líčení, před zahájením jeho výslechu atd.). Po provedení jednotlivého důkazu má obviněný opět prostor, aby se vyjádřil. 22. Trestní řízení ovládá princip presumpce neviny. Ten zapovídá, aby orgány č...",
+          "chunk_id": 3872
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.566.26.1",
+          "decision_date": "10. 6. 2026",
+          "score": 0.016129,
+          "snippet": "trestním řízení je zajistit, aby při praktické aplikaci ustanovení trestního řádu, jimiž je upraveno sjednávání a schvalování dohody o vině a trestu, byly zájmy poškozených (v míře zákonem vyžadované) skutečně chráněn...",
+          "chunk_id": 408
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1898.25.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.016129,
+          "snippet": "rozh. tr., body 16-19 a bod 23). 28. Ani členění řízení do jednotlivých fází (stádií) nic nemění na jeho civilní povaze, ač se v první fázi přiměřeně použije trestní řád (srov. § 89 a § 89a zákona o soudnictví ve věce...",
+          "chunk_id": 1639
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.3579.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.015873,
+          "snippet": "řízení, a zda tohoto účelu nelze dosáhnout jinak. Ústavnímu soudu nepřísluší zasahovat do takto vymezené pravomoci orgánů činných v trestním řízení, pokud jejich postupem nedošlo k porušení základních práv a svobod (s...",
+          "chunk_id": 3429
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "civilní řízení",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.899.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.563638,
+          "snippet": "kterých by v řízení, z něhož příslušné rozhodnutí cizozemského soudu vzešlo, byla porušena základní práva účastníka řízení. Rozpor s veřejným pořádkem totiž musí být takového stupně, že porušuje základní principy práv...",
+          "chunk_id": 3279
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.897.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.551072,
+          "snippet": "nedošlo. 17. V prvé řadě třeba uvést, že není porušením práva na řádný proces, jestliže obecné soudy nebudují vlastní závěry na podrobné oponentuře (a vyvracení) jednotlivě vznesených námitek, pakliže proti nim staví ...",
+          "chunk_id": 2914
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 0.548506,
+          "snippet": "18. Nález IV. ÚS 1247/20 není přenositelný na trestní věci. Nález řešil civilní spor. Trestní řízení a civilní řízení se řídí odlišnými procesními principy i pravidly dokazování. Přistoupit na stěžovatelův požadavek p...",
+          "chunk_id": 3870
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.2752.24.1",
+          "decision_date": "13. 5. 2026",
+          "score": 0.543137,
+          "snippet": "nepřípustně některé z ústavně zaručených základních práv či svobod nebo jsou v rozporu s požadavky řádného procesu či s obecně sdílenými zásadami spravedlnosti. Postup v soudním řízení, zjišťování a hodnocení skutkové...",
+          "chunk_id": 2181
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.899.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.541617,
+          "snippet": "řízení podle kritérií pro neuznání rozhodnutí stanovených nařízením Brusel I bis, se tak míjí s průběhem řízení. 23. Civilní soudy po vymezení hypotézy právní normy následně v souladu s ústavními požadavky zkoumaly, z...",
+          "chunk_id": 3281
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.897.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 3.533663,
+          "snippet": "ústavními požadavky vysvětlily, že vadou není ani neprojednání stěžovatelčina protinávrhu, neboť britský soud vyšel z toho, že za ukončení smlouvy je odpovědná stěžovatelka. Tento nárok je nadto možné případně projedn...",
+          "chunk_id": 2917
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.899.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 3.431538,
+          "snippet": "sankční prvek, neboť výsledek soudního řízení závisel na vyřešení odborných otázek soudními znalci. Nelze proto ani tvrdit, že by tento výsledek měl být v extrémním rozporu s obsahem důkazů (srov. bod 55 usnesení Nejv...",
+          "chunk_id": 3282
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.899.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 3.131938,
+          "snippet": "civilní soudy pochybily při dokazování či opominuly nějaké důkazy (dohoda mezi společnostmi a informace od britského finančního úřadu). Civilní soudy totiž vysvětlily, že není prostor k novému projednání věci, předklá...",
+          "chunk_id": 3283
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.897.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 3.105646,
+          "snippet": "projednání věci, předkládání nových skutkových tvrzení a k tvorbě nových, právní názor stěžovatelky podporujících závěrů, neboť by tím civilní soudy věcně přezkoumaly rozhodnutí, tj. konkrétně přehodnotily skutkové a ...",
+          "chunk_id": 2918
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.899.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 3.026826,
+          "snippet": "Nejvyšší soud i krajský soud srozumitelně uvedly své úvahy, které je vedly k jejich rozhodnutím, tyto úvahy vyvracejí argumentaci stěžovatelky. 22. Není pravda, že by civilní soudy nevymezily obsah pojmu veřejný pořád...",
+          "chunk_id": 3280
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.899.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016393,
+          "snippet": "kterých by v řízení, z něhož příslušné rozhodnutí cizozemského soudu vzešlo, byla porušena základní práva účastníka řízení. Rozpor s veřejným pořádkem totiž musí být takového stupně, že porušuje základní principy práv...",
+          "chunk_id": 3279
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.897.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016393,
+          "snippet": "ústavními požadavky vysvětlily, že vadou není ani neprojednání stěžovatelčina protinávrhu, neboť britský soud vyšel z toho, že za ukončení smlouvy je odpovědná stěžovatelka. Tento nárok je nadto možné případně projedn...",
+          "chunk_id": 2917
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.897.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016129,
+          "snippet": "nedošlo. 17. V prvé řadě třeba uvést, že není porušením práva na řádný proces, jestliže obecné soudy nebudují vlastní závěry na podrobné oponentuře (a vyvracení) jednotlivě vznesených námitek, pakliže proti nim staví ...",
+          "chunk_id": 2914
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.899.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016129,
+          "snippet": "sankční prvek, neboť výsledek soudního řízení závisel na vyřešení odborných otázek soudními znalci. Nelze proto ani tvrdit, že by tento výsledek měl být v extrémním rozporu s obsahem důkazů (srov. bod 55 usnesení Nejv...",
+          "chunk_id": 3282
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+          "decision_date": "23. 4. 2026",
+          "score": 0.015873,
+          "snippet": "18. Nález IV. ÚS 1247/20 není přenositelný na trestní věci. Nález řešil civilní spor. Trestní řízení a civilní řízení se řídí odlišnými procesními principy i pravidly dokazování. Přistoupit na stěžovatelův požadavek p...",
+          "chunk_id": 3870
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "ústavní stížnost",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.657.26.2",
+          "decision_date": "22. 4. 2026",
+          "score": 0.660455,
+          "snippet": "věci a předchozí průběh řízení 1. Stěžovatelé v ústavní stížnosti navrhují, aby Ústavní soud zrušil v záhlaví označené usnesení Vrchního soudu v Praze (\"vrchní soud\"), nebo jeho výrok nařizující projednání v jiném slo...",
+          "chunk_id": 4033
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.651.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.651104,
+          "snippet": "na náhradě nákladů řízení před soudy obou stupňů částku 341 304 Kč (výrok III.). Výrokem IV. a V. rozhodl o nákladech řízení státu. 3. Stěžovatel ústavní stížností napadá výrok III. rozsudku městského soudu o náhradě ...",
+          "chunk_id": 831
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1145.26.1",
+          "decision_date": "7. 5. 2026",
+          "score": 0.650649,
+          "snippet": "zprostit ustanoveného advokáta povinnosti obhajovat navrhovatele a novému obhájci ustanovil přiměřenou lhůtu k nastudování věci; v souvislosti s tím požaduje předběžným opatřením uložit soudu, aby odročil hlavní líčen...",
+          "chunk_id": 2392
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.614.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.642765,
+          "snippet": "NALUS - databáze rozhodnutí Ústavního soudu II.ÚS 614/26 ze dne 20. 5. 2026 Česká republika USNESENÍ Ústavního soudu Ústavní soud rozhodl v senátu složeném z předsedy Jiřího Přibáně (soudce zpravodaje) a soudců Martin...",
+          "chunk_id": 1662
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3643.25.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.641545,
+          "snippet": "nabyla směnou za pozemky, kterých se vedlejší účastnice a) v jiném soudním řízení o vydání již domohla. 8. Zatřetí, stěžovatel také napadá závěry obecných soudů tím, že brojí proti jejich závěru o vlastnictví pozemků ...",
+          "chunk_id": 2742
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1218.26.1",
+          "decision_date": "14. 5. 2026",
+          "score": 1.017704,
+          "snippet": "ÚS 2900/25 , bod 3). 8. Soudce zpravodaj shrnuje, že odmítl stěžovatelovu ústavní stížnost podle § 43 odst. 1 písm. e) ve spojení s § 75 odst. 1 zákona o Ústavním soudu. Neshledal přitom důvod pro aplikaci § 75 odst. ...",
+          "chunk_id": 1998
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1074.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 1.011174,
+          "snippet": "dvouměsíční lhůta k podání ústavní stížnosti již uplynula a ústavní stížnost proti usnesení krajského soudu je proto opožděná. 17. Ústavní soud uzavírá, že přezkoumal ústavní stížnost z hlediska kompetencí daných mu Ú...",
+          "chunk_id": 2763
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1138.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.994327,
+          "snippet": "soud napadeným usnesením rozhodl. 9. Podle § 72 odst. 1 písm. a) zákona o Ústavním soudu může ústavní stížnost podat pouze ten, kdo byl účastníkem řízení, z něhož vzešlo rozhodnutí napadené ústavní stížností. Ústavní ...",
+          "chunk_id": 3023
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1332.26.1",
+          "decision_date": "29. 5. 2026",
+          "score": 0.993505,
+          "snippet": "shrnuje, že odmítl stěžovatelčinu ústavní stížnost podle § 43 odst. 1 písm. e) ve spojení s § 75 odst. 1 zákona o Ústavním soudu. Neshledal přitom důvod pro aplikaci § 75 odst. 2 písm. a) téhož zákona. 7. Ústavní soud...",
+          "chunk_id": 722
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1193.26.1",
+          "decision_date": "18. 5. 2026",
+          "score": 0.988605,
+          "snippet": "podat komunální ústavní stížnost podle čl. 87 odst. 1 písm. c) Ústavy a § 72 odst. 1 písm. b) zákona o Ústavním soudu. Jak již bylo řečeno, ve svém návrhu však výslovně uvedl, že podává obecnou ústavní stížnost, a ted...",
+          "chunk_id": 1823
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.657.26.2",
+          "decision_date": "22. 4. 2026",
+          "score": 0.016393,
+          "snippet": "věci a předchozí průběh řízení 1. Stěžovatelé v ústavní stížnosti navrhují, aby Ústavní soud zrušil v záhlaví označené usnesení Vrchního soudu v Praze (\"vrchní soud\"), nebo jeho výrok nařizující projednání v jiném slo...",
+          "chunk_id": 4033
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1218.26.1",
+          "decision_date": "14. 5. 2026",
+          "score": 0.016393,
+          "snippet": "ÚS 2900/25 , bod 3). 8. Soudce zpravodaj shrnuje, že odmítl stěžovatelovu ústavní stížnost podle § 43 odst. 1 písm. e) ve spojení s § 75 odst. 1 zákona o Ústavním soudu. Neshledal přitom důvod pro aplikaci § 75 odst. ...",
+          "chunk_id": 1998
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.651.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.016129,
+          "snippet": "na náhradě nákladů řízení před soudy obou stupňů částku 341 304 Kč (výrok III.). Výrokem IV. a V. rozhodl o nákladech řízení státu. 3. Stěžovatel ústavní stížností napadá výrok III. rozsudku městského soudu o náhradě ...",
+          "chunk_id": 831
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1074.26.1",
+          "decision_date": "6. 5. 2026",
+          "score": 0.016129,
+          "snippet": "dvouměsíční lhůta k podání ústavní stížnosti již uplynula a ústavní stížnost proti usnesení krajského soudu je proto opožděná. 17. Ústavní soud uzavírá, že přezkoumal ústavní stížnost z hlediska kompetencí daných mu Ú...",
+          "chunk_id": 2763
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.1145.26.1",
+          "decision_date": "7. 5. 2026",
+          "score": 0.015873,
+          "snippet": "zprostit ustanoveného advokáta povinnosti obhajovat navrhovatele a novému obhájci ustanovil přiměřenou lhůtu k nastudování věci; v souvislosti s tím požaduje předběžným opatřením uložit soudu, aby odročil hlavní líčen...",
+          "chunk_id": 2392
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "proporcionalita",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1002.26.2",
+          "decision_date": "20. 5. 2026",
+          "score": 0.492816,
+          "snippet": "výnosu z trestné činnosti ve výši 38 milionů Kč po provedených korekcích. Stížnostní soud tak zjevně provedl přezkum proporcionality zajištění a jeho rozsah přizpůsobil dosavadním skutkovým zjištěním. Nelze proto uzav...",
+          "chunk_id": 1515
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1949.25.1",
+          "decision_date": "19. 5. 2026",
+          "score": 0.468248,
+          "snippet": "pozemků v RÚIAN a v katastru nemovitostí. Změna územního plánu toliko odrážela skutečnost, že pozemky stěžovatelky již nebyly zastavěnými stavebními pozemky a nesplňovaly ani žádné jiné znaky pro zařazení do zastavěné...",
+          "chunk_id": 1795
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.3707.25.1",
+          "decision_date": "28. 4. 2026",
+          "score": 0.465097,
+          "snippet": "ze dne 25. 9. 2007 sp. zn. Pl. ÚS 85/06 nebo nález ze dne 14. 5. 2018 sp. zn. I. ÚS 2502/17 ). Z napadených rozhodnutí přítomnost kvalifikované vady nevyplývá. Obecné soudy srozumitelně vysvětlily, z jakých důvodů roz...",
+          "chunk_id": 3641
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.895.26.1",
+          "decision_date": "22. 5. 2026",
+          "score": 0.46406,
+          "snippet": "sankci, prostředek psychického zlomení procesního odporu stěžovatele a jeho exemplární potrestání. Stěžovatel přitom měl k odmítnutí předání nezletilých řadu důvodů, které průběžně dokládal a obracel se na veřejné org...",
+          "chunk_id": 1236
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.709.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.45903,
+          "snippet": "sp. zn. III. ÚS 309/16 ), přičemž ochranu soukromí nelze oddělit od ochrany důstojnosti. S odkazem na judikaturu Ústavního soudu namítá, že obecné soudy při svém rozhodování opomněly princip proporcionality, pokud má ...",
+          "chunk_id": 1435
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1002.26.2",
+          "decision_date": "20. 5. 2026",
+          "score": 3.413783,
+          "snippet": "rozhodnutí jako celek obstojí z hlediska ústavních požadavků kladených na použití majetkových zajišťovacích institutů. Důvody zajištění byly konkretizovány, jejich proporcionalita byla stížnostním soudem přezkoumána a...",
+          "chunk_id": 1516
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3190.25.1",
+          "decision_date": "10. 6. 2026",
+          "score": 2.575088,
+          "snippet": "se opírají i soudy obou stupňů, je právě existence duální diagnózy (drogová závislost a schizofrenie) klíčovým problémem, který odůvodňuje uložení zabezpečovací detence. Okresní soud s odvoláním na znalce tak na str. ...",
+          "chunk_id": 441
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1002.26.2",
+          "decision_date": "20. 5. 2026",
+          "score": 2.555469,
+          "snippet": "výnosu z trestné činnosti ve výši 38 milionů Kč po provedených korekcích. Stížnostní soud tak zjevně provedl přezkum proporcionality zajištění a jeho rozsah přizpůsobil dosavadním skutkovým zjištěním. Nelze proto uzav...",
+          "chunk_id": 1515
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1901.25.1",
+          "decision_date": "20. 5. 2026",
+          "score": 2.555469,
+          "snippet": "Podle krajského soudu zvolený postup odpovídá účelu institutu územní studie a odpovídá též veškerým očekáváním, jež plynula ze ZÚR JMK (jež byly rovněž podrobeny soudnímu přezkumu) před jejich aktualizací. Podle nich ...",
+          "chunk_id": 1608
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3190.25.1",
+          "decision_date": "10. 6. 2026",
+          "score": 2.486019,
+          "snippet": "Ústavní soud ve vymezeném rozsahu přezkoumal napadená rozhodnutí a dospěl k závěru, že ústavní stížnost je důvodná. V.a. Obecná východiska rozhodování o ústavnosti uložení či prodloužení zabezpečovací detence 21. Inst...",
+          "chunk_id": 432
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1002.26.2",
+          "decision_date": "20. 5. 2026",
+          "score": 0.032266,
+          "snippet": "výnosu z trestné činnosti ve výši 38 milionů Kč po provedených korekcích. Stížnostní soud tak zjevně provedl přezkum proporcionality zajištění a jeho rozsah přizpůsobil dosavadním skutkovým zjištěním. Nelze proto uzav...",
+          "chunk_id": 1515
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1002.26.2",
+          "decision_date": "20. 5. 2026",
+          "score": 0.016393,
+          "snippet": "rozhodnutí jako celek obstojí z hlediska ústavních požadavků kladených na použití majetkových zajišťovacích institutů. Důvody zajištění byly konkretizovány, jejich proporcionalita byla stížnostním soudem přezkoumána a...",
+          "chunk_id": 1516
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1949.25.1",
+          "decision_date": "19. 5. 2026",
+          "score": 0.016129,
+          "snippet": "pozemků v RÚIAN a v katastru nemovitostí. Změna územního plánu toliko odrážela skutečnost, že pozemky stěžovatelky již nebyly zastavěnými stavebními pozemky a nesplňovaly ani žádné jiné znaky pro zařazení do zastavěné...",
+          "chunk_id": 1795
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.3190.25.1",
+          "decision_date": "10. 6. 2026",
+          "score": 0.016129,
+          "snippet": "se opírají i soudy obou stupňů, je právě existence duální diagnózy (drogová závislost a schizofrenie) klíčovým problémem, který odůvodňuje uložení zabezpečovací detence. Okresní soud s odvoláním na znalce tak na str. ...",
+          "chunk_id": 441
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.3707.25.1",
+          "decision_date": "28. 4. 2026",
+          "score": 0.015873,
+          "snippet": "ze dne 25. 9. 2007 sp. zn. Pl. ÚS 85/06 nebo nález ze dne 14. 5. 2018 sp. zn. I. ÚS 2502/17 ). Z napadených rozhodnutí přítomnost kvalifikované vady nevyplývá. Obecné soudy srozumitelně vysvětlily, z jakých důvodů roz...",
+          "chunk_id": 3641
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "retroaktivita",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1089.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.55632,
+          "snippet": "kvalifikovaných vad. 8. V nynější věci Ústavní soud žádné kvalifikované vady neshledal. Výklad nyní vyslovený správními soudy, tedy že se i ve věci stěžovatele vychází z právního stavu v době vydání konstitutivního ro...",
+          "chunk_id": 1578
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.552255,
+          "snippet": "nedochází k zásahu do práva na přístup k voleným a jiným veřejným funkcím za rovných podmínek. VII. c) Právní jistota a princip zákazu zpětné účinnosti právních norem 75. Podle navrhovatelky bylo napadenými ustanovení...",
+          "chunk_id": 3517
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1089.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.551084,
+          "snippet": "nepřípustně odebráno nabyté právo, protože to dosud před povolením záměru nevzniklo. Nadto již existovala uvedená ustálená judikatura, že po změně územního plánu je třeba vycházet z této nové, změněné podoby. Mohlo jí...",
+          "chunk_id": 1576
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.540997,
+          "snippet": "právní následky pro minulost, v minulosti nastalé skutečnosti však právně kvalifikuje jako podmínku budoucího právního následku nebo pro budoucnost modifikuje právní následky založené podle dřívějších předpisů (srov. ...",
+          "chunk_id": 3518
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.534489,
+          "snippet": "změna pravidel pro odměňování tak má ve vztahu k uvedeným členům zastupitelstev charakter nepravé retroaktivity. 79. Nepravá retroaktivita je obecně přípustná a výjimečné okolnosti, proč by tomu tak nemělo v posuzovan...",
+          "chunk_id": 3519
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1089.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 3.868282,
+          "snippet": "kvalifikovaných vad. 8. V nynější věci Ústavní soud žádné kvalifikované vady neshledal. Výklad nyní vyslovený správními soudy, tedy že se i ve věci stěžovatele vychází z právního stavu v době vydání konstitutivního ro...",
+          "chunk_id": 1578
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 3.847295,
+          "snippet": "právní následky pro minulost, v minulosti nastalé skutečnosti však právně kvalifikuje jako podmínku budoucího právního následku nebo pro budoucnost modifikuje právní následky založené podle dřívějších předpisů (srov. ...",
+          "chunk_id": 3518
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1089.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 2.71512,
+          "snippet": "nepřípustně odebráno nabyté právo, protože to dosud před povolením záměru nevzniklo. Nadto již existovala uvedená ustálená judikatura, že po změně územního plánu je třeba vycházet z této nové, změněné podoby. Mohlo jí...",
+          "chunk_id": 1576
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 2.660784,
+          "snippet": "změna pravidel pro odměňování tak má ve vztahu k uvedeným členům zastupitelstev charakter nepravé retroaktivity. 79. Nepravá retroaktivita je obecně přípustná a výjimečné okolnosti, proč by tomu tak nemělo v posuzovan...",
+          "chunk_id": 3519
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1067.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.0,
+          "snippet": "NALUS - databáze rozhodnutí Ústavního soudu II.ÚS 1067/26 ze dne 20. 5. 2026 Česká republika USNESENÍ Ústavního soudu Ústavní soud rozhodl v senátu složeném z předsedy Pavla Šámala, soudkyně zpravodajky Veroniky Křesť...",
+          "chunk_id": 1356
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1089.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.032787,
+          "snippet": "kvalifikovaných vad. 8. V nynější věci Ústavní soud žádné kvalifikované vady neshledal. Výklad nyní vyslovený správními soudy, tedy že se i ve věci stěžovatele vychází z právního stavu v době vydání konstitutivního ro...",
+          "chunk_id": 1578
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.031754,
+          "snippet": "právní následky pro minulost, v minulosti nastalé skutečnosti však právně kvalifikuje jako podmínku budoucího právního následku nebo pro budoucnost modifikuje právní následky založené podle dřívějších předpisů (srov. ...",
+          "chunk_id": 3518
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1089.26.1",
+          "decision_date": "20. 5. 2026",
+          "score": 0.031746,
+          "snippet": "nepřípustně odebráno nabyté právo, protože to dosud před povolením záměru nevzniklo. Nadto již existovala uvedená ustálená judikatura, že po změně územního plánu je třeba vycházet z této nové, změněné podoby. Mohlo jí...",
+          "chunk_id": 1576
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.03101,
+          "snippet": "změna pravidel pro odměňování tak má ve vztahu k uvedeným členům zastupitelstev charakter nepravé retroaktivity. 79. Nepravá retroaktivita je obecně přípustná a výjimečné okolnosti, proč by tomu tak nemělo v posuzovan...",
+          "chunk_id": 3519
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016129,
+          "snippet": "nedochází k zásahu do práva na přístup k voleným a jiným veřejným funkcím za rovných podmínek. VII. c) Právní jistota a princip zákazu zpětné účinnosti právních norem 75. Podle navrhovatelky bylo napadenými ustanovení...",
+          "chunk_id": 3517
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "semantic_or_weak_keyword_overlap_review_needed"
+    },
+    {
+      "query": "legitimní očekávání",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.39.25.1",
+          "decision_date": "24. 6. 2026",
+          "score": 0.638147,
+          "snippet": "očekávání je legitimní pouze tehdy, bylo-li založeno zákonným ustanovením nebo právním aktem vztahujícím se k dotčenému majetkovému zájmu (nález sp. zn. Pl. ÚS 21/21 , bod 96). 77. K těmto závěrům se Ústavní soud přih...",
+          "chunk_id": 74
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.263.26.3",
+          "decision_date": "13. 5. 2026",
+          "score": 0.590004,
+          "snippet": "legitimního očekávání podle čl. 11 odst. 1 Listiny [srov. např. nálezy ze dne 8. 3. 2023 sp. zn. I. ÚS 3281/22 (N 37/117 SbNU 45), ze dne 13. 12. 2023 sp. zn. III. ÚS 2040/22 (N 185/121 SbNU 290), ze dne 10. 4. 2024 s...",
+          "chunk_id": 2380
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1100.26.1",
+          "decision_date": "21. 5. 2026",
+          "score": 0.586143,
+          "snippet": "legitimního očekávání vzniklého jednáním vedlejší účastnice, toto je vyvráceno jednoznačným a podloženým závěrem obecných soudů o tom, že si stěžovatel musel být od počátku vědom, že není vlastníkem žalovaných pozemků...",
+          "chunk_id": 1295
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.1106.26.1",
+          "decision_date": "27. 5. 2026",
+          "score": 0.551959,
+          "snippet": "pochybení. 12. Ústavní soud nemůže přisvědčit námitce stěžovatele, že soudy nejednaly v souladu s principem legitimního očekávání a \"tuzemským právním řádem\", neboť nesprávně aplikovaly vybraná ustanovení zákonů v jeh...",
+          "chunk_id": 910
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.18.25.1",
+          "decision_date": "24. 6. 2026",
+          "score": 0.542766,
+          "snippet": "přiměřené v užším smyslu. Vládou provedené srovnání s § 66 odst. 1 písm. c) správního řádu je nepřiléhavé, neboť toto ustanovení sleduje legitimní cíl hospodárnosti správního řízení. Stěží lze vést řízení o žádosti, k...",
+          "chunk_id": 107
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 5.37026,
+          "snippet": "právní následky pro minulost, v minulosti nastalé skutečnosti však právně kvalifikuje jako podmínku budoucího právního následku nebo pro budoucnost modifikuje právní následky založené podle dřívějších předpisů (srov. ...",
+          "chunk_id": 3518
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.778.26.1",
+          "decision_date": "14. 5. 2026",
+          "score": 4.757788,
+          "snippet": "jednou z procesně obhajitelných variant, ale výkladem, který je správný a obecně uplatnitelný. Zatřetí, napadené rozhodnutí neodporuje požadavkům těchto nálezů na řádné odůvodnění, legitimní očekávání a individuální p...",
+          "chunk_id": 2074
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 4.647326,
+          "snippet": "již dříve přezkoumával ústavnost souběhu funkcí v samosprávě s členstvím v zákonodárném či vládním sboru. Podle navrhovatelky Ústavní soud také výslovně zdůraznil, že právní úpravu shledává za ústavně přijatelnou s oh...",
+          "chunk_id": 3492
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1344.26.1",
+          "decision_date": "2. 6. 2026",
+          "score": 4.40876,
+          "snippet": "je z pohledu zásady právní jistoty a legitimního očekávání rozdílná soudní praxe nežádoucím jevem, nevyplývá z těchto zásad absolutní nemožnost změny přístupu soudu (srov. nález sp. zn. I. ÚS 3755/17 ze dne 15. 8. 201...",
+          "chunk_id": 692
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.778.26.1",
+          "decision_date": "14. 5. 2026",
+          "score": 4.098109,
+          "snippet": "nelze chápat jako obecné potvrzení správnosti použití § 9 advokátního tarifu v řízeních o určení dědického práva. Rozhodnutí krajského soudu navíc odporuje požadavkům těchto nálezů na řádné odůvodnění, legitimní očeká...",
+          "chunk_id": 2070
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.39.25.1",
+          "decision_date": "24. 6. 2026",
+          "score": 0.016393,
+          "snippet": "očekávání je legitimní pouze tehdy, bylo-li založeno zákonným ustanovením nebo právním aktem vztahujícím se k dotčenému majetkovému zájmu (nález sp. zn. Pl. ÚS 21/21 , bod 96). 77. K těmto závěrům se Ústavní soud přih...",
+          "chunk_id": 74
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:Pl.US.46.25.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016393,
+          "snippet": "právní následky pro minulost, v minulosti nastalé skutečnosti však právně kvalifikuje jako podmínku budoucího právního následku nebo pro budoucnost modifikuje právní následky založené podle dřívějších předpisů (srov. ...",
+          "chunk_id": 3518
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.263.26.3",
+          "decision_date": "13. 5. 2026",
+          "score": 0.016129,
+          "snippet": "legitimního očekávání podle čl. 11 odst. 1 Listiny [srov. např. nálezy ze dne 8. 3. 2023 sp. zn. I. ÚS 3281/22 (N 37/117 SbNU 45), ze dne 13. 12. 2023 sp. zn. III. ÚS 2040/22 (N 185/121 SbNU 290), ze dne 10. 4. 2024 s...",
+          "chunk_id": 2380
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.778.26.1",
+          "decision_date": "14. 5. 2026",
+          "score": 0.016129,
+          "snippet": "jednou z procesně obhajitelných variant, ale výkladem, který je správný a obecně uplatnitelný. Zatřetí, napadené rozhodnutí neodporuje požadavkům těchto nálezů na řádné odůvodnění, legitimní očekávání a individuální p...",
+          "chunk_id": 2074
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1100.26.1",
+          "decision_date": "21. 5. 2026",
+          "score": 0.015873,
+          "snippet": "legitimního očekávání vzniklého jednáním vedlejší účastnice, toto je vyvráceno jednoznačným a podloženým závěrem obecných soudů o tom, že si stěžovatel musel být od počátku vědom, že není vlastníkem žalovaných pozemků...",
+          "chunk_id": 1295
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    },
+    {
+      "query": "právo na účinný prostředek nápravy",
+      "top_k": 5,
+      "collection": "nalus_us_bge_m3_pilot_20260708",
+      "dense_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1055.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.59516,
+          "snippet": "efektivní prostředek ochrany, od jehož vyřízení by bylo možné ve smyslu § 72 odst. 3 zákona o Ústavním soudu odvíjet lhůtu k podání ústavní stížnosti. Zejména tak tomu nebude u tzv. vnitřního dohledu podle § 12e zákon...",
+          "chunk_id": 1902
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1038.26.1",
+          "decision_date": "17. 6. 2026",
+          "score": 0.588468,
+          "snippet": "hodné, pro které by stěžovatelka nemusela všechny dostupné procesní prostředky vyčerpat, tyto však neshledal. 11. K odvolání stěžovatelky Městský soud v Praze napadeným rozsudkem rozsudek obvodního soudu potvrdil. Sou...",
+          "chunk_id": 239
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1038.26.1",
+          "decision_date": "17. 6. 2026",
+          "score": 0.579533,
+          "snippet": "čl. 36 odst. 3 Listiny může vzniknout odpovědnost státu za škodu způsobenou nezákonným opatřením obecné povahy, přestože toto opatření nebylo formálně zrušeno nebo změněno, a to za předpokladu, že stěžovatelé nezákonn...",
+          "chunk_id": 255
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1038.26.1",
+          "decision_date": "17. 6. 2026",
+          "score": 0.565491,
+          "snippet": "řízení, ale nezákonným mimořádným opatřením bylo o jejích právech a povinnostech rozhodováno, a současně v zákonem stanovené lhůtě využila možnost podat žalobu na zrušení mimořádného opatření pro nezákonnost. Konkrétn...",
+          "chunk_id": 254
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1038.26.1",
+          "decision_date": "17. 6. 2026",
+          "score": 0.56047,
+          "snippet": "opravného prostředku nebylo reálně možné ani takový prostředek podat, natož očekávat jakýkoliv faktický výsledek takové žaloby. Pandemická omezení měla dopad i na soudy a jiné složky státní správy, přičemž občané a po...",
+          "chunk_id": 257
+        }
+      ],
+      "bm25_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.307.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 6.69912,
+          "snippet": "posouzení věci bezpředmětné. II. Argumentace stěžovatele 7. Stěžovatel podal ústavní stížnost proti rozhodnutí městského a Nejvyššího soudu. Tato rozhodnutí podle něj porušují jeho právo na vlastnictví majetku, na spr...",
+          "chunk_id": 3350
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1055.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 6.234852,
+          "snippet": "efektivní prostředek ochrany, od jehož vyřízení by bylo možné ve smyslu § 72 odst. 3 zákona o Ústavním soudu odvíjet lhůtu k podání ústavní stížnosti. Zejména tak tomu nebude u tzv. vnitřního dohledu podle § 12e zákon...",
+          "chunk_id": 1902
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.896.26.1",
+          "decision_date": "22. 4. 2026",
+          "score": 4.404137,
+          "snippet": "představuje krajní prostředek k ochraně práva nastupující až tehdy, když náprava před ostatními orgány veřejné moci již není (standardním postupem) možná. 12. Napadeným usnesením státní zástupkyně městského státního z...",
+          "chunk_id": 3958
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:4.US.566.26.1",
+          "decision_date": "10. 6. 2026",
+          "score": 4.273958,
+          "snippet": "zefektivnění, které je ovšem stejně jako v jeho standardní podobě ukončeno pravomocným rozhodnutím o vině a trestu obviněného (viz nález sp. zn. IV. ÚS 405/24 , cit výše). 26. Ačkoliv je dohoda o vině a trestu primárn...",
+          "chunk_id": 407
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.939.26.1",
+          "decision_date": "13. 5. 2026",
+          "score": 4.005488,
+          "snippet": "podala stěžovatelka kasační stížnost, kterou Nejvyšší správní soud napadeným rozsudkem zamítl. Zdůraznil, že stěžovatelka nenapadla samotné rozhodnutí o zařazení do 7. tarifní třídy, městský soud proto nemohl rozhodov...",
+          "chunk_id": 2122
+        }
+      ],
+      "hybrid_results": [
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:1.US.1055.26.1",
+          "decision_date": "15. 5. 2026",
+          "score": 0.032522,
+          "snippet": "efektivní prostředek ochrany, od jehož vyřízení by bylo možné ve smyslu § 72 odst. 3 zákona o Ústavním soudu odvíjet lhůtu k podání ústavní stížnosti. Zejména tak tomu nebude u tzv. vnitřního dohledu podle § 12e zákon...",
+          "chunk_id": 1902
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:3.US.307.26.1",
+          "decision_date": "29. 4. 2026",
+          "score": 0.016393,
+          "snippet": "posouzení věci bezpředmětné. II. Argumentace stěžovatele 7. Stěžovatel podal ústavní stížnost proti rozhodnutí městského a Nejvyššího soudu. Tato rozhodnutí podle něj porušují jeho právo na vlastnictví majetku, na spr...",
+          "chunk_id": 3350
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1038.26.1",
+          "decision_date": "17. 6. 2026",
+          "score": 0.016129,
+          "snippet": "hodné, pro které by stěžovatelka nemusela všechny dostupné procesní prostředky vyčerpat, tyto však neshledal. 11. K odvolání stěžovatelky Městský soud v Praze napadeným rozsudkem rozsudek obvodního soudu potvrdil. Sou...",
+          "chunk_id": 239
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.1038.26.1",
+          "decision_date": "17. 6. 2026",
+          "score": 0.015873,
+          "snippet": "čl. 36 odst. 3 Listiny může vzniknout odpovědnost státu za škodu způsobenou nezákonným opatřením obecné povahy, přestože toto opatření nebylo formálně zrušeno nebo změněno, a to za předpokladu, že stěžovatelé nezákonn...",
+          "chunk_id": 255
+        },
+        {
+          "collection": "nalus_us_bge_m3_pilot_20260708",
+          "source_document_id": "ECLI:CZ:US:2026:2.US.896.26.1",
+          "decision_date": "22. 4. 2026",
+          "score": 0.015873,
+          "snippet": "představuje krajní prostředek k ochraně práva nastupující až tehdy, když náprava před ostatními orgány veřejné moci již není (standardním postupem) možná. 12. Napadeným usnesením státní zástupkyně městského státního z...",
+          "chunk_id": 3958
+        }
+      ],
+      "dense_all_from_smoke_collection": true,
+      "dense_all_from_candidate_collection": true,
+      "all_hits_from_candidate_collection": true,
+      "qualitative_relevance": "plausible_top_hits_keyword_overlap"
+    }
+  ],
+  "warnings": [],
+  "failures": [],
+  "production_api_touched": false,
+  "retrieval_logic_changed": false,
+  "clarification_gate_changed": false,
+  "aliases_touched": false,
+  "stage2_recommendation": "safe_after_review",
+  "dry_run_command": "python scripts/build_usoud_bge_m3_candidate.py --mode pilot --limit 500 --collection-name nalus_us_bge_m3_pilot_20260708 --source-batch batches/year_2026_20260708_124949.json --output-dir artifacts/nalus_update/usoud_bge_m3_pilot_20260708 --dry-run --no-alias-update"
+}

@@ -1,0 +1,16 @@
+{
+  "status": "in_progress",
+  "builder_version": "usoud-bge-m3-guarded-v3",
+  "collection_name": "nalus_us_bge_m3_full_20260708",
+  "source_manifest": "batches/manifest.json",
+  "limit": 0,
+  "chunk_size": 1400,
+  "full_record_batch_size": 50,
+  "total_records": 103488,
+  "expected_chunk_count": 748626,
+  "next_record_index": 0,
+  "next_seq_id": 1,
+  "inserted_point_count": 0,
+  "last_record_identity": null,
+  "updated_at": "2026-07-08T18:54:22Z"
+}

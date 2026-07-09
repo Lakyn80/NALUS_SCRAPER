@@ -1,5 +1,10 @@
 """
-Retrieval service — orchestrates query understanding and hybrid retrieval.
+Legacy retrieval service — orchestrates query understanding and old dense +
+substring keyword retrieval.
+
+Production API retrieval uses HybridBgeM3Retriever with BGE-M3 dense + BM25 + RRF.
+This legacy RetrievalService (dense + substring keyword) is not used by production startup.
+non-production experiments only.
 
 Flow:
   raw query

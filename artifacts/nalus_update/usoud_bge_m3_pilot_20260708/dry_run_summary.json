@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-07-08T15:05:13Z",
+  "builder_version": "usoud-bge-m3-guarded-v2",
+  "script_path": "scripts/build_usoud_bge_m3_candidate.py",
+  "mode": "pilot",
+  "action": "dry-run",
+  "command": "python scripts/build_usoud_bge_m3_candidate.py --mode pilot --limit 500 --collection-name nalus_us_bge_m3_pilot_20260708 --source-batch batches/year_2026_20260708_124949.json --output-dir artifacts/nalus_update/usoud_bge_m3_pilot_20260708 --dry-run --no-alias-update",
+  "input": "batches/year_2026_20260708_124949.json",
+  "collection_name": "nalus_us_bge_m3_pilot_20260708",
+  "limit": 500,
+  "selected_record_count": 500,
+  "generated_chunk_count": 4081,
+  "estimated_qdrant_points": 4081,
+  "estimated_embedding_texts": 4081,
+  "embedding_model": "BAAI/bge-m3",
+  "expected_vector_dimension": 1024,
+  "vector_dimension_validation": "not_run",
+  "qdrant": {
+    "collection_point_count_before": null,
+    "collection_point_count_after": null,
+    "inserted_point_count": 0,
+    "nalus_live_before": 784812,
+    "nalus_live_after": null,
+    "nalus_stable_20260326_before": 784812,
+    "nalus_stable_20260326_after": null,
+    "aliases_before": [
+      {
+        "alias_name": "nalus_live",
+        "collection_name": "nalus_stable_20260326"
+      }
+    ],
+    "aliases_after": [],
+    "nalus_live_target_before": "nalus_stable_20260326",
+    "nalus_live_target_after": null,
+    "aliases_changed": false
+  },
+  "qdrant_write_occurred": false,
+  "payload_metadata_validation": "not_run",
+  "sample_payloads": [],
+  "bm25_status": "not_run",
+  "hybrid_status": "not_run",
+  "smoke_queries": [],
+  "warnings": [],
+  "failures": [],
+  "production_api_touched": false,
+  "retrieval_logic_changed": false,
+  "clarification_gate_changed": false,
+  "aliases_touched": false,
+  "stage2_recommendation": "safe_to_execute_pilot_after_review"
+}

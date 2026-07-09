@@ -143,15 +143,23 @@ def main():
 
     print(f"Saved to {output_path}")
 
-    auto_ingest = _read_bool("NALUS_AUTO_INGEST", True)
+    auto_ingest = _read_bool("NALUS_AUTO_INGEST", False)
     if auto_ingest:
         _run_ingest(output_path, query)
 
 
 def _run_ingest(batch_path: Path, query: str) -> None:
-    """Ingest the freshly scraped batch into Qdrant and update the manifest."""
+    """Legacy dense-only ingest for explicit local/test use."""
+    if not _read_bool("NALUS_ALLOW_LEGACY_AUTO_INGEST", False):
+        print(
+            "[INGEST] refused: NALUS_AUTO_INGEST uses the legacy dense-only ingest path. "
+            "Use the BGE-M3 candidate/build workflow for production retrieval, or set "
+            "NALUS_ALLOW_LEGACY_AUTO_INGEST=1 for an explicit legacy/test run."
+        )
+        return
+
     qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
-    collection_name = os.getenv("QDRANT_COLLECTION_NAME", "nalus")
+    collection_name = os.getenv("QDRANT_COLLECTION_NAME", "legacy_nalus_dense_only")
 
     print(f"[INGEST] connecting to Qdrant at {qdrant_url}")
 

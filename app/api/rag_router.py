@@ -29,10 +29,7 @@ from app.rag.execution.execution_service import ExecutionService
 from app.rag.orchestration.pipeline import RetrievalPipeline
 from app.rag.orchestrator.orchestrator_service import OrchestratorResult, OrchestratorService
 from app.rag.planner.planner_service import MockPlannerLLM, PlannerService
-from app.rag.retrieval.dense_retriever import DenseRetriever
-from app.rag.retrieval.embedder import MockEmbedder
-from app.rag.retrieval.keyword_retriever import KeywordRetriever
-from app.rag.retrieval.retrieval_service import RetrievalService
+from app.rag.retrieval.production_profile import DEFAULT_QDRANT_COLLECTION
 from app.rag.synthesis.synthesis_service import MockSynthesisLLM, SynthesisService
 
 logger = get_logger(__name__)
@@ -116,33 +113,18 @@ _SOURCE_FILTER_ALIASES: dict[str, set[str]] = {
 
 
 def _collection_name() -> str:
-    return os.getenv("QDRANT_COLLECTION_NAME", "nalus")
+    return os.getenv("QDRANT_COLLECTION_NAME", DEFAULT_QDRANT_COLLECTION)
 
 
 def get_pipeline() -> RetrievalPipeline:
     """
-    Default pipeline wired with stub retrievers.
+    Legacy /search endpoint compatibility pipeline.
 
-    Override this dependency in production to inject real Qdrant client
-    and embedder:
-
-        app.dependency_overrides[get_pipeline] = lambda: RetrievalPipeline(
-            RetrievalService(
-                dense=DenseRetriever(client=real_client, collection_name="nalus", embedder=RealEmbedder()),
-                keyword=KeywordRetriever(corpus=loaded_corpus),
-            )
-        )
+    Production retrieval is wired through startup and /query or /retrieve. This
+    fallback intentionally returns no retrieval results instead of using the old
+    substring KeywordRetriever.
     """
-    mock_client = MagicMock()
-    mock_client.search.return_value = []
-    dense = DenseRetriever(
-        client=mock_client,
-        collection_name=_collection_name(),
-        embedder=MockEmbedder(),
-    )
-    keyword = KeywordRetriever(corpus=[])
-    service = RetrievalService(dense=dense, keyword=keyword)
-    return RetrievalPipeline(service)
+    return _EmptyPipeline()
 
 
 def get_answer_service() -> AnswerService:
@@ -152,7 +134,7 @@ def get_answer_service() -> AnswerService:
 def get_orchestrator() -> OrchestratorService:
     """
     Returns the live orchestrator (real Qdrant + corpus) if startup succeeded,
-    otherwise falls back to a stub with keyword-only retrieval.
+    otherwise falls back to a stub with empty retrieval.
     """
     if _live_orchestrator is not None:
         return _live_orchestrator
@@ -172,23 +154,30 @@ def get_orchestrator() -> OrchestratorService:
             detail=detail,
         )
 
-    # Fallback stub (used when Qdrant is not available or in tests)
-    mock_client = MagicMock()
-    mock_client.query_points.return_value = MagicMock(points=[])
-    dense = DenseRetriever(
-        client=mock_client,
-        collection_name=_collection_name(),
-        embedder=MockEmbedder(),
-    )
-    keyword = KeywordRetriever(corpus=[])
-    retrieval = RetrievalService(dense=dense, keyword=keyword)
+    # Fallback stub (used only when strict mode is disabled or in tests).
     return ClarifyingOrchestratorService(
         OrchestratorService(
             planner=PlannerService(llm=MockPlannerLLM()),
-            execution=ExecutionService(retrieval_service=retrieval),
+            execution=ExecutionService(retrieval_service=_EmptyRetrievalService()),
             synthesis=SynthesisService(llm=MockSynthesisLLM()),
         )
     )
+
+
+class _EmptyPipeline:
+    def run(self, query: str, top_k: int = 5):
+        del top_k
+        return MagicMock(query=query, results=[])
+
+
+class _EmptyRetrievalService:
+    def search(self, query: str, top_k: int = 5) -> list:
+        del query, top_k
+        return []
+
+    def search_dense(self, query: str, top_k: int = 5) -> list:
+        del query, top_k
+        return []
 
 
 def _normalize_text(value: Any) -> str | None:

@@ -31,3 +31,8 @@ artifacts/rag_eval/client_longform_v1/winner_qa.md
 artifacts/rag_eval/client_longform_v1/winner_legal_eval.json
 artifacts/rag_eval/client_longform_v1/legal_quality_report.md
 artifacts/nalus_incremental_batches/
+models/
+backend/models/
+storage/rag/bm25/*.sqlite
+storage/rag/bm25/*.sqlite-shm
+storage/rag/bm25/*.sqlite-wal

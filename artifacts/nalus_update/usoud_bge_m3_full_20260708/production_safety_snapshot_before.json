@@ -1,0 +1,12 @@
+{
+  "captured_at": "2026-07-08T18:54:22Z",
+  "nalus_live_point_count": 784812,
+  "nalus_stable_20260326_point_count": 784812,
+  "aliases": [
+    {
+      "alias_name": "nalus_live",
+      "collection_name": "nalus_stable_20260326"
+    }
+  ],
+  "nalus_live_target": "nalus_stable_20260326"
+}

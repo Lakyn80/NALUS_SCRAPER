@@ -79,7 +79,9 @@ Dále jsou v `batches/` starší soubory:
 
 K 2026-04-05 je v kolekci `nalus` **770 776 bodů** (chunků).
 
-Embedovací model: `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` (dim=768, multilingual).
+Embedovací model (produkce): `BAAI/bge-m3` (dim=1024). MPNet je zakázaný.
+
+Legacy kolekce `nalus_live` / `nalus_stable_20260326` (768-dim MPNet) se nepoužívá pro nový RAG stack.
 
 ---
 

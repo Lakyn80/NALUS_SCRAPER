@@ -1,0 +1,25 @@
+{
+  "status": "in_progress",
+  "builder_version": "usoud-bge-m3-guarded-v4",
+  "collection_name": "nalus_us_bge_m3_mvp_5y_20260708",
+  "source_manifest": "batches/manifest.json",
+  "limit": 0,
+  "chunk_size": 1400,
+  "full_record_batch_size": 50,
+  "embedding_batch_size": 16,
+  "ingest_slice": "mvp_5y",
+  "decision_date_filter": {
+    "ingest_slice": "mvp_5y",
+    "years_back": 5,
+    "decision_date_from": "2021-07-08",
+    "decision_date_to": "2026-07-08"
+  },
+  "total_records": 18062,
+  "expected_chunk_count": 155414,
+  "collection_point_count_at_start": 0,
+  "next_record_index": 650,
+  "next_seq_id": 8336,
+  "inserted_point_count": 8335,
+  "last_record_identity": "ECLI:CZ:US:2023:3.US.2698.22.1",
+  "updated_at": "2026-07-09T08:23:13Z"
+}

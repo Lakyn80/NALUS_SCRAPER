@@ -1,8 +1,10 @@
 """
-Standalone Qdrant ingest script.
+Legacy standalone Qdrant ingest script.
 
 Ingests one or more batch JSON files from the batches/ directory into Qdrant.
 Safe to re-run — identical chunks are skipped (idempotent).
+
+This is not the production BGE-M3 dense+BM25+RRF build path.
 
 Usage:
     python scripts/ingest_batch.py                          # ingest all batches/
@@ -34,6 +36,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--url", default="http://localhost:6333", help="Qdrant URL")
     parser.add_argument("--collection", default="nalus", help="Qdrant collection name")
     parser.add_argument("--batch-size", type=int, default=200)
+    parser.add_argument(
+        "--allow-legacy-ingest",
+        action="store_true",
+        help="Explicitly allow this legacy dense-only ingest path.",
+    )
     return parser.parse_args()
 
 
@@ -62,6 +69,14 @@ def _save_manifest(manifest: dict) -> None:
 
 def main() -> int:
     args = _parse_args()
+    if not args.allow_legacy_ingest:
+        print(
+            "[INGEST] refused: scripts/ingest_batch.py is a legacy dense-only path. "
+            "Use the BGE-M3 candidate/build workflow for production retrieval, or pass "
+            "--allow-legacy-ingest for an explicit legacy/test run."
+        )
+        return 2
+
     files = _resolve_files(args.files)
 
     if not files:

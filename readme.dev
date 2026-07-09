@@ -1639,3 +1639,262 @@ s jinym Qdrantem bezicim na hostu.
 2. Konfigurace top_k, threshold, max_tokens pres env
 3. Citace relevantnich chunk IDs / case references primo v odpovedi
 4. Samostatny eval dataset pro rodinne pravo vs ostatni agendy
+
+---
+
+## 2026-07-08 20:15 Europe/Prague — Stage 3 ÚS/NALUS BGE-M3 full candidate (START)
+
+**Co:** Rozšíření `scripts/build_usoud_bge_m3_candidate.py` o guarded `full` režim, testy a Stage 3 dry-run/execute do nové kolekce `nalus_us_bge_m3_full_20260708`.
+
+**Proč:** Stage 1 smoke a Stage 2 pilot prošly; další krok je plný paralelní BGE-M3 candidate ingest bez dotyku produkce.
+
+**Production safety:** Zakázáno psát do `nalus_live`, `nalus_stable_20260326`, měnit aliasy, restartovat API, měnit retrieval/clarification. Pouze nová full candidate kolekce + artefakty v `artifacts/nalus_update/usoud_bge_m3_full_20260708/`.
+
+**Očekávané soubory:** `dry_run_summary.json`, `execute_summary.json`, `retrieval_validation.json`, `production_safety_snapshot_before.json`, `production_safety_snapshot_after.json`, `artifacts/nalus_update/usoud_bge_m3_stage3_full_report.md`.
+
+---
+
+## 2026-07-08 21:27 Europe/Prague — Stage 3 full execute resume/checkpoint (START)
+
+**Co:** Přidání `execute_checkpoint.json` a auto-resume logiky do `scripts/build_usoud_bge_m3_candidate.py` pro full execute (`--resume-full-collection`, bez recreate navazuje na checkpoint).
+
+**Proč:** Full ingest ~748k chunků může trvat hodiny; po přerušení musí běh bezpečně pokračovat od posledního batch checkpointu.
+
+**Production safety:** Beze změny — pouze candidate kolekce `nalus_us_bge_m3_full_20260708`, žádný zápis do `nalus_live` / aliasů.
+
+**Očekávané soubory:** `artifacts/nalus_update/usoud_bge_m3_full_20260708/execute_checkpoint.json` (během běhu), testy v `tests/test_build_usoud_bge_m3_candidate.py`.
+
+---
+
+## 2026-07-08 21:30 Europe/Prague — Stage 3 full execute resume/checkpoint (END)
+
+**Co změněno:** `scripts/build_usoud_bge_m3_candidate.py` — checkpoint `execute_checkpoint.json`, auto-resume při `--execute` bez `--recreate-full-collection`, flag `--resume-full-collection`, validace shody checkpoint↔Qdrant, `_prepare_candidate_collection(resume=True)`; testy rozšířeny (28 passed).
+
+**Příkazy:** `python -m pytest tests/test_build_usoud_bge_m3_candidate.py -q` (28/28 PASS), deploy do Docker API kontejneru.
+
+**Resume chování:**
+- nový běh / recreate → checkpoint od nuly
+- přerušení + restart bez recreate → naváže z `execute_checkpoint.json`
+- částečná kolekce bez checkpointu → bezpečný FAIL (nutný recreate nebo oprava checkpointu)
+
+**Restart execute (po nasazení nového kódu):**
+`docker compose exec -T api python scripts/build_usoud_bge_m3_candidate.py --mode full --limit 0 --collection-name nalus_us_bge_m3_full_20260708 --source-manifest batches/manifest.json --output-dir artifacts/nalus_update/usoud_bge_m3_full_20260708 --execute --no-alias-update`
+(pokračování) nebo s `--recreate-full-collection` pro čistý start.
+
+**Production:** nedotčeno.
+
+---
+
+## 2026-07-08 22:40 Europe/Prague — Stage 3 MVP 5y rolling ingest slice (END)
+
+**Co změněno:** `scripts/build_usoud_bge_m3_candidate.py` v4 — `--years-back`, `--decision-date-from/to`, `--ingest-slice`, `--append-full-slice`; checkpoint validuje slice + datumové okno; nový skript `scripts/run_usoud_bge_m3_mvp_5y.ps1`.
+
+**Proč:** Full 748k na CPU je příliš pomalý pro první MVP — ingest jen rozhodnutí z rolling 5 let, zbytek doplnitelný po slicech.
+
+**Testy:** `python -m pytest tests/test_build_usoud_bge_m3_candidate.py -q` → 31/31 PASS.
+
+**MVP target:** kolekce `nalus_us_bge_m3_mvp_5y_20260708`, artefakty `artifacts/nalus_update/usoud_bge_m3_mvp_5y_20260708/`.
+
+**Production:** nedotčeno.
+
+---
+
+## 2026-07-09 — Current production RAG stack (NALUS API runtime)
+
+**Source of truth:** aktivní NALUS API runtime používá **lokální** moduly v `app/rag/retrieval/*`.
+Sibling balíček `nalus-legal-rag` existuje pro budoucí extrakci, ale **není** v Docker image
+nainstalovaný ani importovaný (Option A — žádný `import nalus_legal_rag` v `startup.py` / `rag_router.py`).
+
+### Aktivní profil
+
+| Parametr | Hodnota |
+|----------|---------|
+| profile | `nalus_bge_m3_dense_bm25_rrf_v1` |
+| embedding model | `BAAI/bge-m3` |
+| embedding dimension | `1024` |
+| retrieval mode | `dense_plus_bm25` |
+| fusion | RRF, `rrf_k=60` |
+| BM25 | `k1=1.5`, `b=0.75` |
+| Qdrant collection (dev/candidate API) | `nalus_us_bge_m3_rag_combined_20260709` (13 315 bodů) |
+| BM25 sidecar | `storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite` |
+| model runtime | CPU-only, **offline** (`HF_HUB_OFFLINE=1`, `local_files_only=True`) |
+| startup | read-only: validuje kolekci + BM25 + model path, **neingestuje** |
+
+### Model path (důležité)
+
+- Default v `docker-compose.yml`: `/app/models/BAAI/bge-m3` (host mount `./models` je často prázdný).
+- **Funkční offline path** je v Docker volume `huggingface_cache`:
+  `/root/.cache/huggingface/hub/models--BAAI--bge-m3/snapshots/<hash>`
+- V `.env` nastav `EMBEDDING_MODEL_NAME` na existující snapshot path. API **nepouští** HF Hub download.
+
+### Docker (api service)
+
+`docker-compose.yml` mountuje:
+
+- `./app:/app/app` — live kód (po recreate neběží starý bake `startup.py`)
+- `./scripts:/app/scripts` — builder/merge/backfill skripty
+- `./storage:/app/storage` — BM25 sidecar
+- `huggingface_cache:/root/.cache/huggingface` — BGE-M3 weights offline
+- `env_file: .env`
+
+**Nepoužívat:** `PYTHONPATH` mount na sibling `nalus-legal-rag` (způsoboval `ModuleNotFoundError`).
+
+### Zakázané v aktivním runtime
+
+1. MPNet (`paraphrase-multilingual-mpnet-base-v2`) jako default/fallback
+2. `SentenceTransformersEmbedder` v API startup
+3. `KeywordRetriever` jako production hybrid fallback
+4. hash/mock vector fallback (`_MOCK_VECTOR_DIM`)
+5. automatické HF Hub stahování modelu
+6. background ingest / zápis do Qdrant při API startu
+7. alias switch / zápis do `nalus_live` / `nalus_stable_20260326`
+
+Legacy MPNet kód zůstává pouze v `app/nsoud/`, gated `NALUS_ALLOW_LEGACY_AUTO_INGEST` a historických artefaktech.
+
+### API `.env` pro combined RAG candidate
+
+```env
+QDRANT_COLLECTION_NAME=nalus_us_bge_m3_rag_combined_20260709
+BM25_SIDECAR_PATH=/app/storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite
+BM25_INDEX_ID=nalus_bge_m3_dense_bm25_rrf_v1
+RETRIEVAL_PROFILE=nalus_bge_m3_dense_bm25_rrf_v1
+RETRIEVAL_MODE=dense_plus_bm25
+EMBEDDING_MODEL_NAME=/root/.cache/huggingface/hub/models--BAAI--bge-m3/snapshots/<snapshot-hash>
+EMBEDDING_DIMENSION=1024
+HF_HUB_OFFLINE=1
+```
+
+### Ověření API
+
+```powershell
+docker compose up -d --force-recreate api
+curl http://localhost:8029/health
+# orchestrator_ready: true
+
+$body = '{"query":"právo na spravedlivý proces","top_k":5}'
+Invoke-RestMethod -Uri "http://localhost:8029/api/rag/query" -Method POST `
+  -ContentType "application/json; charset=utf-8" `
+  -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) | ConvertTo-Json -Depth 10
+# očekávej nenulové sources (chunk_id)
+```
+
+### Testy runtime + provenance
+
+```powershell
+python -m pytest tests/rag/test_production_bge_m3_profile.py tests/rag/test_provenance_backfill.py tests/test_merge_bge_m3_candidate_collections.py -q
+```
+
+---
+
+## 2026-07-09 — API runtime repair (BGE-M3-only)
+
+**Problém:** API v nekonzistentním stavu — `Empty reply`, `ModuleNotFoundError: nalus_legal_rag`,
+chybějící BGE model path, starý MPNet startup z bake image.
+
+**Oprava:**
+
+| Soubor | Změna |
+|--------|-------|
+| `app/api/startup.py` | BGE-M3-only orchestrator (`BgeM3Embedder`, `HybridBgeM3Retriever`, `Bm25Sidecar`); hard fail na chybějící model/BM25/kolekci |
+| `app/api/rag_router.py` | `DEFAULT_QDRANT_COLLECTION` z `production_profile`, bez `nalus_legal_rag` |
+| `app/rag/retrieval/production_profile.py` | MPNet forbidden, env validace |
+| `app/rag/retrieval/embedder.py` | `_refuse_mpnet_model()` guard |
+| `app/rag/retrieval/bge_m3_embedder.py` | offline-only load |
+| `docker-compose.yml` | mount `./app`, `./scripts`, `env_file: .env`; bez sibling package |
+
+**Report:** `artifacts/nalus_update/bge_m3_api_runtime_repair_report.md`
+
+**Production safety:** `nalus_live` / aliasy nedotčeny.
+
+---
+
+## 2026-07-09 — Payload provenance backfill
+
+**Problém:** Po merge combined kolekce část payloadů (zejm. `mvp_5y`, ~7139 bodů) neměla
+povinná provenance pole (`document_id`, `embedding_provider`, `embedding_model`,
+`embedding_dimension`, `content_checksum`). `QdrantDenseStore` při validaci shodil výsledky →
+prázdné `sources` i při `orchestrator_ready: true`.
+
+**Řešení:**
+
+- `app/rag/retrieval/provenance.py` — `derive_document_id()`, `ensure_embedding_provenance()`
+- `scripts/backfill_bge_m3_payload_provenance.py` — doplní chybějící pole bez re-embedování
+- `scripts/merge_bge_m3_candidate_collections.py` — merge vždy volá `ensure_embedding_provenance()`
+
+**Provedeno na combined kolekci:**
+
+```powershell
+# dry-run
+docker compose exec -T api python scripts/backfill_bge_m3_payload_provenance.py `
+  --collection-name nalus_us_bge_m3_rag_combined_20260709 --qdrant-url http://qdrant:6333
+
+# execute (7139 bodů opraveno, 6176 už validních)
+docker compose exec -T api python scripts/backfill_bge_m3_payload_provenance.py `
+  --collection-name nalus_us_bge_m3_rag_combined_20260709 --qdrant-url http://qdrant:6333 --execute
+
+# re-export BM25 po backfillu
+docker compose exec -T api python scripts/build_bm25_sidecar_from_qdrant.py `
+  --collection-name nalus_us_bge_m3_rag_combined_20260709 `
+  --sqlite-path storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite --overwrite
+```
+
+**Výsledek smoke:** `sources: ["2141","4323","8393","1274","6342"]` pro dotaz „právo na spravedlivý proces“.
+
+**Artefakt:** `artifacts/nalus_update/bge_m3_provenance_backfill/execute_summary.json`
+
+---
+
+## 2026-07-09 — Combined RAG candidate (mvp_5y + mvp_recent_3h)
+
+**Co přidáno:** merge + BM25 export + backfill pro jednu RAG-ready kolekci bez re-embedování.
+
+| Skript | Účel |
+|--------|------|
+| `scripts/merge_bge_m3_candidate_collections.py` | sloučí `nalus_us_bge_m3_mvp_5y_20260708` + `nalus_us_bge_m3_mvp_recent_3h_20260709` → `nalus_us_bge_m3_rag_combined_20260709` |
+| `scripts/build_bm25_sidecar_from_qdrant.py` | export Qdrant → SQLite BM25 sidecar |
+| `scripts/backfill_bge_m3_payload_provenance.py` | doplní chybějící embedding provenance v payloadu |
+| `scripts/run_usoud_bge_m3_rag_combined.ps1` | merge dry-run + execute + BM25 export |
+
+**Merge pravidla:** dedupe `(document_id, chunk_index)`, prefer `mvp_recent_3h`, remap `chunk_id`/`point_id`, full provenance via `ensure_embedding_provenance`.
+
+**Stav kolekcí (2026-07-09):**
+
+| Kolekce | Body | Poznámka |
+|---------|------|----------|
+| `nalus_us_bge_m3_mvp_5y_20260708` | ~8 335 | partial / paused |
+| `nalus_us_bge_m3_mvp_recent_3h_20260709` | 4 980 | complete |
+| `nalus_us_bge_m3_rag_combined_20260709` | **13 315** | merge + backfill, API target |
+| `nalus_live` → `nalus_stable_20260326` | 784 812 | **nedotčeno** |
+
+**Production:** `nalus_live` / `nalus_stable_20260326` / aliasy nedotčeny.
+
+---
+
+## 2026-07-09 — Sibling package `nalus-legal-rag` (future only)
+
+Repo path: `C:\Users\lukas\Desktop\PYTHON_PROJECTS_DESKTOP\PYTHON_PROJECTS\nalus-legal-rag`
+
+Balíček je připraven pro budoucí extrakci retrieval core. **Aktuální NALUS Docker API ho nepoužívá**
+(Option A). Pokud se v budoucnu přejde na Option B, musí být balíček explicitně nainstalován/mountován
+v Docker image — ne spoléhat na globální host env.
+
+---
+
+## Historické poznámky (audit only — ne active runtime)
+
+Níže uvedené sekce o `nalus_legal_rag` jako aktivním production path a alias switch na
+`nalus_bge_m3_chunks_v1` jsou **zastaralé plány**, ne aktuální stav:
+
+- Prepared smoke s `from nalus_legal_rag import ...` — nespouštět bez Docker wiring Option B
+- Prepared alias switch na `nalus_bge_m3_chunks_v1` — **neprovedeno**, `nalus_live` beze změny
+- Default collection `nalus_bge_m3_chunks_v1` v `.env.example` — nahrazeno combined candidate pro dev API
+
+Migration warning (stále platí):
+
+1. Do not reintroduce MPNet as production default.
+2. Do not use `KeywordRetriever` as production hybrid retrieval.
+3. Do not silently fall back to hash, MPNet, or substring keyword retrieval.
+4. Do not switch `nalus_live` until explicit stage-4 cutover.
+5. Do not delete old MPNet collections during migration.
+6. Production API startup is read-only for retrieval data.
+

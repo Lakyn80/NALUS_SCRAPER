@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-07-09T11:48:05Z",
+  "merge_version": "usoud-bge-m3-combined-merge-v1",
+  "action": "execute",
+  "source_collections": [
+    "nalus_us_bge_m3_mvp_5y_20260708",
+    "nalus_us_bge_m3_mvp_recent_3h_20260709"
+  ],
+  "target_collection": "nalus_us_bge_m3_rag_combined_20260709",
+  "per_source_point_counts": {
+    "nalus_us_bge_m3_mvp_5y_20260708": 8335,
+    "nalus_us_bge_m3_mvp_recent_3h_20260709": 4980
+  },
+  "merge_stats": {
+    "input_point_count": 13315,
+    "deduplicated_point_count": 13315,
+    "duplicate_dropped_count": 0
+  },
+  "merged_point_count": 13315,
+  "embedding_model": "BAAI/bge-m3",
+  "embedding_dimension": 1024,
+  "production_safety": {
+    "generated_at": "2026-07-09T11:48:05Z",
+    "nalus_live_target": "nalus_stable_20260326",
+    "nalus_live_points": 784812,
+    "nalus_stable_20260326_points": 784812,
+    "aliases": [
+      {
+        "alias_name": "nalus_live",
+        "collection_name": "nalus_stable_20260326"
+      }
+    ]
+  },
+  "final_status": "PASS",
+  "target_point_count_after": 13315,
+  "production_safety_after": {
+    "generated_at": "2026-07-09T11:48:15Z",
+    "nalus_live_target": "nalus_stable_20260326",
+    "nalus_live_points": 784812,
+    "nalus_stable_20260326_points": 784812,
+    "aliases": [
+      {
+        "alias_name": "nalus_live",
+        "collection_name": "nalus_stable_20260326"
+      }
+    ]
+  }
+}
