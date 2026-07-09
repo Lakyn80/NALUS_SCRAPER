@@ -56,40 +56,40 @@ Run artifacts: `artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline/`
 
 ---
 
-## 3. Mixed baseline (skipped)
+## 3. Mixed baseline (complete)
 
 | Field | Value |
 |-------|-------|
-| Status | **SKIPPED — single-collection runner** |
+| Status | **COMPLETE** |
 | Dataset | `artifacts/rag_eval/legal_qa/datasets/mixed_qa_v1.jsonl` (10 questions) |
+| Mode | two-pass mixed retrieval (`--mixed-two-pass`) |
+| ÚS collection | `nalus_us_bge_m3_rag_combined_20260709` |
+| NSoud collection | `nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1` |
+| ÚS BM25 sidecar | `storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite` (from production config) |
+| NSoud BM25 sidecar | `storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite` |
+| Corpus-scored questions | 8 (`expected_target_corpus=both`) |
+| Ambiguous questions | 2 |
+| Redis cache | false |
 
-### Why skipped
+### Metrics
 
-Mixed questions compare Ústavní soud vs Nejvyšší soud and cross-court legal concepts. The current runner supports **one Qdrant collection + one BM25 sidecar per run**.
+| corpus_hit@1 | corpus_hit@3 | corpus_hit@5 | retrieval_hit@1 | retrieval_hit@10 | keyword coverage | pass rate |
+|--------------|--------------|--------------|-----------------|------------------|------------------|-----------|
+| 0.000 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
 
-Running mixed dataset against only `nalus_us_bge_m3_rag_combined_20260709` would:
+| usoud_win_rate@1 | nsoud_win_rate@1 | source_pending |
+|------------------|------------------|----------------|
+| 0.000 | 1.000 | 10 / 10 |
 
-- answer ÚS-flavored questions from ÚS corpus (partially valid)
-- answer NSoud-flavored questions from ÚS corpus (invalid for routing test)
-- fail comparative/routing questions by design
+Frozen baseline: `artifacts/rag_eval/legal_qa/baselines/mixed_retrieval_baseline_20260709.md`  
+Run artifacts: `artifacts/rag_eval/legal_qa/runs/mixed_two_pass_baseline/`
 
-### Required for valid mixed evaluation
+### Mixed eval notes
 
-Choose one:
-
-**Option A — Corpus router**
-
-- Route `corpus=usoud` → ÚS collection
-- Route `corpus=nsoud` → NSoud collection
-- Route `corpus=mixed` → two-pass retrieval with result labeling
-
-**Option B — Two-pass retrieval**
-
-- Retrieve top_k from ÚS collection and NSoud collection separately
-- Label hits with `corpus_origin`
-- Fuse or present side-by-side for mixed questions
-
-Do not hack single-collection runner for mixed eval.
+- Benchmark uses **eval-only** cross-corpus RRF rank merge (k=60); production hybrid RRF/BM25/BGE unchanged.
+- `corpus_hit@1=0` is expected for `expected_target_corpus=both` (one rank-1 slot cannot hold both corpora).
+- `corpus_hit@3/5=1.0` is the meaningful corpus coverage metric for comparative questions.
+- `nsoud_win_rate@1=1.0` is a merge tie-break artifact (rank-1 ties → `nsoud` before `usoud` alphabetically), not a retrieval-quality verdict.
 
 ---
 
@@ -98,29 +98,29 @@ Do not hack single-collection runner for mixed eval.
 | Limitation | Impact |
 |------------|--------|
 | `source_pending=true` on all 40 seed items | hit@k uses keyword proxy, not gold case match |
-| No LLM synthesis | Cannot assess answer quality yet |
+| No LLM synthesis / answer eval | Cannot assess answer quality yet |
 | ÚS collection partial (~13k / full 5y window) | Recall ceiling for older ÚS decisions |
 | NSoud collection partial (eval longform subset) | Recall ceiling for older NS decisions |
+| Mixed merge is benchmark-only | No production corpus router yet |
+| No gold ECLI / spisová značka constraints | corpus_hit@k is routing proxy only |
 
 ---
 
 ## 5. Next steps
 
-1. Implement corpus router or two-pass mixed retrieval
-2. Run `mixed_qa_v1.jsonl`
-3. Manually verify top-3 hits for 10 questions → set `source_pending=false` + gold constraints
-4. Re-run with strict source-constraint hit@k
-5. Optional: Redis cache A/B (`EMBEDDING_CACHE_ENABLED=1`) after all baselines frozen
+1. Manually verify top-3 hits for representative questions → set `source_pending=false` + gold constraints
+2. Re-run single-corpus and mixed baselines with strict source-constraint metrics
+3. Design production corpus router (optional) based on frozen benchmark evidence
+4. Add LLM answer synthesis evaluation (separate phase)
+5. Optional: Redis cache A/B (`EMBEDDING_CACHE_ENABLED=1`) after gold-source review
 
 ---
 
 ## 6. Should retrieval logic change?
 
-**No change recommended yet.**
+**No production retrieval change recommended yet.**
 
-ÚS and NSoud baselines show strong keyword retrieval (pass rate 1.0, hit@5–10 = 1.0). The hit@1 gaps (ÚS 0.75, NSoud 0.70) may improve with gold-source eval or RRF tuning, but mixed baseline is still missing — changing RRF/BM25/BGE now would invalidate comparison.
-
-Wait for mixed baseline before tuning.
+All three baselines show pass rate 1.0 on keyword proxy. Single-corpus hit@1 gaps (ÚS 0.75, NSoud 0.70) and mixed `corpus_hit@1=0` need gold-source interpretation before RRF/BM25/BGE tuning.
 
 ---
 
@@ -129,9 +129,9 @@ Wait for mixed baseline before tuning.
 | Check | Status |
 |-------|--------|
 | Redis used | **false** |
-| Qdrant access | **read-only** (ÚS run only) |
+| Qdrant access | **read-only** (search only) |
 | Production aliases touched | **false** |
 | `nalus_live` / `nalus_stable_20260326` | **untouched** |
 | Model downloaded | **false** |
 | `nalus-legal-rag` imported/modified | **false** |
-| Retrieval logic changed | **false** |
+| Production retrieval logic changed | **false** (benchmark-only mixed merge added) |
