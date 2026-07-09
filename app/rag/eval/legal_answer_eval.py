@@ -74,12 +74,52 @@ class AnswerEvalMetrics:
     boilerplate_noise_count: int
     corpus_only_count: int
     citation_available_rate: float
+    strict_direct_pass_rate_all: float
+    strict_direct_pass_rate_gold: float
+    usable_support_rate_gold: float
     answer_eval_pass_rate: float
     answer_eval_partial_rate: float
     answer_eval_gap_rate: float
     unsupported_answer_risk_count: int
     skipped_count: int
     needs_review_count: int
+
+
+def infer_corpus_from_run_name(run_name: str) -> str:
+    name = run_name.lower()
+    if name.startswith("mixed"):
+        return "mixed"
+    if name.startswith("nsoud"):
+        return "nsoud"
+    if name.startswith("usoud"):
+        return "usoud"
+    raise RetrievalConfigurationError(f"Cannot infer corpus from run name: {run_name!r}")
+
+
+def build_summary_json_payload(
+    *,
+    run_name: str,
+    metrics: AnswerEvalMetrics,
+    generated_at: str,
+    corpus: str | None = None,
+) -> dict[str, Any]:
+    resolved_corpus = corpus or infer_corpus_from_run_name(run_name)
+    return {
+        "generated_at": generated_at,
+        "run_name": run_name,
+        "corpus": resolved_corpus,
+        "gold": metrics.gold_available_count,
+        "direct_support_count": metrics.direct_support_count,
+        "partial_support_count": metrics.partial_support_count,
+        "gap_count": metrics.gap_count,
+        "boilerplate_noise_count": metrics.boilerplate_noise_count,
+        "corpus_only_count": metrics.corpus_only_count,
+        "unsupported_answer_risk_count": metrics.unsupported_answer_risk_count,
+        "strict_direct_pass_rate_all": metrics.strict_direct_pass_rate_all,
+        "strict_direct_pass_rate_gold": metrics.strict_direct_pass_rate_gold,
+        "usable_support_rate_gold": metrics.usable_support_rate_gold,
+        "citation_available_rate": metrics.citation_available_rate,
+    }
 
 
 def load_retrieval_results(path: Path) -> dict[str, dict[str, Any]]:
@@ -418,6 +458,20 @@ def aggregate_answer_metrics(results: list[AnswerEvalResult]) -> AnswerEvalMetri
     def _count_support(level: str) -> int:
         return sum(1 for result in gold_results if result.support_level == level)
 
+    strict_direct_pass_all = _count_status("pass")
+    strict_direct_pass_gold = sum(1 for result in gold_results if result.answer_eval_status == "pass")
+    usable_support_gold = sum(
+        1
+        for result in gold_results
+        if result.support_level in {"direct", "partial", "corpus_only"}
+    )
+
+    strict_direct_pass_rate_all = strict_direct_pass_all / total
+    strict_direct_pass_rate_gold = (
+        strict_direct_pass_gold / gold_count if gold_count else 0.0
+    )
+    usable_support_rate_gold = usable_support_gold / gold_count if gold_count else 0.0
+
     return AnswerEvalMetrics(
         total_questions=total,
         gold_available_count=gold_count,
@@ -427,7 +481,10 @@ def aggregate_answer_metrics(results: list[AnswerEvalResult]) -> AnswerEvalMetri
         boilerplate_noise_count=_count_support("boilerplate_noise"),
         corpus_only_count=_count_support("corpus_only"),
         citation_available_rate=citation_available_rate,
-        answer_eval_pass_rate=_count_status("pass") / total,
+        strict_direct_pass_rate_all=strict_direct_pass_rate_all,
+        strict_direct_pass_rate_gold=strict_direct_pass_rate_gold,
+        usable_support_rate_gold=usable_support_rate_gold,
+        answer_eval_pass_rate=strict_direct_pass_rate_all,
         answer_eval_partial_rate=_count_status("partial") / total,
         answer_eval_gap_rate=_count_status("gap") / total,
         unsupported_answer_risk_count=sum(1 for r in results if r.unsupported_answer_risk),
@@ -446,6 +503,7 @@ def write_answer_eval_outputs(
     metrics: AnswerEvalMetrics,
     no_llm: bool,
     citation_required: bool,
+    corpus: str | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -504,25 +562,53 @@ def write_answer_eval_outputs(
         f"- Mode: deterministic no-LLM",
         f"- Citation required: {citation_required}",
         "",
-        "## Metrics",
+        "## Interpretation",
+        "",
+        "- `direct` = strict pass (document gold + snippet support)",
+        "- `partial` = usable support, not full direct answer pass",
+        "- `gap` / `boilerplate_noise` = must not generate a confident answer",
+        "- `corpus_only` = corpus routing only, no document citation",
+        "",
+        "## Support breakdown (gold items)",
+        "",
+        f"- direct_support_count: {metrics.direct_support_count}",
+        f"- partial_support_count: {metrics.partial_support_count}",
+        f"- gap_count: {metrics.gap_count}",
+        f"- boilerplate_noise_count: {metrics.boilerplate_noise_count}",
+        f"- corpus_only_count: {metrics.corpus_only_count}",
+        "",
+        "## Rates",
+        "",
+        f"- strict_direct_pass_rate_all: {metrics.strict_direct_pass_rate_all:.3f}",
+        f"- strict_direct_pass_rate_gold: {metrics.strict_direct_pass_rate_gold:.3f}",
+        f"- usable_support_rate_gold: {metrics.usable_support_rate_gold:.3f}",
+        f"- citation_available_rate: {metrics.citation_available_rate:.3f}",
+        f"- answer_eval_pass_rate (alias): {metrics.answer_eval_pass_rate:.3f}",
+        f"- answer_eval_partial_rate: {metrics.answer_eval_partial_rate:.3f}",
+        f"- answer_eval_gap_rate: {metrics.answer_eval_gap_rate:.3f}",
+        "",
+        "## Risk / coverage",
         "",
         f"- total questions: {metrics.total_questions}",
         f"- gold available: {metrics.gold_available_count}",
-        f"- direct support: {metrics.direct_support_count}",
-        f"- partial support: {metrics.partial_support_count}",
-        f"- gap: {metrics.gap_count}",
-        f"- boilerplate noise: {metrics.boilerplate_noise_count}",
-        f"- corpus only: {metrics.corpus_only_count}",
-        f"- citation available rate: {metrics.citation_available_rate:.3f}",
-        f"- answer eval pass rate: {metrics.answer_eval_pass_rate:.3f}",
-        f"- answer eval partial rate: {metrics.answer_eval_partial_rate:.3f}",
-        f"- answer eval gap rate: {metrics.answer_eval_gap_rate:.3f}",
-        f"- unsupported answer risk: {metrics.unsupported_answer_risk_count}",
+        f"- unsupported_answer_risk_count: {metrics.unsupported_answer_risk_count}",
         f"- skipped: {metrics.skipped_count}",
         f"- needs review: {metrics.needs_review_count}",
         "",
     ]
     (output_dir / "summary.md").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
+
+    run_name = output_dir.name
+    summary_json = build_summary_json_payload(
+        run_name=run_name,
+        metrics=metrics,
+        generated_at=generated_at,
+        corpus=corpus,
+    )
+    (output_dir / "summary.json").write_text(
+        json.dumps(summary_json, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def resolve_retrieval_results_path(candidates: list[Path]) -> Path:

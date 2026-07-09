@@ -65,6 +65,45 @@ services:
       - ../eternal-world/packages/rag-embedding-benchmark:/packages/rag-embedding-benchmark:ro
     restart: unless-stopped
 
+  nalus-eval-metrics-exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile.eval-exporter
+    ports:
+      - "9108:9108"
+    volumes:
+      - ./artifacts/rag_eval/legal_qa/answer_eval:/artifacts/rag_eval/legal_qa/answer_eval:ro
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    depends_on:
+      - nalus-eval-metrics-exporter
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes:
   qdrant_storage:
   huggingface_cache:

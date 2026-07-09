@@ -13,4 +13,5 @@ pydantic
 qdrant-client
 pytest
 pytest-asyncio
+prometheus_client
 anyio

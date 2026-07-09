@@ -327,6 +327,51 @@ def test_aggregate_answer_metrics_counts() -> None:
     assert metrics.gold_available_count == 1
     assert metrics.skipped_count == 1
     assert metrics.direct_support_count == 1
+    assert metrics.strict_direct_pass_rate_all == 0.5
+    assert metrics.strict_direct_pass_rate_gold == 1.0
+    assert metrics.usable_support_rate_gold == 1.0
+
+
+def test_new_rate_metrics_on_mixed_support_levels() -> None:
+    direct = evaluate_answer_item(
+        item=_item(source_pending=False, ecli="ECLI:CZ:US:2026:1.US.1.1"),
+        gold=load_gold_registry_from_dataset(
+            [_item(source_pending=False, ecli="ECLI:CZ:US:2026:1.US.1.1")]
+        )["usoud-qa-test-001"],
+        retrieval={
+            "hits": [
+                _hit(
+                    rank=1,
+                    chunk_id="1",
+                    text="Ústavní soud posuzuje právo na spravedlivý proces podle článku 36 Listiny.",
+                    document_id="ECLI:CZ:US:2026:1.US.1.1",
+                )
+            ]
+        },
+        citation_required=True,
+    )
+    partial = evaluate_answer_item(
+        item=_item(item_id="usoud-qa-002", source_pending=False, ecli="ECLI:CZ:US:2026:2.US.2.2"),
+        gold=load_gold_registry_from_dataset(
+            [_item(item_id="usoud-qa-002", source_pending=False, ecli="ECLI:CZ:US:2026:2.US.2.2")]
+        )["usoud-qa-002"],
+        retrieval={
+            "hits": [
+                _hit(
+                    rank=2,
+                    chunk_id="2",
+                    text="Zmínka o spravedlivém procesu bez dalšího kontextu pro ústavní posouzení.",
+                    document_id="ECLI:CZ:US:2026:2.US.2.2",
+                )
+            ]
+        },
+        citation_required=True,
+    )
+    metrics = aggregate_answer_metrics([direct, partial])
+    assert metrics.direct_support_count == 1
+    assert metrics.partial_support_count == 1
+    assert metrics.strict_direct_pass_rate_gold == 0.5
+    assert metrics.usable_support_rate_gold == 1.0
 
 
 def test_runner_module_has_no_nalus_legal_rag_import() -> None:

@@ -119,11 +119,15 @@ def main(argv: list[str] | None = None) -> int:
         metrics=metrics,
         no_llm=True,
         citation_required=args.require_citations,
+        corpus=corpus_key,
     )
 
     print(
         f"[legal-answer-eval] corpus={corpus_key} questions={metrics.total_questions} "
-        f"gold={metrics.gold_available_count} pass_rate={metrics.answer_eval_pass_rate:.3f} "
+        f"gold={metrics.gold_available_count} "
+        f"strict_direct_pass_rate_all={metrics.strict_direct_pass_rate_all:.3f} "
+        f"strict_direct_pass_rate_gold={metrics.strict_direct_pass_rate_gold:.3f} "
+        f"usable_support_rate_gold={metrics.usable_support_rate_gold:.3f} "
         f"citation_rate={metrics.citation_available_rate:.3f} "
         f"unsupported_risk={metrics.unsupported_answer_risk_count} "
         f"retrieval={retrieval_path} output={output_dir}",

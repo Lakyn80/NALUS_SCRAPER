@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: nalus_legal_answer_eval
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - nalus-eval-metrics-exporter:9108

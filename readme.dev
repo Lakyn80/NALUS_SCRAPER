@@ -1980,3 +1980,99 @@ docker compose exec -T api python scripts/run_legal_qa_benchmark.py `
 
 **Testy:** `python -m pytest tests/rag/test_legal_qa_benchmark.py -q`
 
+---
+
+## 2026-07-09 — Grafana dashboard for legal QA answer eval metrics
+
+**Co:** Read-only Prometheus exporter + Grafana dashboard pro offline legal answer eval metriky (ne live RAG runtime).
+
+**Architektura:**
+
+```
+answer eval artifacts (summary.json / metrics.json)
+  → nalus-eval-metrics-exporter :9108/metrics
+  → Prometheus :9091
+  → Grafana :3002
+```
+
+**Machine-readable export:** každý answer eval run zapisuje `summary.json` vedle `summary.md`:
+
+```json
+{
+  "run_name": "usoud_no_llm_baseline",
+  "corpus": "usoud",
+  "gold": 5,
+  "direct_support_count": 1,
+  "strict_direct_pass_rate_all": 0.05,
+  "usable_support_rate_gold": 1.0,
+  "citation_available_rate": 1.0
+}
+```
+
+**Zdrojové artefakty:** `artifacts/rag_eval/legal_qa/answer_eval/*/summary.json` (fallback: `metrics.json`)
+
+**Exporter modul:** `app/observability/eval_metrics_exporter.py`
+
+**Prometheus metriky (labels: `run_name`, `corpus`):**
+
+- `legal_answer_eval_gold`
+- `legal_answer_eval_direct_support_count`
+- `legal_answer_eval_partial_support_count`
+- `legal_answer_eval_gap_count`
+- `legal_answer_eval_boilerplate_noise_count`
+- `legal_answer_eval_corpus_only_count`
+- `legal_answer_eval_unsupported_answer_risk_count`
+- `legal_answer_eval_strict_direct_pass_rate_all`
+- `legal_answer_eval_strict_direct_pass_rate_gold`
+- `legal_answer_eval_usable_support_rate_gold`
+- `legal_answer_eval_citation_available_rate`
+
+**Spuštění eval testů:**
+
+```powershell
+python -m pytest tests/rag/test_legal_answer_eval.py tests/rag/test_legal_qa_benchmark.py tests/rag/test_embedding_cache.py -q
+python -m pytest tests/observability/test_eval_metrics_exporter.py -q
+```
+
+**Lokální exporter (bez Docker):**
+
+```powershell
+python -m app.observability.eval_metrics_exporter --host 0.0.0.0 --port 9108
+```
+
+**Monitoring stack (Docker):**
+
+```powershell
+docker compose config
+docker compose up -d nalus-eval-metrics-exporter prometheus grafana
+```
+
+| Služba | URL |
+|--------|-----|
+| Exporter metrics | http://localhost:9108/metrics |
+| Prometheus | http://localhost:9091 |
+| Grafana | http://localhost:3002 |
+
+**Grafana login (local dev only):** `admin` / `admin` — nepoužívat v produkci.
+
+**Dashboard:** `NALUS — Legal Answer Eval Metrics` (`monitoring/grafana/dashboards/legal_answer_eval_dashboard.json`)
+
+**Smoke checks:**
+
+```powershell
+curl http://localhost:9108/metrics
+curl http://localhost:9091/-/ready
+curl http://localhost:3002/api/health
+```
+
+Prometheus target `nalus_legal_answer_eval` musí být **UP** na http://localhost:9091/targets
+
+**Limitace:**
+
+1. Grafana ukazuje **poslední exportované offline eval výsledky**, ne live chat/RAG runtime metriky.
+2. Exporter jen čte artefakty — nevolá LLM, Redis, Qdrant write.
+3. Po novém answer eval běhu restart exporteru není nutný; `/metrics` přečte soubory při každém scrape.
+4. `summary.json` se generuje při `write_answer_eval_outputs`; starší runy bez něj používají fallback z `metrics.json`.
+
+**Testy exporteru:** `python -m pytest tests/observability/test_eval_metrics_exporter.py -q`
+

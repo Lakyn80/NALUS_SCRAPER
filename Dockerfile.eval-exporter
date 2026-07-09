@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+WORKDIR /app
+
+RUN python -m pip install --no-cache-dir prometheus_client
+
+COPY app/observability /app/app/observability
+
+EXPOSE 9108
+
+CMD ["python", "-m", "app.observability.eval_metrics_exporter", "--host", "0.0.0.0", "--port", "9108", "--artifacts-dir", "/artifacts/rag_eval/legal_qa/answer_eval"]
