@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-07-09T19:57:57Z",
+  "run_name": "usoud_no_llm_baseline",
+  "corpus": "usoud",
+  "gold": 5,
+  "direct_support_count": 1,
+  "partial_support_count": 4,
+  "gap_count": 0,
+  "boilerplate_noise_count": 0,
+  "corpus_only_count": 0,
+  "unsupported_answer_risk_count": 0,
+  "strict_direct_pass_rate_all": 0.05,
+  "strict_direct_pass_rate_gold": 0.2,
+  "usable_support_rate_gold": 1.0,
+  "citation_available_rate": 1.0
+}

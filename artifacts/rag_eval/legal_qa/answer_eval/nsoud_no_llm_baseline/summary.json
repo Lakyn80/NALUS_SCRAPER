@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-07-09T19:57:59Z",
+  "run_name": "nsoud_no_llm_baseline",
+  "corpus": "nsoud",
+  "gold": 3,
+  "direct_support_count": 0,
+  "partial_support_count": 2,
+  "gap_count": 0,
+  "boilerplate_noise_count": 1,
+  "corpus_only_count": 0,
+  "unsupported_answer_risk_count": 1,
+  "strict_direct_pass_rate_all": 0.0,
+  "strict_direct_pass_rate_gold": 0.0,
+  "usable_support_rate_gold": 0.6666666666666666,
+  "citation_available_rate": 0.6666666666666666
+}

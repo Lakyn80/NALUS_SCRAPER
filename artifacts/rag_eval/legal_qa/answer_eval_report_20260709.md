@@ -4,34 +4,34 @@ Deterministic answer-support evaluation over frozen gold-source annotations. **N
 
 ---
 
-## What this checks
+## Metric interpretation
 
-| Check | Description |
-|-------|-------------|
-| Gold source presence | ECLI/document gold hit in top-1/3/5 |
-| Support level | `direct`, `partial`, `gap`, `boilerplate_noise`, `corpus_only` |
-| Answer skeleton | Built only from `expected_answer_points` + verified snippet context |
-| Citation availability | ECLI + chunk_id when `--require-citations` |
-| Unsupported answer risk | Gap/boilerplate or missing citation on would-be direct answer |
+| Metric | Meaning |
+|--------|---------|
+| `strict_direct_pass_rate_all` | Share of **all** questions with `answer_eval_status=pass` (direct + citation when required) |
+| `strict_direct_pass_rate_gold` | Same, but only over gold-available items |
+| `usable_support_rate_gold` | Gold items with `direct`, `partial`, or `corpus_only` support |
+| `answer_eval_pass_rate` | Alias for `strict_direct_pass_rate_all` (backward compat) |
+| `citation_available_rate` | Gold items where ECLI/chunk citation is present in skeleton |
 
-## What this does **not** check
+**Support levels**
 
-- LLM answer quality or fluency
-- Legal correctness beyond gold snippet keyword overlap
-- Synthesis across multiple chunks
-- DeepSeek / any generative model output
+| Level | Meaning |
+|-------|---------|
+| `direct` | Strict pass — document gold + rank-1 snippet with ≥67% keyword overlap |
+| `partial` | Usable support, not a full direct answer pass |
+| `gap` / `boilerplate_noise` | Must **not** generate a confident answer |
+| `corpus_only` | Corpus routing only — no document citation |
 
 ---
 
-## Retrieval inputs (detected paths)
+## Retrieval inputs
 
 | Corpus | Retrieval results used |
 |--------|------------------------|
 | ÚS | `artifacts/rag_eval/legal_qa/runs/usoud_gold_eval/retrieval_results.jsonl` |
-| NSoud | `artifacts/rag_eval/legal_qa/runs/nsoud_gold_eval/retrieval_results.jsonl` |
-| Mixed | `artifacts/rag_eval/legal_qa/runs/mixed_gold_eval/retrieval_results.jsonl` |
-
-Fallback order in runner: `*_gold_eval` → `*_full_baseline` / `mixed_two_pass_baseline`.
+| NSoud | `artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline/retrieval_results.jsonl` |
+| Mixed | `artifacts/rag_eval/legal_qa/runs/mixed_two_pass_baseline/retrieval_results.jsonl` |
 
 Gold review: `artifacts/rag_eval/legal_qa/gold_source_review_20260709.md`
 
@@ -43,13 +43,17 @@ Gold review: `artifacts/rag_eval/legal_qa/gold_source_review_20260709.md`
 |--------|-------|
 | Total questions | 20 |
 | Gold available | 5 |
-| Direct support | 1 |
-| Partial support | 4 |
-| Pass rate (all Q) | 0.050 |
-| Partial rate | 0.200 |
-| Citation available rate | **1.000** |
-| Unsupported answer risk | 0 |
-| Skipped | 15 |
+| direct_support_count | 1 |
+| partial_support_count | 4 |
+| gap_count | 0 |
+| boilerplate_noise_count | 0 |
+| corpus_only_count | 0 |
+| strict_direct_pass_rate_all | **0.050** |
+| strict_direct_pass_rate_gold | **0.200** |
+| usable_support_rate_gold | **1.000** |
+| citation_available_rate | **1.000** |
+| unsupported_answer_risk_count | 0 |
+| skipped_count | 15 |
 
 Gold item breakdown:
 - `usoud-qa-004` → **direct / pass**
@@ -63,15 +67,18 @@ Gold item breakdown:
 |--------|-------|
 | Total questions | 10 |
 | Gold available | 3 |
-| Direct support | 0 |
-| Partial support | 2 |
-| Boilerplate noise | 1 |
-| Pass rate | 0.000 |
-| Partial rate | 0.200 |
-| Citation available rate | **0.667** |
-| Unsupported answer risk | **1** |
-| Needs review | 1 |
-| Skipped | 7 |
+| direct_support_count | 0 |
+| partial_support_count | 2 |
+| gap_count | 0 |
+| boilerplate_noise_count | 1 |
+| corpus_only_count | 0 |
+| strict_direct_pass_rate_all | **0.000** |
+| strict_direct_pass_rate_gold | **0.000** |
+| usable_support_rate_gold | **0.667** |
+| citation_available_rate | **0.667** |
+| unsupported_answer_risk_count | **1** |
+| needs_review_count | 1 |
+| skipped_count | 7 |
 
 Gold item breakdown:
 - `nsoud-qa-003, 004` → partial
@@ -85,12 +92,22 @@ Gold item breakdown:
 |--------|-------|
 | Total questions | 10 |
 | Gold available | 2 (corpus-only) |
-| Corpus-only | 2 |
-| Pass rate | 0.000 |
-| Partial rate | 0.200 |
-| Citation available rate | **0.000** (by design — no document gold) |
-| Unsupported answer risk | 0 |
-| Skipped | 8 |
+| direct_support_count | 0 |
+| partial_support_count | 0 |
+| gap_count | 0 |
+| boilerplate_noise_count | 0 |
+| corpus_only_count | 2 |
+| strict_direct_pass_rate_all | **0.000** |
+| strict_direct_pass_rate_gold | **0.000** |
+| usable_support_rate_gold | **1.000** |
+| citation_available_rate | **0.000** (by design — no document gold) |
+| unsupported_answer_risk_count | 0 |
+| skipped_count | 8 |
+
+Mixed rules enforced:
+- `corpus_only` skeleton does not claim a document citation
+- `citation_available=false` without ECLI/source_document_id
+- No direct pass without document gold
 
 Gold item breakdown:
 - `mixed-qa-002, 005` → corpus_only / partial — no fabricated document citation
@@ -99,11 +116,11 @@ Gold item breakdown:
 
 ## Cross-corpus summary
 
-| Corpus | Gold | Direct | Partial | Boilerplate | Corpus-only | Citation rate | Unsupported risk |
-|--------|------|--------|---------|-------------|-------------|---------------|------------------|
-| ÚS | 5 | 1 | 4 | 0 | 0 | 1.000 | 0 |
-| NSoud | 3 | 0 | 2 | 1 | 0 | 0.667 | 1 |
-| Mixed | 2 | 0 | 0 | 0 | 2 | 0.000 | 0 |
+| Corpus | Gold | Direct | Partial | Gap | Boilerplate | Corpus-only | strict_direct_pass_rate_gold | usable_support_rate_gold | citation_available_rate | unsupported_risk |
+|--------|------|--------|---------|-----|-------------|-------------|------------------------------|--------------------------|-------------------------|------------------|
+| ÚS | 5 | 1 | 4 | 0 | 0 | 0 | 0.200 | 1.000 | 1.000 | 0 |
+| NSoud | 3 | 0 | 2 | 0 | 1 | 0 | 0.000 | 0.667 | 0.667 | 1 |
+| Mixed | 2 | 0 | 0 | 0 | 0 | 2 | 0.000 | 1.000 | 0.000 | 0 |
 
 ---
 
@@ -111,7 +128,7 @@ Gold item breakdown:
 
 1. **Strict direct threshold** — rank-1 gold ECLI + ≥67% keyword overlap on snippet; many gold retrieval passes become `partial` at answer layer.
 2. **Snippet-only** — does not read full chunk text from Qdrant.
-3. **Boilerplate detection** — short operative lines (NSoud dovolání) flagged as `needs_review`.
+3. **Boilerplate detection** — snippets &lt;40 chars or operative lines (NSoud dovolání) flagged as `needs_review`.
 4. **15/20 ÚS and 7/10 NSoud skipped** — still `source_pending=true`; expand gold before corpus-wide answer eval.
 5. **No generative answers** — skeleton only.
 
@@ -123,25 +140,38 @@ Gold item breakdown:
 |-------|--------|
 | Real LLM called | **No** |
 | DeepSeek called | **No** |
-| Redis | **Off** |
-| Qdrant writes | **None** |
+| Redis | **Off** (not used) |
+| Qdrant writes | **None** (read-only via frozen retrieval JSONL) |
 | Aliases touched | **No** |
 | Retrieval logic changed | **No** |
 | `nalus-legal-rag` | **Not imported/modified** |
 
 ---
 
-## Next step
-
-Optional **LLM answer generation** behind an explicit flag (e.g. `--enable-llm` / DeepSeek), using the same gold-support gate before accepting generated text. Not implemented in this phase.
-
-Run command:
+## Run commands
 
 ```powershell
+# ÚS
 python scripts/run_legal_answer_eval.py `
   --dataset artifacts/rag_eval/legal_qa/datasets/usoud_qa_v1.jsonl `
   --retrieval-results artifacts/rag_eval/legal_qa/runs/usoud_gold_eval/retrieval_results.jsonl `
   --gold-review artifacts/rag_eval/legal_qa/gold_source_review_20260709.md `
   --output-dir artifacts/rag_eval/legal_qa/answer_eval/usoud_no_llm_baseline `
+  --no-llm --require-citations
+
+# NSoud
+python scripts/run_legal_answer_eval.py `
+  --dataset artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl `
+  --retrieval-results artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline/retrieval_results.jsonl `
+  --gold-review artifacts/rag_eval/legal_qa/gold_source_review_20260709.md `
+  --output-dir artifacts/rag_eval/legal_qa/answer_eval/nsoud_no_llm_baseline `
+  --no-llm --require-citations
+
+# Mixed
+python scripts/run_legal_answer_eval.py `
+  --dataset artifacts/rag_eval/legal_qa/datasets/mixed_qa_v1.jsonl `
+  --retrieval-results artifacts/rag_eval/legal_qa/runs/mixed_two_pass_baseline/retrieval_results.jsonl `
+  --gold-review artifacts/rag_eval/legal_qa/gold_source_review_20260709.md `
+  --output-dir artifacts/rag_eval/legal_qa/answer_eval/mixed_no_llm_baseline `
   --no-llm --require-citations
 ```

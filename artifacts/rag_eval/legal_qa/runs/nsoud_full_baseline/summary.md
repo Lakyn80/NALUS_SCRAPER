@@ -1,6 +1,6 @@
 # Retrieval benchmark summary
 
-- Generated: 2026-07-09T16:34:10Z
+- Generated: 2026-07-09T16:39:01Z
 - Dataset: `/app/artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl`
 - Collection: `nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1`
 - Questions: 10

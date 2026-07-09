@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-09T19:50:11Z",
+  "generated_at": "2026-07-09T19:57:57Z",
   "dataset": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\legal_qa\\datasets\\usoud_qa_v1.jsonl",
   "retrieval_results": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\legal_qa\\runs\\usoud_gold_eval\\retrieval_results.jsonl",
   "gold_review": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\legal_qa\\gold_source_review_20260709.md",
@@ -13,6 +13,9 @@
   "boilerplate_noise_count": 0,
   "corpus_only_count": 0,
   "citation_available_rate": 1.0,
+  "strict_direct_pass_rate_all": 0.05,
+  "strict_direct_pass_rate_gold": 0.2,
+  "usable_support_rate_gold": 1.0,
   "answer_eval_pass_rate": 0.05,
   "answer_eval_partial_rate": 0.2,
   "answer_eval_gap_rate": 0.0,
