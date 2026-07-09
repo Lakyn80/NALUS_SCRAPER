@@ -133,3 +133,15 @@ Do not compare until baseline metrics exist.
 4. Re-run with verified sources for strict hit@k
 5. Enable Redis cache and compare latency
 6. Phase 2: add synthesis + answer scoring
+
+---
+
+## 9. Frozen baselines (2026-07-09)
+
+| Corpus | Status | Baseline doc |
+|--------|--------|--------------|
+| ÚS (20q) | **COMPLETE** | `artifacts/rag_eval/legal_qa/baselines/usoud_retrieval_baseline_20260709.md` |
+| NSoud (10q) | **SKIPPED** — missing BM25 sidecar + runner wiring | see combined report |
+| Mixed (10q) | **SKIPPED** — needs corpus router / two-pass | see combined report |
+
+Combined report: `artifacts/rag_eval/legal_qa/legal_qa_retrieval_baseline_report.md`

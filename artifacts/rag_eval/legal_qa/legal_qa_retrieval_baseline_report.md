@@ -1,0 +1,148 @@
+# Legal Q&A Retrieval Baseline Report
+
+**Date:** 2026-07-09  
+**Scope:** Retrieval-only benchmark baselines for ÚS, NSoud, and mixed corpora.
+
+---
+
+## 1. ÚS baseline (complete)
+
+| Field | Value |
+|-------|-------|
+| Status | **COMPLETE** |
+| Dataset | `artifacts/rag_eval/legal_qa/datasets/usoud_qa_v1.jsonl` |
+| Collection | `nalus_us_bge_m3_rag_combined_20260709` |
+| Questions | 20 |
+| BM25 sidecar | `storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite` |
+| Redis cache | false |
+
+### Metrics
+
+| hit@1 | hit@3 | hit@5 | hit@10 | keyword coverage | pass rate |
+|-------|-------|-------|--------|------------------|-----------|
+| 0.750 | 1.000 | 1.000 | 1.000 | 0.883 | 1.000 |
+
+Frozen baseline: `artifacts/rag_eval/legal_qa/baselines/usoud_retrieval_baseline_20260709.md`  
+Run artifacts: `artifacts/rag_eval/legal_qa/runs/usoud_full_baseline/`
+
+---
+
+## 2. NSoud baseline (skipped)
+
+| Field | Value |
+|-------|-------|
+| Status | **SKIPPED — not wired in runner** |
+| Dataset | `artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl` (10 questions) |
+| Expected Qdrant collection | `nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1` |
+
+### Why skipped
+
+1. **Qdrant collection exists** (1,862 points, dim 1024) — verified read-only.
+2. **BM25 sidecar missing** for this collection. Only sidecar present:
+   `storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite`
+3. **Runner not wired** for per-corpus BM25 path. `build_hybrid_retriever()` overrides `QDRANT_COLLECTION_NAME` only; `BM25_SIDECAR_PATH` still comes from `.env` (ÚS combined path).
+
+Running NSoud questions against the ÚS BM25 sidecar would produce **invalid hybrid retrieval** (dense from NSoud collection + lexical from ÚS corpus). Per instructions: do not guess — stop.
+
+### Required before NSoud run
+
+1. Export BM25 sidecar:
+   ```powershell
+   docker compose exec -T api python scripts/build_bm25_sidecar_from_qdrant.py `
+     --collection-name nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1 `
+     --sqlite-path storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite `
+     --overwrite
+   ```
+2. Add runner flag `--bm25-sidecar-path` (benchmark config only, not retrieval logic change).
+3. Re-run:
+   ```powershell
+   docker compose exec -T api python scripts/run_legal_qa_benchmark.py `
+     --dataset artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl `
+     --collection-name nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1 `
+     --top-k 10 --retrieval-only `
+     --output-dir artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline
+   ```
+
+---
+
+## 3. Mixed baseline (skipped)
+
+| Field | Value |
+|-------|-------|
+| Status | **SKIPPED — single-collection runner** |
+| Dataset | `artifacts/rag_eval/legal_qa/datasets/mixed_qa_v1.jsonl` (10 questions) |
+
+### Why skipped
+
+Mixed questions compare Ústavní soud vs Nejvyšší soud and cross-court legal concepts. The current runner supports **one Qdrant collection + one BM25 sidecar per run**.
+
+Running mixed dataset against only `nalus_us_bge_m3_rag_combined_20260709` would:
+
+- answer ÚS-flavored questions from ÚS corpus (partially valid)
+- answer NSoud-flavored questions from ÚS corpus (invalid for routing test)
+- fail comparative/routing questions by design
+
+### Required for valid mixed evaluation
+
+Choose one:
+
+**Option A — Corpus router**
+
+- Route `corpus=usoud` → ÚS collection
+- Route `corpus=nsoud` → NSoud collection
+- Route `corpus=mixed` → two-pass retrieval with result labeling
+
+**Option B — Two-pass retrieval**
+
+- Retrieve top_k from ÚS collection and NSoud collection separately
+- Label hits with `corpus_origin`
+- Fuse or present side-by-side for mixed questions
+
+Do not hack single-collection runner for mixed eval.
+
+---
+
+## 4. Limitations (all datasets)
+
+| Limitation | Impact |
+|------------|--------|
+| `source_pending=true` on all 40 seed items | hit@k uses keyword proxy, not gold case match |
+| No LLM synthesis | Cannot assess answer quality yet |
+| ÚS collection partial (~13k / full 5y window) | Recall ceiling for older ÚS decisions |
+| NSoud not benchmarked yet | No cross-corpus comparison |
+
+---
+
+## 5. Next steps
+
+1. Wire NSoud BM25 sidecar + runner `--bm25-sidecar-path`
+2. Run `nsoud_qa_v1.jsonl` baseline
+3. Implement corpus router or two-pass mixed retrieval
+4. Run `mixed_qa_v1.jsonl`
+5. Manually verify top-3 hits for 10 questions → set `source_pending=false` + gold constraints
+6. Re-run with strict source-constraint hit@k
+7. Optional: Redis cache A/B (`EMBEDDING_CACHE_ENABLED=1`) after all baselines frozen
+
+---
+
+## 6. Should retrieval logic change?
+
+**No change recommended yet.**
+
+ÚS baseline shows strong keyword retrieval (hit@3–10 = 1.0, pass rate 1.0). The hit@1 gap (0.75) may improve with gold-source eval or RRF tuning, but NSoud and mixed baselines are missing — changing RRF/BM25/BGE now would invalidate comparison.
+
+Wait for NSoud + mixed baselines before tuning.
+
+---
+
+## 7. Safety summary
+
+| Check | Status |
+|-------|--------|
+| Redis used | **false** |
+| Qdrant access | **read-only** (ÚS run only) |
+| Production aliases touched | **false** |
+| `nalus_live` / `nalus_stable_20260326` | **untouched** |
+| Model downloaded | **false** |
+| `nalus-legal-rag` imported/modified | **false** |
+| Retrieval logic changed | **false** |
