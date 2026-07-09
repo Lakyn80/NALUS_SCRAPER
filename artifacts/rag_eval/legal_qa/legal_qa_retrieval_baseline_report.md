@@ -27,36 +27,32 @@ Run artifacts: `artifacts/rag_eval/legal_qa/runs/usoud_full_baseline/`
 
 ---
 
-## 2. NSoud baseline (blocked on provenance)
+## 2. NSoud baseline (complete)
 
 | Field | Value |
 |-------|-------|
-| Status | **BLOCKED — missing embedding provenance in Qdrant payloads** |
-| Dataset | `artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl` (10 questions) |
+| Status | **COMPLETE** |
+| Dataset | `artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl` |
 | Collection | `nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1` (1,862 points) |
 | BM25 sidecar | `storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite` |
+| Provenance backfill | `nsoud-bge-m3-provenance-backfill-v1` (1,862 points updated) |
+| Redis cache | false |
 
-### Completed prerequisites
+### Metrics
 
-1. BM25 sidecar exported (step 1).
-2. Runner `--bm25-sidecar-path` wired (step 2) — benchmark can override collection + BM25 per corpus without changing retrieval logic.
+| hit@1 | hit@3 | hit@5 | hit@10 | keyword coverage | pass rate |
+|-------|-------|-------|--------|------------------|-----------|
+| 0.700 | 0.900 | 1.000 | 1.000 | 0.833 | 1.000 |
 
-### Current blocker
+Frozen baseline: `artifacts/rag_eval/legal_qa/baselines/nsoud_retrieval_baseline_20260709.md`  
+Run artifacts: `artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline/`
 
-NSoud payloads use a different schema (`chunk_metadata.source_document_id`, no top-level `document_id`). Retrieval refuses with missing provenance fields — same class of issue as ÚS before backfill, but `backfill_bge_m3_payload_provenance.py` cannot derive `document_id` from nested `chunk_metadata` yet.
+### Cross-corpus snapshot (keyword proxy)
 
-### Next: provenance backfill for NSoud schema, then run
-
-```powershell
-# After provenance support/backfill:
-docker compose exec -T api python scripts/run_legal_qa_benchmark.py `
-  --dataset artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl `
-  --collection-name nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1 `
-  --bm25-sidecar-path storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite `
-  --top-k 10 --retrieval-only `
-  --output-dir artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline `
-  --qdrant-url http://qdrant:6333
-```
+| Corpus | Questions | hit@1 | hit@3 | hit@5 | pass rate |
+|--------|-----------|-------|-------|-------|-----------|
+| ÚS | 20 | 0.750 | 1.000 | 1.000 | 1.000 |
+| NSoud | 10 | 0.700 | 0.900 | 1.000 | 1.000 |
 
 ---
 
@@ -104,19 +100,17 @@ Do not hack single-collection runner for mixed eval.
 | `source_pending=true` on all 40 seed items | hit@k uses keyword proxy, not gold case match |
 | No LLM synthesis | Cannot assess answer quality yet |
 | ÚS collection partial (~13k / full 5y window) | Recall ceiling for older ÚS decisions |
-| NSoud not benchmarked yet | No cross-corpus comparison |
+| NSoud collection partial (eval longform subset) | Recall ceiling for older NS decisions |
 
 ---
 
 ## 5. Next steps
 
-1. Extend provenance backfill for NSoud `chunk_metadata` schema + execute backfill
-2. Run `nsoud_qa_v1.jsonl` baseline
-3. Implement corpus router or two-pass mixed retrieval
-4. Run `mixed_qa_v1.jsonl`
-5. Manually verify top-3 hits for 10 questions → set `source_pending=false` + gold constraints
-6. Re-run with strict source-constraint hit@k
-7. Optional: Redis cache A/B (`EMBEDDING_CACHE_ENABLED=1`) after all baselines frozen
+1. Implement corpus router or two-pass mixed retrieval
+2. Run `mixed_qa_v1.jsonl`
+3. Manually verify top-3 hits for 10 questions → set `source_pending=false` + gold constraints
+4. Re-run with strict source-constraint hit@k
+5. Optional: Redis cache A/B (`EMBEDDING_CACHE_ENABLED=1`) after all baselines frozen
 
 ---
 
@@ -124,9 +118,9 @@ Do not hack single-collection runner for mixed eval.
 
 **No change recommended yet.**
 
-ÚS baseline shows strong keyword retrieval (hit@3–10 = 1.0, pass rate 1.0). The hit@1 gap (0.75) may improve with gold-source eval or RRF tuning, but NSoud and mixed baselines are missing — changing RRF/BM25/BGE now would invalidate comparison.
+ÚS and NSoud baselines show strong keyword retrieval (pass rate 1.0, hit@5–10 = 1.0). The hit@1 gaps (ÚS 0.75, NSoud 0.70) may improve with gold-source eval or RRF tuning, but mixed baseline is still missing — changing RRF/BM25/BGE now would invalidate comparison.
 
-Wait for NSoud + mixed baselines before tuning.
+Wait for mixed baseline before tuning.
 
 ---
 

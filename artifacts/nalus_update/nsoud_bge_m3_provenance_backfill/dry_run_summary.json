@@ -1,0 +1,67 @@
+{
+  "generated_at": "2026-07-09T16:32:15Z",
+  "backfill_version": "usoud-bge-m3-provenance-backfill-v1",
+  "collection_name": "nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1",
+  "bm25_index_id": "nalus_bge_m3_dense_bm25_rrf_v1",
+  "ingest_run_id": "nsoud-bge-m3-provenance-backfill-v1",
+  "execute": false,
+  "total_points": 1862,
+  "already_valid": 0,
+  "needs_backfill": 1862,
+  "updated": 0,
+  "sample_before": [
+    {
+      "point_id": "00187f8c-e86b-5331-93e7-c933d2b43436",
+      "missing_document_id": true,
+      "keys": [
+        "chunk_id",
+        "chunk_metadata",
+        "model_code",
+        "source_id",
+        "text"
+      ]
+    },
+    {
+      "point_id": "0029a252-abe0-52a6-84b0-4df709f7a9d3",
+      "missing_document_id": true,
+      "keys": [
+        "chunk_id",
+        "chunk_metadata",
+        "model_code",
+        "source_id",
+        "text"
+      ]
+    },
+    {
+      "point_id": "004479c1-c8c3-54c2-847d-50f68c92725a",
+      "missing_document_id": true,
+      "keys": [
+        "chunk_id",
+        "chunk_metadata",
+        "model_code",
+        "source_id",
+        "text"
+      ]
+    }
+  ],
+  "sample_after": [
+    {
+      "point_id": "00187f8c-e86b-5331-93e7-c933d2b43436",
+      "document_id": "ECLI:CZ:NS:2025:3.TDO.1120.2024.1",
+      "embedding_model": "BAAI/bge-m3",
+      "content_checksum": "6447de709cfa66f6f37c176b5c90565c7bdac33b52e98ab7b04563af3a76ca0e"
+    },
+    {
+      "point_id": "0029a252-abe0-52a6-84b0-4df709f7a9d3",
+      "document_id": "ECLI:CZ:NS:2025:28.CDO.3513.2024.1",
+      "embedding_model": "BAAI/bge-m3",
+      "content_checksum": "2ccb45c6dce4eca001f2ab99ee0dcecdaf975ce8f205e3d97c4ef9ec0765806a"
+    },
+    {
+      "point_id": "004479c1-c8c3-54c2-847d-50f68c92725a",
+      "document_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+      "embedding_model": "BAAI/bge-m3",
+      "content_checksum": "85114a5c9268a4a1eeafc802fd8378e35d0501863ed0d8cc5832e0a73e470154"
+    }
+  ]
+}
