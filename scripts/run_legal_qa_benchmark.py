@@ -24,6 +24,10 @@ from app.rag.retrieval.errors import RetrievalConfigurationError  # noqa: E402
 DEFAULT_COLLECTION = "nalus_us_bge_m3_rag_combined_20260709"
 DEFAULT_DATASET = PROJECT_ROOT / "artifacts/rag_eval/legal_qa/datasets/usoud_qa_v1.jsonl"
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "artifacts/rag_eval/legal_qa/runs"
+NSOUD_COLLECTION = "nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1"
+DEFAULT_NSOUD_BM25_SIDECAR = (
+    PROJECT_ROOT / "storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite"
+)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -36,6 +40,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--use-redis-cache", action="store_true")
     parser.add_argument("--qdrant-url", default=None)
+    parser.add_argument(
+        "--bm25-sidecar-path",
+        type=Path,
+        default=None,
+        help="Override BM25 SQLite sidecar for non-default benchmark collections.",
+    )
     return parser.parse_args(argv)
 
 
@@ -66,6 +76,7 @@ def main(argv: list[str] | None = None) -> int:
         collection_name=args.collection_name,
         qdrant_url=qdrant_url,
         use_redis_cache=args.use_redis_cache,
+        bm25_sidecar_path=args.bm25_sidecar_path,
     )
     results = run_retrieval_benchmark(items=items, search_fn=search_fn, top_k=args.top_k)
     metrics = aggregate_metrics(results)

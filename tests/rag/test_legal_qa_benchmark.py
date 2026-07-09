@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -143,6 +144,42 @@ def test_fake_retriever_runner() -> None:
     assert results[0].passed is True
     metrics = aggregate_metrics(results)
     assert metrics.hit_at_1 == 1.0
+
+
+def test_bm25_sidecar_path_override_sets_env_and_validates_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("EMBEDDING_CACHE_ENABLED", "0")
+    monkeypatch.setenv("QDRANT_COLLECTION_NAME", "nalus_us_bge_m3_rag_combined_20260709")
+    missing = tmp_path / "missing.sqlite"
+    with pytest.raises(RetrievalConfigurationError, match="BM25 sidecar not found"):
+        build_hybrid_retriever(
+            collection_name="nalus_us_bge_m3_rag_combined_20260709",
+            qdrant_url="http://qdrant:6333",
+            use_redis_cache=False,
+            bm25_sidecar_path=missing,
+        )
+
+
+def test_bm25_sidecar_path_override_wires_production_config(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    sidecar = tmp_path / "bm25.sqlite"
+    sidecar.write_text("", encoding="utf-8")
+    monkeypatch.setenv("EMBEDDING_CACHE_ENABLED", "0")
+    with patch("app.api.startup._build_production_retrieval") as mocked:
+        retriever = MagicMock()
+        retriever.search.return_value = []
+        mocked.return_value = (retriever, MagicMock())
+        with patch("qdrant_client.QdrantClient"):
+            build_hybrid_retriever(
+                collection_name="nalus_us_bge_m3_rag_combined_20260709",
+                qdrant_url="http://qdrant:6333",
+                use_redis_cache=False,
+                bm25_sidecar_path=sidecar,
+            )
+    assert os.environ["BM25_SIDECAR_PATH"] == str(sidecar.resolve())
+    mocked.assert_called_once()
 
 
 def test_redis_flag_does_not_connect_to_real_redis(monkeypatch: pytest.MonkeyPatch) -> None:

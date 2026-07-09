@@ -27,41 +27,36 @@ Run artifacts: `artifacts/rag_eval/legal_qa/runs/usoud_full_baseline/`
 
 ---
 
-## 2. NSoud baseline (skipped)
+## 2. NSoud baseline (blocked on provenance)
 
 | Field | Value |
 |-------|-------|
-| Status | **SKIPPED — not wired in runner** |
+| Status | **BLOCKED — missing embedding provenance in Qdrant payloads** |
 | Dataset | `artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl` (10 questions) |
-| Expected Qdrant collection | `nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1` |
+| Collection | `nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1` (1,862 points) |
+| BM25 sidecar | `storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite` |
 
-### Why skipped
+### Completed prerequisites
 
-1. **Qdrant collection exists** (1,862 points, dim 1024) — verified read-only.
-2. **BM25 sidecar missing** for this collection. Only sidecar present:
-   `storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite`
-3. **Runner not wired** for per-corpus BM25 path. `build_hybrid_retriever()` overrides `QDRANT_COLLECTION_NAME` only; `BM25_SIDECAR_PATH` still comes from `.env` (ÚS combined path).
+1. BM25 sidecar exported (step 1).
+2. Runner `--bm25-sidecar-path` wired (step 2) — benchmark can override collection + BM25 per corpus without changing retrieval logic.
 
-Running NSoud questions against the ÚS BM25 sidecar would produce **invalid hybrid retrieval** (dense from NSoud collection + lexical from ÚS corpus). Per instructions: do not guess — stop.
+### Current blocker
 
-### Required before NSoud run
+NSoud payloads use a different schema (`chunk_metadata.source_document_id`, no top-level `document_id`). Retrieval refuses with missing provenance fields — same class of issue as ÚS before backfill, but `backfill_bge_m3_payload_provenance.py` cannot derive `document_id` from nested `chunk_metadata` yet.
 
-1. Export BM25 sidecar:
-   ```powershell
-   docker compose exec -T api python scripts/build_bm25_sidecar_from_qdrant.py `
-     --collection-name nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1 `
-     --sqlite-path storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite `
-     --overwrite
-   ```
-2. Add runner flag `--bm25-sidecar-path` (benchmark config only, not retrieval logic change).
-3. Re-run:
-   ```powershell
-   docker compose exec -T api python scripts/run_legal_qa_benchmark.py `
-     --dataset artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl `
-     --collection-name nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1 `
-     --top-k 10 --retrieval-only `
-     --output-dir artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline
-   ```
+### Next: provenance backfill for NSoud schema, then run
+
+```powershell
+# After provenance support/backfill:
+docker compose exec -T api python scripts/run_legal_qa_benchmark.py `
+  --dataset artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl `
+  --collection-name nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1 `
+  --bm25-sidecar-path storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite `
+  --top-k 10 --retrieval-only `
+  --output-dir artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline `
+  --qdrant-url http://qdrant:6333
+```
 
 ---
 
@@ -115,7 +110,7 @@ Do not hack single-collection runner for mixed eval.
 
 ## 5. Next steps
 
-1. Wire NSoud BM25 sidecar + runner `--bm25-sidecar-path`
+1. Extend provenance backfill for NSoud `chunk_metadata` schema + execute backfill
 2. Run `nsoud_qa_v1.jsonl` baseline
 3. Implement corpus router or two-pass mixed retrieval
 4. Run `mixed_qa_v1.jsonl`

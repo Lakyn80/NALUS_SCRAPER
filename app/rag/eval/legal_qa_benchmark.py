@@ -439,6 +439,7 @@ def build_hybrid_retriever(
     collection_name: str,
     qdrant_url: str,
     use_redis_cache: bool,
+    bm25_sidecar_path: str | Path | None = None,
 ) -> RetrievalSearchFn:
     validate_collection_name(collection_name)
     if use_redis_cache:
@@ -452,10 +453,19 @@ def build_hybrid_retriever(
     from app.rag.retrieval.production_profile import production_retrieval_config_from_env
 
     os.environ["QDRANT_COLLECTION_NAME"] = collection_name
+    if bm25_sidecar_path is not None:
+        resolved_bm25 = Path(bm25_sidecar_path).resolve()
+        if not resolved_bm25.exists():
+            raise RetrievalConfigurationError(f"BM25 sidecar not found: {resolved_bm25}")
+        os.environ["BM25_SIDECAR_PATH"] = str(resolved_bm25)
     config = production_retrieval_config_from_env()
     if config.qdrant_collection != collection_name:
         raise RetrievalConfigurationError(
             f"Configured collection {config.qdrant_collection!r} != requested {collection_name!r}"
+        )
+    if bm25_sidecar_path is not None and config.bm25_sidecar_path.resolve() != Path(bm25_sidecar_path).resolve():
+        raise RetrievalConfigurationError(
+            "BM25 sidecar path mismatch between CLI override and production config."
         )
     client = QdrantClient(url=qdrant_url, timeout=30)
     retriever, _cache_build = _build_production_retrieval(client, config)
