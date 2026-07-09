@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-07-09T15:36:34Z",
+  "dataset": "/app/artifacts/rag_eval/legal_qa/datasets/usoud_qa_v1.jsonl",
+  "collection_name": "nalus_us_bge_m3_rag_combined_20260709",
+  "top_k": 10,
+  "retrieval_only": true,
+  "use_redis_cache": false,
+  "question_count": 3,
+  "hit_at_1": 0.6666666666666666,
+  "hit_at_3": 1.0,
+  "hit_at_5": 1.0,
+  "hit_at_10": 1.0,
+  "mean_keyword_coverage": 1.0,
+  "mean_source_constraint_match": null,
+  "pass_rate": 1.0
+}

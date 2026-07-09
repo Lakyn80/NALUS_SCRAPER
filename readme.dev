@@ -1947,3 +1947,36 @@ EMBEDDING_CACHE_ENABLED=1
 
 **Pravidla:** žádný MPNet/hash fallback; wrong-dim vector fail; `nalus-legal-rag` se neimportuje; Redis DB 1 odděleno od query cache DB 0.
 
+---
+
+## 2026-07-09 — Legal Q&A retrieval benchmark (v1)
+
+**Co:** Retrieval-only benchmark harness — otázka → hybrid BGE-M3 retrieval → metriky (bez LLM synthesis).
+
+**Soubory:**
+
+| Soubor | Účel |
+|--------|------|
+| `artifacts/rag_eval/legal_qa_benchmark_plan.md` | Plán a metriky |
+| `artifacts/rag_eval/legal_qa/datasets/usoud_qa_v1.jsonl` | 20 ÚS otázek |
+| `artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl` | 10 NSoud otázek |
+| `artifacts/rag_eval/legal_qa/datasets/mixed_qa_v1.jsonl` | 10 mixed otázek |
+| `app/rag/eval/legal_qa_benchmark.py` | Core loader, metriky, runner wiring |
+| `scripts/run_legal_qa_benchmark.py` | CLI runner |
+
+**Smoke (3 otázky):**
+
+```powershell
+docker compose exec -T api python scripts/run_legal_qa_benchmark.py `
+  --dataset artifacts/rag_eval/legal_qa/datasets/usoud_qa_v1.jsonl `
+  --collection-name nalus_us_bge_m3_rag_combined_20260709 `
+  --top-k 10 --retrieval-only --limit 3 `
+  --output-dir artifacts/rag_eval/legal_qa/runs/smoke
+```
+
+**Metriky v1:** hit@1/3/5/10, keyword coverage, source constraint match (když `source_pending=false`).
+
+**Redis:** default vypnuto; `--use-redis-cache` pouze pro A/B test později.
+
+**Testy:** `python -m pytest tests/rag/test_legal_qa_benchmark.py -q`
+
