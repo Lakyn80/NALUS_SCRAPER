@@ -11,7 +11,7 @@ Human verification of top-3 retrieval hits from frozen baselines. Gold annotatio
 | No invented spisová značka / case_reference | Yes — only ECLI from verified rank-1 |
 | No invented decision_date | Yes |
 | `source_pending=false` only after baseline review | Yes |
-| Gold pass = keyword hit **and** source constraint in top-k | Yes (13 document-gold items after 2026-07-10 expansion) |
+| Gold pass = keyword hit **and** source constraint in top-k | Yes (14 document-gold items after 2026-07-10 expansion) |
 | Mixed corpus-only items | Keyword + `corpus_hit@k` only (no document gold) |
 
 ## ÚS — 10 document gold items
@@ -29,15 +29,16 @@ Human verification of top-3 retrieval hits from frozen baselines. Gold annotatio
 | usoud-qa-012 | ECLI:CZ:US:2026:4.US.1065.26.1 | true |
 | usoud-qa-015 | ECLI:CZ:US:2026:2.US.3645.25.1 | true |
 
-## NSoud — 3 document gold items
+## NSoud — 4 document gold items
 
 | ID | Rank-1 ECLI (baseline) | hit@1 (keyword) |
 |----|------------------------|-----------------|
 | nsoud-qa-003 | ECLI:CZ:NS:2025:21.CDO.372.2024.1 | true |
 | nsoud-qa-004 | ECLI:CZ:NS:2024:8.TDO.760.2024.1 | true |
+| nsoud-qa-007 | ECLI:CZ:NS:2025:5.TDO.1086.2024.1 | true |
 | nsoud-qa-010 | ECLI:CZ:NS:2025:29.NSCR.1.2025.1 | true |
 
-**Not annotated (rank-1 missing ECLI in payload):** nsoud-qa-001, 002, 005, 007 — remain `source_pending=true`.
+**Not annotated after provenance check:** `nsoud-qa-001`, `nsoud-qa-002`, `nsoud-qa-005`, `nsoud-qa-006`, `nsoud-qa-008`, `nsoud-qa-009` remain `source_pending=true` and require manual relevance review.
 
 ## Mixed — 8 corpus-verified items
 
@@ -59,9 +60,9 @@ Remaining 2 mixed items stay `source_pending=true`: `mixed-qa-004`, `mixed-qa-01
 - ÚS stayed pending where rank-1 snippet was too generic or not tightly aligned with the question:
   `usoud-qa-005`, `usoud-qa-006`, `usoud-qa-008`, `usoud-qa-013`, `usoud-qa-014`,
   `usoud-qa-016`, `usoud-qa-017`, `usoud-qa-018`, `usoud-qa-019`, `usoud-qa-020`
-- NSoud pending remains blocked on missing clean rank-1 provenance payload in frozen artifacts:
-  `nsoud-qa-001`, `nsoud-qa-002`, `nsoud-qa-005`, `nsoud-qa-006`, `nsoud-qa-007`,
-  `nsoud-qa-008`, `nsoud-qa-009`
+- NSoud pending is no longer blocked on provenance extraction; read-only Qdrant lookup resolved candidate ECLI/case numbers.
+  Remaining pending items stayed unannotated because relevance is still not conservative-enough for automatic gold:
+  `nsoud-qa-001`, `nsoud-qa-002`, `nsoud-qa-005`, `nsoud-qa-006`, `nsoud-qa-008`, `nsoud-qa-009`
 
 ## Re-apply annotations
 

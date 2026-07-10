@@ -3,6 +3,7 @@
 Deterministic answer-support evaluation over frozen gold-source annotations. **No LLM was called.**
 
 Update: refreshed on 2026-07-10 after conservative gold expansion for ÚS and mixed.
+Update: refreshed again on 2026-07-10 after adding only `nsoud-qa-007` as a conservative NSoud gold item from the read-only provenance check.
 
 ---
 
@@ -68,22 +69,23 @@ Gold item breakdown:
 | Metric | Value |
 |--------|-------|
 | Total questions | 10 |
-| Gold available | 3 |
+| Gold available | 4 |
 | direct_support_count | 0 |
 | partial_support_count | 2 |
-| gap_count | 0 |
+| gap_count | 1 |
 | boilerplate_noise_count | 1 |
 | corpus_only_count | 0 |
 | strict_direct_pass_rate_all | **0.000** |
 | strict_direct_pass_rate_gold | **0.000** |
-| usable_support_rate_gold | **0.667** |
-| citation_available_rate | **0.667** |
-| unsupported_answer_risk_count | **1** |
+| usable_support_rate_gold | **0.500** |
+| citation_available_rate | **0.500** |
+| unsupported_answer_risk_count | **2** |
 | needs_review_count | 1 |
-| skipped_count | 7 |
+| skipped_count | 6 |
 
 Gold item breakdown:
 - `nsoud-qa-003, 004` → partial
+- `nsoud-qa-007` → **gap** after annotation; provenance is verified, but retrieved snippet still does not support a safe answer skeleton
 - `nsoud-qa-010` → **boilerplate_noise / needs_review** (operative snippet “Dovolání se odmítá.”)
 
 ---
@@ -121,7 +123,7 @@ Gold item breakdown:
 | Corpus | Gold | Direct | Partial | Gap | Boilerplate | Corpus-only | strict_direct_pass_rate_gold | usable_support_rate_gold | citation_available_rate | unsupported_risk |
 |--------|------|--------|---------|-----|-------------|-------------|------------------------------|--------------------------|-------------------------|------------------|
 | ÚS | 10 | 1 | 9 | 0 | 0 | 0 | 0.100 | 1.000 | 1.000 | 0 |
-| NSoud | 3 | 0 | 2 | 0 | 1 | 0 | 0.000 | 0.667 | 0.667 | 1 |
+| NSoud | 4 | 0 | 2 | 1 | 1 | 0 | 0.000 | 0.500 | 0.500 | 2 |
 | Mixed | 8 | 0 | 0 | 0 | 0 | 8 | 0.000 | 1.000 | 0.000 | 0 |
 
 ---
@@ -131,7 +133,8 @@ Gold item breakdown:
 1. **Strict direct threshold** — rank-1 gold ECLI + ≥67% keyword overlap on snippet; many gold retrieval passes become `partial` at answer layer.
 2. **Snippet-only** — does not read full chunk text from Qdrant.
 3. **Boilerplate detection** — snippets &lt;40 chars or operative lines (NSoud dovolání) flagged as `needs_review`.
-4. **10/20 ÚS, 7/10 NSoud, and 2/10 mixed remain skipped** — remaining `source_pending=true` items still need provenance-safe gold expansion.
+4. **10/20 ÚS, 6/10 NSoud, and 2/10 mixed remain skipped** — remaining `source_pending=true` items still need provenance-safe gold expansion or manual relevance review.
+5. **Verified provenance is not enough for NSoud gold quality** — `nsoud-qa-007` shows that a clean ECLI can still evaluate as `gap` at the answer-support layer.
 5. **No generative answers** — skeleton only.
 
 ---

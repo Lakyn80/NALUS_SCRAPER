@@ -1,6 +1,6 @@
 # No-LLM answer eval summary
 
-- Generated: 2026-07-09T19:57:59Z
+- Generated: 2026-07-10T12:20:50Z
 - Dataset: `C:\Users\lukas\Desktop\PYTHON_PROJECTS_DESKTOP\PYTHON_PROJECTS\nalus-scraper\artifacts\rag_eval\legal_qa\datasets\nsoud_qa_v1.jsonl`
 - Retrieval results: `C:\Users\lukas\Desktop\PYTHON_PROJECTS_DESKTOP\PYTHON_PROJECTS\nalus-scraper\artifacts\rag_eval\legal_qa\runs\nsoud_full_baseline\retrieval_results.jsonl`
 - Gold review: `C:\Users\lukas\Desktop\PYTHON_PROJECTS_DESKTOP\PYTHON_PROJECTS\nalus-scraper\artifacts\rag_eval\legal_qa\gold_source_review_20260709.md`
@@ -18,7 +18,7 @@
 
 - direct_support_count: 0
 - partial_support_count: 2
-- gap_count: 0
+- gap_count: 1
 - boilerplate_noise_count: 1
 - corpus_only_count: 0
 
@@ -26,17 +26,17 @@
 
 - strict_direct_pass_rate_all: 0.000
 - strict_direct_pass_rate_gold: 0.000
-- usable_support_rate_gold: 0.667
-- citation_available_rate: 0.667
+- usable_support_rate_gold: 0.500
+- citation_available_rate: 0.500
 - answer_eval_pass_rate (alias): 0.000
 - answer_eval_partial_rate: 0.200
-- answer_eval_gap_rate: 0.000
+- answer_eval_gap_rate: 0.100
 
 ## Risk / coverage
 
 - total questions: 10
-- gold available: 3
-- unsupported_answer_risk_count: 1
-- skipped: 7
+- gold available: 4
+- unsupported_answer_risk_count: 2
+- skipped: 6
 - needs review: 1
 
