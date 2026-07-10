@@ -2,6 +2,8 @@
 
 Deterministic answer-support evaluation over frozen gold-source annotations. **No LLM was called.**
 
+Update: refreshed on 2026-07-10 after conservative gold expansion for ÚS and mixed.
+
 ---
 
 ## Metric interpretation
@@ -42,22 +44,22 @@ Gold review: `artifacts/rag_eval/legal_qa/gold_source_review_20260709.md`
 | Metric | Value |
 |--------|-------|
 | Total questions | 20 |
-| Gold available | 5 |
+| Gold available | 10 |
 | direct_support_count | 1 |
-| partial_support_count | 4 |
+| partial_support_count | 9 |
 | gap_count | 0 |
 | boilerplate_noise_count | 0 |
 | corpus_only_count | 0 |
 | strict_direct_pass_rate_all | **0.050** |
-| strict_direct_pass_rate_gold | **0.200** |
+| strict_direct_pass_rate_gold | **0.100** |
 | usable_support_rate_gold | **1.000** |
 | citation_available_rate | **1.000** |
 | unsupported_answer_risk_count | 0 |
-| skipped_count | 15 |
+| skipped_count | 10 |
 
 Gold item breakdown:
 - `usoud-qa-004` → **direct / pass**
-- `usoud-qa-001, 003, 009, 012` → partial (rank-1 gold ECLI present but keyword coverage on snippet &lt; direct threshold)
+- `usoud-qa-001, 002, 003, 007, 009, 010, 011, 012, 015` → partial (rank-1 gold ECLI present but keyword coverage on snippet &lt; direct threshold)
 
 ---
 
@@ -91,18 +93,18 @@ Gold item breakdown:
 | Metric | Value |
 |--------|-------|
 | Total questions | 10 |
-| Gold available | 2 (corpus-only) |
+| Gold available | 8 (corpus-only) |
 | direct_support_count | 0 |
 | partial_support_count | 0 |
 | gap_count | 0 |
 | boilerplate_noise_count | 0 |
-| corpus_only_count | 2 |
+| corpus_only_count | 8 |
 | strict_direct_pass_rate_all | **0.000** |
 | strict_direct_pass_rate_gold | **0.000** |
 | usable_support_rate_gold | **1.000** |
 | citation_available_rate | **0.000** (by design — no document gold) |
 | unsupported_answer_risk_count | 0 |
-| skipped_count | 8 |
+| skipped_count | 2 |
 
 Mixed rules enforced:
 - `corpus_only` skeleton does not claim a document citation
@@ -110,7 +112,7 @@ Mixed rules enforced:
 - No direct pass without document gold
 
 Gold item breakdown:
-- `mixed-qa-002, 005` → corpus_only / partial — no fabricated document citation
+- `mixed-qa-001, 002, 003, 005, 006, 007, 008, 009` → corpus_only / partial — no fabricated document citation
 
 ---
 
@@ -118,9 +120,9 @@ Gold item breakdown:
 
 | Corpus | Gold | Direct | Partial | Gap | Boilerplate | Corpus-only | strict_direct_pass_rate_gold | usable_support_rate_gold | citation_available_rate | unsupported_risk |
 |--------|------|--------|---------|-----|-------------|-------------|------------------------------|--------------------------|-------------------------|------------------|
-| ÚS | 5 | 1 | 4 | 0 | 0 | 0 | 0.200 | 1.000 | 1.000 | 0 |
+| ÚS | 10 | 1 | 9 | 0 | 0 | 0 | 0.100 | 1.000 | 1.000 | 0 |
 | NSoud | 3 | 0 | 2 | 0 | 1 | 0 | 0.000 | 0.667 | 0.667 | 1 |
-| Mixed | 2 | 0 | 0 | 0 | 0 | 2 | 0.000 | 1.000 | 0.000 | 0 |
+| Mixed | 8 | 0 | 0 | 0 | 0 | 8 | 0.000 | 1.000 | 0.000 | 0 |
 
 ---
 
@@ -129,7 +131,7 @@ Gold item breakdown:
 1. **Strict direct threshold** — rank-1 gold ECLI + ≥67% keyword overlap on snippet; many gold retrieval passes become `partial` at answer layer.
 2. **Snippet-only** — does not read full chunk text from Qdrant.
 3. **Boilerplate detection** — snippets &lt;40 chars or operative lines (NSoud dovolání) flagged as `needs_review`.
-4. **15/20 ÚS and 7/10 NSoud skipped** — still `source_pending=true`; expand gold before corpus-wide answer eval.
+4. **10/20 ÚS, 7/10 NSoud, and 2/10 mixed remain skipped** — remaining `source_pending=true` items still need provenance-safe gold expansion.
 5. **No generative answers** — skeleton only.
 
 ---
