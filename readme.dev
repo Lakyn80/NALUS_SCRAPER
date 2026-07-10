@@ -2076,3 +2076,291 @@ Prometheus target `nalus_legal_answer_eval` musí být **UP** na http://localhos
 
 **Testy exporteru:** `python -m pytest tests/observability/test_eval_metrics_exporter.py -q`
 
+---
+
+## 2026-07-10 14:08 Europe/Prague — HANDOFF: Legal Q&A benchmark + answer eval + Grafana (kompletní)
+
+**Datum a čas zápisu:** `2026-07-10 14:08:00 +03:00`
+
+Toto je **kompletní handoff** pro Codex / dalšího agenta. Pokrývá celou větev práce od retrieval benchmarku přes gold-source anotace, no-LLM answer eval až po Prometheus/Grafana vizualizaci. Cíl: agent musí po přečtení vědět **co je hotové**, **kde jsou frozen artefakty**, **jak to znovu spustit** a **co nesmí rozbít**.
+
+### Stav repozitáře (HEAD)
+
+| Commit | Popis |
+|--------|-------|
+| `498e200` | Frozen answer eval artefakty + `summary.json` pro usoud/nsoud/mixed |
+| `839c76d` | Prometheus exporter + Grafana dashboard + Docker monitoring stack |
+| `f8bcf67` | Deterministic no-LLM legal answer eval |
+| `340a30e` | Gold ECLI anotace + `source_hit@k` metriky |
+| `d1ff299` | Mixed two-pass retrieval benchmark |
+| `66b83fc` | NSoud provenance + NSoud retrieval baseline |
+| `0d86406` | `--bm25-sidecar-path` pro per-corpus NSoud běhy |
+| `1bbc62b` | ÚS retrieval baseline freeze |
+| `96edb23` | Retrieval-only legal Q&A benchmark harness |
+
+Branch: `main` (pushnuto na `origin` k 2026-07-10).
+
+---
+
+### Architektura (dvě vrstvy evaluace)
+
+```
+VRSTVA 1 — RETRIEVAL (jen vyhledávání, bez LLM)
+  datasets/*.jsonl
+    → scripts/run_legal_qa_benchmark.py
+    → artifacts/rag_eval/legal_qa/runs/<run_name>/
+       retrieval_results.jsonl, metrics.json, summary.md
+
+VRSTVA 2 — ANSWER EVAL (deterministic no-LLM, nad frozen retrieval)
+  datasets/*.jsonl + frozen retrieval_results.jsonl + gold review
+    → scripts/run_legal_answer_eval.py --no-llm --require-citations
+    → artifacts/rag_eval/legal_qa/answer_eval/<run_name>/
+       answer_eval_results.jsonl, metrics.json, summary.md, summary.json
+
+VRSTVA 3 — OBSERVABILITY (offline, read-only)
+  answer_eval/*/summary.json
+    → app/observability/eval_metrics_exporter.py :9108
+    → Prometheus :9091
+    → Grafana :3002  (dashboard: NALUS — Legal Answer Eval Metrics)
+```
+
+**Důležité:** Grafana a exporter ukazují **offline benchmark výsledky**, ne live RAG API / chat metriky.
+
+---
+
+### Klíčové moduly a skripty
+
+| Soubor | Účel |
+|--------|------|
+| `app/rag/eval/legal_qa_benchmark.py` | Retrieval benchmark core, mixed two-pass merge |
+| `scripts/run_legal_qa_benchmark.py` | CLI retrieval runner (`--mixed-two-pass`, `--bm25-sidecar-path`, …) |
+| `app/rag/eval/legal_answer_eval.py` | No-LLM answer support eval, `AnswerEvalMetrics`, `summary.json` |
+| `scripts/run_legal_answer_eval.py` | CLI answer eval runner |
+| `scripts/apply_gold_source_annotations.py` | Aplikace ECLI gold anotací do datasetů |
+| `app/rag/retrieval/provenance.py` | `document_id` / NSoud `chunk_metadata` provenance |
+| `app/observability/eval_metrics_exporter.py` | Read-only Prometheus exporter |
+| `monitoring/prometheus/prometheus.yml` | Scrape job `nalus_legal_answer_eval` |
+| `monitoring/grafana/dashboards/legal_answer_eval_dashboard.json` | Grafana dashboard |
+
+**Testy:**
+
+```powershell
+python -m pytest tests/rag/test_legal_qa_benchmark.py tests/rag/test_legal_answer_eval.py tests/rag/test_embedding_cache.py tests/observability/test_eval_metrics_exporter.py -q
+# očekáváno: 57+ passed (k 2026-07-10)
+```
+
+---
+
+### Datasety a gold review
+
+| Dataset | Otázek | Gold ECLI | Poznámka |
+|---------|--------|-----------|----------|
+| `datasets/usoud_qa_v1.jsonl` | 20 | 5× ECLI | 15× `source_pending=true` |
+| `datasets/nsoud_qa_v1.jsonl` | 10 | 3× ECLI | 7× pending |
+| `datasets/mixed_qa_v1.jsonl` | 10 | 2× corpus-only | `mixed-qa-002`, `mixed-qa-005` bez ECLI |
+
+Gold review (human): `artifacts/rag_eval/legal_qa/gold_source_review_20260709.md`
+
+---
+
+### Frozen retrieval baselines (VRSTVA 1)
+
+| Corpus | Run output | Retrieval input | Kolekce / BM25 |
+|--------|------------|-----------------|----------------|
+| ÚS | `runs/usoud_full_baseline/` | 20 otázek | `nalus_us_bge_m3_rag_combined_20260709` |
+| NSoud | `runs/nsoud_full_baseline/` | 10 otázek | `nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1` + BM25 sidecar |
+| Mixed | `runs/mixed_two_pass_baseline/` | 10 otázek | two-pass: ÚS kolekce + NSoud kolekce, merge |
+
+Frozen reporty: `artifacts/rag_eval/legal_qa/baselines/*_20260709.md`
+
+**ÚS retrieval baseline (2026-07-09):** hit@1=0.750, pass rate=1.000  
+**NSoud retrieval baseline:** hit@1=0.700, pass rate=1.000 (po provenance backfill 1862/1862 bodů)  
+**Mixed two-pass:** corpus_hit@3=1.0, retrieval_hit@1=1.0
+
+**Příkaz — ÚS full retrieval:**
+
+```powershell
+docker compose exec -T api python scripts/run_legal_qa_benchmark.py `
+  --dataset artifacts/rag_eval/legal_qa/datasets/usoud_qa_v1.jsonl `
+  --collection-name nalus_us_bge_m3_rag_combined_20260709 `
+  --top-k 10 --retrieval-only `
+  --output-dir artifacts/rag_eval/legal_qa/runs/usoud_full_baseline
+```
+
+**Příkaz — NSoud full retrieval** (vyžaduje `--bm25-sidecar-path`):
+
+```powershell
+docker compose exec -T api python scripts/run_legal_qa_benchmark.py `
+  --dataset artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl `
+  --collection-name nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1 `
+  --bm25-sidecar-path storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite `
+  --top-k 10 --retrieval-only `
+  --output-dir artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline
+```
+
+**Příkaz — Mixed two-pass:**
+
+```powershell
+docker compose exec -T api python scripts/run_legal_qa_benchmark.py `
+  --dataset artifacts/rag_eval/legal_qa/datasets/mixed_qa_v1.jsonl `
+  --mixed-two-pass `
+  --usoud-collection-name nalus_us_bge_m3_rag_combined_20260709 `
+  --nsoud-collection-name nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1 `
+  --nsoud-bm25-sidecar-path storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite `
+  --top-k 10 --retrieval-only `
+  --output-dir artifacts/rag_eval/legal_qa/runs/mixed_two_pass_baseline
+```
+
+---
+
+### Frozen no-LLM answer eval baselines (VRSTVA 2)
+
+| Corpus | Output dir | Retrieval input | Gold |
+|--------|------------|-----------------|------|
+| ÚS | `answer_eval/usoud_no_llm_baseline/` | `runs/usoud_gold_eval/retrieval_results.jsonl` | 5 |
+| NSoud | `answer_eval/nsoud_no_llm_baseline/` | `runs/nsoud_full_baseline/retrieval_results.jsonl` | 3 |
+| Mixed | `answer_eval/mixed_no_llm_baseline/` | `runs/mixed_two_pass_baseline/retrieval_results.jsonl` | 2 corpus-only |
+
+Souhrnný report: `artifacts/rag_eval/legal_qa/answer_eval_report_20260709.md`
+
+**Interpretace answer eval metrik:**
+
+| Metrika | Význam |
+|---------|--------|
+| `strict_direct_pass_rate_all` | Podíl všech otázek se `status=pass` (direct + citace) |
+| `strict_direct_pass_rate_gold` | Totéž jen nad gold položkami |
+| `usable_support_rate_gold` | Gold s `direct` / `partial` / `corpus_only` |
+| `citation_available_rate` | Gold s dostupnou ECLI/chunk citací |
+| `direct` | Strict pass — rank-1 gold ECLI + ≥67 % keyword overlap na snippetu |
+| `partial` | Použitelná opora, ne plný direct pass |
+| `gap` / `boilerplate_noise` | Nesmí generovat jistou odpověď |
+| `corpus_only` | Jen směrování na správný korpus, bez dokumentové citace |
+
+**Frozen výsledky (2026-07-09, `summary.json`):**
+
+| Corpus | usable_support_rate_gold | strict_direct_pass_rate_gold | citation_rate | unsupported_risk |
+|--------|--------------------------|------------------------------|---------------|------------------|
+| ÚS | **1.000** | **0.200** | **1.000** | 0 |
+| NSoud | **0.667** | **0.000** | **0.667** | **1** (`nsoud-qa-010` boilerplate) |
+| Mixed | **1.000** | **0.000** | **0.000** (záměr) | 0 |
+
+**Příkaz — answer eval (příklad NSoud):**
+
+```powershell
+python scripts/run_legal_answer_eval.py `
+  --dataset artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl `
+  --retrieval-results artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline/retrieval_results.jsonl `
+  --gold-review artifacts/rag_eval/legal_qa/gold_source_review_20260709.md `
+  --output-dir artifacts/rag_eval/legal_qa/answer_eval/nsoud_no_llm_baseline `
+  --no-llm --require-citations
+```
+
+Po běhu se automaticky zapíše `summary.json` (pro Grafana exporter).
+
+**Mixed pravidla (implementováno v `legal_answer_eval.py`):**
+
+- `corpus_only` nesmí tvrdit přesnou dokumentovou citaci
+- `citation_available=false` bez ECLI/source_document_id
+- žádný direct pass bez document gold
+
+---
+
+### Grafana / Prometheus (VRSTVA 3)
+
+```powershell
+docker compose up -d nalus-eval-metrics-exporter prometheus grafana
+```
+
+| Služba | URL |
+|--------|-----|
+| Exporter | http://localhost:9108/metrics |
+| Prometheus | http://localhost:9091 (target `nalus_legal_answer_eval` = UP) |
+| Grafana | http://localhost:3002 (`admin` / `admin` — **jen local dev**) |
+
+Dashboard: **NALUS — Legal Answer Eval Metrics**  
+Soubor: `monitoring/grafana/dashboards/legal_answer_eval_dashboard.json`
+
+Lokální exporter bez Docker:
+
+```powershell
+python -m app.observability.eval_metrics_exporter --host 0.0.0.0 --port 9108
+```
+
+---
+
+### Co se **NEMĚNILO** / production safety
+
+Při celé této větvi evaluace platí:
+
+1. **Žádný LLM** / DeepSeek volán v benchmark ani answer eval
+2. **Žádný Redis** v eval bězích (default vypnuto)
+3. **Žádný Qdrant write** při eval — jen čtení existujících kolekcí
+4. **Žádná změna retrieval logiky** (BGE-M3 / BM25 / RRF beze změny)
+5. **Žádný alias switch** — `nalus_live` / `nalus_stable_20260326` nedotčeny
+6. **Žádný ingest** spuštěný jako součást eval
+7. **`nalus-legal-rag`** se neimportuje ani nemění
+8. **AI-LEGAL-SYSTEM** — mimo scope
+
+Výjimka mimo eval: NSoud provenance backfill (`66b83fc`) doplnil `document_id` do NSoud eval kolekce — to byl jednorázový maintenance krok, ne produkční alias switch.
+
+---
+
+### Co má další agent udělat jako **další krok** (doporučené pořadí)
+
+1. **Rozšířit gold anotace** — z 5+3+2 na více otázek (`source_pending=false` + ECLI); použít `scripts/apply_gold_source_annotations.py` + update `gold_source_review_*.md`
+2. **Re-run answer eval** po rozšíření gold → refresh `summary.json` → Grafana se aktualizuje při scrape
+3. **Volitelně LLM answer eval** — explicitní flag (`--enable-llm`), zatím **neimplementováno**; před tím musí projít no-LLM gate
+4. **NSoud boilerplate handling** — `nsoud-qa-010` (operative snippet „Dovolání se odmítá.") → zvážit full-chunk read nebo upravit gold threshold
+5. **Rozšířit dataset** — více otázek do `*_qa_v1.jsonl` pro corpus-wide eval (ne jen gold subset)
+6. **CI hook** — přidat `pytest tests/rag/test_legal_answer_eval.py tests/observability/test_eval_metrics_exporter.py` do pipeline
+
+**Nedělat bez explicitního zadání:**
+
+- Zapínat LLM/DeepSeek v eval pipeline
+- Měnit BGE-M3 / BM25 / RRF scoring
+- Přepínat Qdrant aliasy nebo psát do produkčních kolekcí
+- Commitovat obří generated artefakty (`out_*`, winner outputy)
+- Zaměňovat produkční API (`localhost:8029`) za „viteznou“ benchmark kolekci bez ověření collection name
+
+---
+
+### Rychlá kontrola pro nového agenta
+
+```powershell
+# 1) Testy
+python -m pytest tests/rag/test_legal_answer_eval.py tests/rag/test_legal_qa_benchmark.py tests/rag/test_embedding_cache.py tests/observability/test_eval_metrics_exporter.py -q
+
+# 2) Exporter metriky (lokálně nebo Docker)
+curl http://localhost:9108/metrics | Select-String usable_support_rate_gold
+
+# 3) Ověř frozen summary.json
+Get-Content artifacts/rag_eval/legal_qa/answer_eval/usoud_no_llm_baseline/summary.json
+Get-Content artifacts/rag_eval/legal_qa/answer_eval/nsoud_no_llm_baseline/summary.json
+Get-Content artifacts/rag_eval/legal_qa/answer_eval/mixed_no_llm_baseline/summary.json
+
+# 4) Grafana stack
+docker compose ps nalus-eval-metrics-exporter prometheus grafana
+curl http://localhost:9091/-/ready
+```
+
+Očekávané hodnoty v exporteru / Grafana:
+
+- ÚS `usable_support_rate_gold` = 1.0
+- NSoud `usable_support_rate_gold` ≈ 0.667
+- Mixed `usable_support_rate_gold` = 1.0
+- NSoud `unsupported_answer_risk_count` = 1
+
+---
+
+### Související artefakty (source of truth)
+
+| Typ | Cesta |
+|-----|-------|
+| Retrieval baselines | `artifacts/rag_eval/legal_qa/baselines/` |
+| Retrieval runs | `artifacts/rag_eval/legal_qa/runs/` |
+| Answer eval runs | `artifacts/rag_eval/legal_qa/answer_eval/` |
+| Answer eval report | `artifacts/rag_eval/legal_qa/answer_eval_report_20260709.md` |
+| Gold review | `artifacts/rag_eval/legal_qa/gold_source_review_20260709.md` |
+| NSoud provenance backfill | `artifacts/nalus_update/bge_m3_provenance_backfill/` |
+| Monitoring config | `monitoring/prometheus/`, `monitoring/grafana/` |
+
