@@ -7,7 +7,11 @@ import pytest
 
 from app.rag.eval.legal_answer_eval import (
     aggregate_answer_metrics,
+    build_failed_case_report_entries,
+    build_metric_failure_categories,
+    build_nsoud_qa_007_diagnostic,
     build_answer_skeleton,
+    determine_final_status,
     evaluate_answer_item,
     gold_source_hit_at_k,
     hit_matches_gold_ecli,
@@ -15,8 +19,10 @@ from app.rag.eval.legal_answer_eval import (
     load_gold_registry_from_dataset,
     load_retrieval_results,
     map_support_to_status,
+    normalize_answer_text,
     run_answer_eval,
     validate_gold_review_path,
+    write_answer_eval_outputs,
 )
 from app.rag.eval.legal_qa_benchmark import LegalQaItem, SourceConstraints, load_dataset
 from app.rag.retrieval.errors import RetrievalConfigurationError
@@ -91,6 +97,11 @@ def test_matches_retrieval_result_to_gold_source() -> None:
     ]
     assert hit_matches_gold_ecli(hits[0], "ECLI:CZ:US:2026:1.US.1.1")
     assert gold_source_hit_at_k(hits, "ECLI:CZ:US:2026:1.US.1.1", 1) is True
+
+
+def test_normalize_answer_text_handles_whitespace_and_currency() -> None:
+    assert normalize_answer_text("35 000 RUB") == "35000 rub"
+    assert normalize_answer_text("35000 руб.") == "35000 rub"
 
 
 def test_direct_support_produces_pass(tmp_path: Path) -> None:
@@ -282,6 +293,9 @@ def test_runner_main_no_llm(tmp_path: Path) -> None:
         ]
     ) == 0
     assert (output / "answer_eval_results.jsonl").exists()
+    assert (output / "failed_cases_report.json").exists()
+    assert (output / "metrics_summary.json").exists()
+    assert (output / "metric_failure_categories.json").exists()
 
 
 def test_validate_gold_review_path(tmp_path: Path) -> None:
@@ -324,7 +338,8 @@ def test_aggregate_answer_metrics_counts() -> None:
         citation_required=True,
     )
     metrics = aggregate_answer_metrics(results)
-    assert metrics.gold_available_count == 1
+    assert metrics.gold_question_count == 1
+    assert metrics.missing_gold_count == 1
     assert metrics.skipped_count == 1
     assert metrics.direct_support_count == 1
     assert metrics.strict_direct_pass_rate_all == 0.5
@@ -372,6 +387,240 @@ def test_new_rate_metrics_on_mixed_support_levels() -> None:
     assert metrics.partial_support_count == 1
     assert metrics.strict_direct_pass_rate_gold == 0.5
     assert metrics.usable_support_rate_gold == 1.0
+
+
+def test_failed_case_classification_marks_retrieval_miss() -> None:
+    item = _item(source_pending=False, ecli="ECLI:CZ:US:2026:1.US.1.1")
+    registry = load_gold_registry_from_dataset([item])
+    retrieval_by_id = {
+        item.id: {
+            "hits": [
+                _hit(
+                    rank=1,
+                    chunk_id="9",
+                    text="nesouvislý text bez klíčových slov",
+                    document_id="ECLI:CZ:US:2026:9.US.9.9.9",
+                )
+            ]
+        }
+    }
+    results = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id=retrieval_by_id,
+        citation_required=True,
+    )
+    failed_cases = build_failed_case_report_entries(
+        run_name="usoud_no_llm_baseline",
+        generated_at="2026-07-10T12:00:00Z",
+        dataset_path=Path("dataset.jsonl"),
+        corpus="usoud",
+        items=[item],
+        registry=registry,
+        retrieval_by_id=retrieval_by_id,
+        results=results,
+    )
+    assert len(failed_cases) == 1
+    assert failed_cases[0].failure_category == "true_retrieval_miss"
+    assert failed_cases[0].is_real_failure is True
+    counts = build_metric_failure_categories(
+        failed_cases=failed_cases,
+        metrics=aggregate_answer_metrics(results),
+    )
+    assert counts["true_retrieval_miss"] == 1
+    assert counts["metric_denominator_warning"] == 1
+
+
+def test_write_answer_eval_outputs_writes_failed_case_diagnostics(tmp_path: Path) -> None:
+    item = _item(source_pending=False, ecli="ECLI:CZ:US:2026:1.US.1.1")
+    items = [item]
+    registry = load_gold_registry_from_dataset(items)
+    retrieval_by_id = {
+        item.id: {
+            "hits": [
+                _hit(
+                    rank=1,
+                    chunk_id="9",
+                    text="nesouvislý text bez klíčových slov",
+                    document_id="ECLI:CZ:US:2026:9.US.9.9.9",
+                )
+            ]
+        }
+    }
+    results = run_answer_eval(
+        items=items,
+        registry=registry,
+        retrieval_by_id=retrieval_by_id,
+        citation_required=True,
+    )
+    metrics = aggregate_answer_metrics(results)
+    output_dir = tmp_path / "usoud_no_llm_baseline"
+    write_answer_eval_outputs(
+        output_dir=output_dir,
+        dataset_path=tmp_path / "dataset.jsonl",
+        retrieval_results_path=tmp_path / "retrieval.jsonl",
+        gold_review_path=tmp_path / "review.md",
+        items=items,
+        registry=registry,
+        retrieval_by_id=retrieval_by_id,
+        results=results,
+        metrics=metrics,
+        no_llm=True,
+        citation_required=True,
+        corpus="usoud",
+    )
+    failed_cases_payload = json.loads(
+        (output_dir / "failed_cases_report.json").read_text(encoding="utf-8")
+    )
+    assert failed_cases_payload["failed_case_count"] == 1
+    metrics_summary = json.loads((output_dir / "metrics_summary.json").read_text(encoding="utf-8"))
+    assert metrics_summary["gold_count"] == 1
+    assert metrics_summary["denominator_warning"] is not None
+    category_payload = json.loads(
+        (output_dir / "metric_failure_categories.json").read_text(encoding="utf-8")
+    )
+    assert category_payload["failure_category_counts"]["true_retrieval_miss"] == 1
+
+
+def test_missing_gold_is_not_counted_as_retrieval_failure() -> None:
+    item = _item(source_pending=True, ecli=None)
+    registry = load_gold_registry_from_dataset([item])
+    results = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id={item.id: {"hits": []}},
+        citation_required=True,
+    )
+    failed_cases = build_failed_case_report_entries(
+        run_name="nsoud_no_llm_baseline",
+        generated_at="2026-07-10T12:00:00Z",
+        dataset_path=Path("dataset.jsonl"),
+        corpus="usoud",
+        items=[item],
+        registry=registry,
+        retrieval_by_id={item.id: {"hits": []}},
+        results=results,
+    )
+    assert failed_cases[0].failure_category == "not_evaluable_missing_gold"
+    assert failed_cases[0].is_real_failure is False
+
+
+def test_corpus_only_no_citation_is_not_failure() -> None:
+    item = LegalQaItem(
+        id="mixed-qa-002",
+        corpus="mixed",
+        question="Porovnání soudů",
+        expected_answer_points=["bod"],
+        expected_source_constraints=SourceConstraints(),
+        expected_keywords=["ústavní", "nejvyšší"],
+        forbidden_answer_patterns=[],
+        difficulty="medium",
+        legal_topic="mixed",
+        evaluation_type="retrieval",
+        source_pending=False,
+        expected_target_corpus="both",
+    )
+    registry = load_gold_registry_from_dataset([item])
+    retrieval_by_id = {item.id: {"hits": [], "corpus_hit_at_3": True, "corpus_hit_at_5": True}}
+    results = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id=retrieval_by_id,
+        citation_required=True,
+    )
+    failed_cases = build_failed_case_report_entries(
+        run_name="mixed_no_llm_baseline",
+        generated_at="2026-07-10T12:00:00Z",
+        dataset_path=Path("dataset.jsonl"),
+        corpus="mixed",
+        items=[item],
+        registry=registry,
+        retrieval_by_id=retrieval_by_id,
+        results=results,
+    )
+    assert failed_cases[0].failure_category == "corpus_only_no_document_citation_expected"
+    assert failed_cases[0].is_real_failure is False
+
+
+def test_determine_final_status_warn_for_missing_gold_only() -> None:
+    status, reason = determine_final_status(
+        corpus="mixed",
+        failure_category_counts={
+            "not_evaluable_missing_gold": 2,
+            "metric_denominator_warning": 1,
+        },
+    )
+    assert status == "WARN"
+    assert "missing gold coverage" in reason
+
+
+def test_determine_final_status_fail_with_real_nsoud_risk() -> None:
+    status, _reason = determine_final_status(
+        corpus="nsoud",
+        failure_category_counts={
+            "true_retrieval_miss": 1,
+            "unsupported_boilerplate_or_gap": 1,
+        },
+    )
+    assert status == "FAIL_WITH_REAL_NSOUD_RISK"
+
+
+def test_nsoud_qa_007_diagnostic_classifies_true_retrieval_miss() -> None:
+    item = LegalQaItem(
+        id="nsoud-qa-007",
+        corpus="nsoud",
+        question="Jak Nejvyšší soud posuzuje dovolací důvod podle § 265b tr. ř.?",
+        expected_answer_points=["bod"],
+        expected_source_constraints=SourceConstraints(source_document_id="ECLI:CZ:NS:2025:5.TDO.1086.2024.1"),
+        expected_keywords=["265b", "trestní", "dovolání"],
+        forbidden_answer_patterns=[],
+        difficulty="medium",
+        legal_topic="trestní dovolání",
+        evaluation_type="retrieval",
+        source_pending=False,
+        expected_target_corpus=None,
+    )
+    registry = load_gold_registry_from_dataset([item])
+    retrieval_by_id = {
+        item.id: {
+            "keyword_coverage": 1.0,
+            "hits": [
+                _hit(
+                    rank=1,
+                    chunk_id="1",
+                    text="§ 265b odst. 1 písm. g) tr. ř.",
+                    document_id="ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+                ),
+                _hit(
+                    rank=2,
+                    chunk_id="2",
+                    text="§ 265b odst. 1 písm. h) tr. ř.",
+                    document_id="ECLI:CZ:NS:2025:3.TDO.53.2025.1",
+                ),
+                _hit(
+                    rank=3,
+                    chunk_id="3",
+                    text="trestní dovolání",
+                    document_id="ECLI:CZ:NS:2025:6.TDO.21.2025.1",
+                ),
+            ],
+        }
+    }
+    results = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id=retrieval_by_id,
+        citation_required=True,
+    )
+    diagnostic = build_nsoud_qa_007_diagnostic(
+        items=[item],
+        registry=registry,
+        retrieval_by_id=retrieval_by_id,
+        results=results,
+    )
+    assert diagnostic is not None
+    assert diagnostic["true_retrieval_miss"] is True
+    assert diagnostic["matcher_issue"] is False
 
 
 def test_runner_module_has_no_nalus_legal_rag_import() -> None:

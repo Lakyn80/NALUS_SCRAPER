@@ -2364,3 +2364,94 @@ Očekávané hodnoty v exporteru / Grafana:
 | NSoud provenance backfill | `artifacts/nalus_update/bge_m3_provenance_backfill/` |
 | Monitoring config | `monitoring/prometheus/`, `monitoring/grafana/` |
 
+---
+
+## 2026-07-10 17:33 Europe/Prague — PRE-CHANGE: NALUS evaluation metrics failed-cases diagnostic and repair
+
+**Co bude inspektováno:**
+
+- `app/rag/eval/legal_answer_eval.py`
+- `scripts/run_legal_answer_eval.py`
+- `app/observability/eval_metrics_exporter.py`
+- `tests/rag/test_legal_answer_eval.py`
+- `tests/observability/test_eval_metrics_exporter.py`
+- existující answer-eval artefakty v `artifacts/rag_eval/legal_qa/answer_eval/`
+
+**Proč se metriky diagnostikují:**
+
+- Grafana zobrazuje offline answer-eval metriky, ale současný export selhání je příliš slabý pro přesnou diagnostiku.
+- Je potřeba rozlišit evaluator/reporting/normalization chyby od retrieval/support/gold-data problémů bez změny produkční retrieval logiky.
+
+**Production safety constraints:**
+
+- zákaz zápisu do `nalus_live`
+- zákaz zápisu do `nalus_stable_20260326`
+- zákaz alias změn
+- zákaz API restartu
+- zákaz frontend změn
+- zákaz změn embedding provideru / BGE-M3 configu / BM25-RRF logiky bez explicitního důkazu v diagnostice
+
+**Zakázané operace v tomto tasku:**
+
+- full ingest: **forbidden**
+- full embedding: **forbidden**
+- Stage 3 full execute: **forbidden**
+- produkční Qdrant write: **forbidden**
+
+**Očekávané artefakty:**
+
+- `artifacts/evaluation_quality/failed_cases_report.json`
+- `artifacts/evaluation_quality/failed_cases_report.md`
+- `artifacts/evaluation_quality/metrics_summary.json`
+- `artifacts/evaluation_quality/metric_failure_categories.json`
+
+**Očekávané testy:**
+
+- `python -m pytest tests/rag/test_legal_answer_eval.py -q`
+- `python -m pytest tests/observability/test_eval_metrics_exporter.py -q`
+- případně další cílené eval testy podle rozsahu změn
+
+---
+
+## 2026-07-10 17:43 Europe/Prague — POST-CHANGE: NALUS evaluation metrics failed-cases diagnostic and repair
+
+**Co se změnilo:**
+
+- `app/rag/eval/legal_answer_eval.py` rozšířen o deterministický failed-cases export, failure-category klasifikaci a `metrics_summary.json` / `metric_failure_categories.json`
+- `scripts/run_legal_answer_eval.py` předává evaluatoru celý kontext potřebný pro diagnostické exporty
+- přidán safe agregační skript `scripts/generate_legal_answer_eval_diagnostics.py` pro stabilní report v `artifacts/evaluation_quality/`
+- doplněny testy pro failed-cases export, category breakdown a aggregate diagnostic run
+
+**Příkazy spuštěné v tomto tasku:**
+
+- `python -m compileall app/rag/eval/legal_answer_eval.py scripts/run_legal_answer_eval.py scripts/generate_legal_answer_eval_diagnostics.py tests/rag/test_legal_answer_eval.py tests/rag/test_legal_answer_eval_diagnostics.py tests/observability/test_eval_metrics_exporter.py`
+- `python -m pytest tests/rag/test_legal_answer_eval.py -q`
+- `python -m pytest tests/rag/test_legal_answer_eval_diagnostics.py -q`
+- `python -m pytest tests/observability/test_eval_metrics_exporter.py -q`
+- `python scripts/generate_legal_answer_eval_diagnostics.py --runs-dir artifacts/rag_eval/legal_qa/answer_eval --output-dir artifacts/evaluation_quality`
+
+**Testy:**
+
+- `tests/rag/test_legal_answer_eval.py` — PASS
+- `tests/rag/test_legal_answer_eval_diagnostics.py` — PASS
+- `tests/observability/test_eval_metrics_exporter.py` — PASS
+
+**Vygenerované artefakty:**
+
+- `artifacts/evaluation_quality/failed_cases_report.json`
+- `artifacts/evaluation_quality/failed_cases_report.md`
+- `artifacts/evaluation_quality/metrics_summary.json`
+- `artifacts/evaluation_quality/metric_failure_categories.json`
+
+**Bezpečnost / produkce:**
+
+- Qdrant touched: **no**
+- production touched: **no**
+- full ingest run: **no**
+- full embedding run: **no**
+- aliases changed: **no**
+
+**Závěr:**
+
+- diagnostika potvrzuje, že hlavní současné problémy jsou malý / nekompletní gold coverage, mnoho `partial` gold hitů bez strict pass a 1 potvrzený retrieval miss (`nsoud-qa-007`)
+- žádný důkaz pro potřebu production write, alias switch nebo full re-ingest nebyl nalezen v rámci tohoto tasku

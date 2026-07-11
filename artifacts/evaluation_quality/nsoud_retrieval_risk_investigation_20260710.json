@@ -1,0 +1,230 @@
+{
+  "generated_at": "2026-07-10",
+  "read_only": true,
+  "collection_name": "nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1",
+  "bm25_sidecar_path": "storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite",
+  "safety": {
+    "retrieval_logic_changed": false,
+    "qdrant_write_happened": false,
+    "alias_changed": false,
+    "ingest_run": false,
+    "llm_or_deepseek_called": false
+  },
+  "global_findings": {
+    "bm25_sidecar_exists": true,
+    "bm25_sidecar_row_count": 1862,
+    "bm25_sidecar_blank_document_id_rows": 1862,
+    "bm25_sidecar_blank_source_document_id_rows": 1862,
+    "bm25_sidecar_provenance_missing_systemic": true
+  },
+  "questions": [
+    {
+      "question_id": "nsoud-qa-007",
+      "question": "Jak Nejvyšší soud posuzuje dovolací důvod podle § 265b tr. ř.?",
+      "expected_source": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+      "qdrant_presence": {
+        "exists": true,
+        "lookup_field": "document_id",
+        "matching_chunk_count": 12
+      },
+      "bm25_sidecar_presence": {
+        "exists_by_document_id_or_source_document_id_or_ecli": false,
+        "matching_row_count": 0
+      },
+      "frozen_baseline": {
+        "expected_source_visible_after_qdrant_resolution": true,
+        "resolved_rank_in_frozen_top10": 1,
+        "top10": [
+          {
+            "rank": 1,
+            "chunk_id": "735",
+            "baseline_document_id": null,
+            "resolved_document_id": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 2,
+            "chunk_id": "131",
+            "baseline_document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+            "resolved_document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 3,
+            "chunk_id": "991",
+            "baseline_document_id": null,
+            "resolved_document_id": "ECLI:CZ:NS:2025:4.TDO.1137.2024.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 4,
+            "chunk_id": "1789",
+            "baseline_document_id": "ECLI:CZ:NS:2025:3.TDO.53.2025.1",
+            "resolved_document_id": "ECLI:CZ:NS:2025:3.TDO.53.2025.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 5,
+            "chunk_id": "1834",
+            "baseline_document_id": null,
+            "resolved_document_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 6,
+            "chunk_id": "1728",
+            "baseline_document_id": "ECLI:CZ:NS:2025:6.TDO.21.2025.1",
+            "resolved_document_id": "ECLI:CZ:NS:2025:6.TDO.21.2025.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 7,
+            "chunk_id": "930",
+            "baseline_document_id": null,
+            "resolved_document_id": "ECLI:CZ:NS:2025:3.TDO.1120.2024.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 8,
+            "chunk_id": "1508",
+            "baseline_document_id": "ECLI:CZ:NS:2025:11.TDO.875.2024.1",
+            "resolved_document_id": "ECLI:CZ:NS:2025:11.TDO.875.2024.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 9,
+            "chunk_id": "343",
+            "baseline_document_id": null,
+            "resolved_document_id": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 10,
+            "chunk_id": "508",
+            "baseline_document_id": "ECLI:CZ:NS:2024:6.TDO.976.2024.1",
+            "resolved_document_id": "ECLI:CZ:NS:2024:6.TDO.976.2024.1",
+            "section_type": "reasoning"
+          }
+        ]
+      },
+      "read_only_top50": {
+        "hybrid_rank": 4,
+        "dense_rank": 13,
+        "bm25_rank": 10
+      },
+      "classification": "BM25_sidecar_missing_expected_source",
+      "is_real_retrieval_miss": false,
+      "recommended_action": "Regenerate BM25 sidecar provenance or enrich diagnostics from Qdrant-by-chunk before using this case as a true retrieval-risk signal.",
+      "reingest_needed": false
+    },
+    {
+      "question_id": "nsoud-qa-010",
+      "question": "Jaký je rozdíl mezi odmítnutím a zamítnutím dovolání?",
+      "expected_source": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+      "qdrant_presence": {
+        "exists": true,
+        "lookup_field": "document_id",
+        "matching_chunk_count": 7
+      },
+      "bm25_sidecar_presence": {
+        "exists_by_document_id_or_source_document_id_or_ecli": false,
+        "matching_row_count": 0
+      },
+      "frozen_baseline": {
+        "resolved_rank_in_frozen_top10": 1,
+        "expected_hit_section_type": "operative_part",
+        "top10": [
+          {
+            "rank": 1,
+            "chunk_id": "1643",
+            "baseline_document_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+            "resolved_document_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+            "section_type": "operative_part"
+          },
+          {
+            "rank": 2,
+            "chunk_id": "884",
+            "baseline_document_id": null,
+            "resolved_document_id": "ECLI:CZ:NS:2025:29.ICDO.3.2025.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 3,
+            "chunk_id": "1533",
+            "baseline_document_id": "ECLI:CZ:NS:2025:29.NSCR.70.2024.1",
+            "resolved_document_id": "ECLI:CZ:NS:2025:29.NSCR.70.2024.1",
+            "section_type": "operative_part"
+          },
+          {
+            "rank": 4,
+            "chunk_id": "632",
+            "baseline_document_id": null,
+            "resolved_document_id": "ECLI:CZ:NS:2024:25.CDO.3217.2023.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 5,
+            "chunk_id": "1427",
+            "baseline_document_id": null,
+            "resolved_document_id": "ECLI:CZ:NS:2025:5.TDO.1071.2024.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 6,
+            "chunk_id": "497",
+            "baseline_document_id": "ECLI:CZ:NS:2025:27.CDO.1921.2024.1",
+            "resolved_document_id": "ECLI:CZ:NS:2025:27.CDO.1921.2024.1",
+            "section_type": "operative_part"
+          },
+          {
+            "rank": 7,
+            "chunk_id": "1176",
+            "baseline_document_id": null,
+            "resolved_document_id": "ECLI:CZ:NS:2025:11.TDO.1127.2024.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 8,
+            "chunk_id": "642",
+            "baseline_document_id": "ECLI:CZ:NS:2025:22.CDO.3556.2024.1",
+            "resolved_document_id": "ECLI:CZ:NS:2025:22.CDO.3556.2024.1",
+            "section_type": "operative_part"
+          },
+          {
+            "rank": 9,
+            "chunk_id": "1724",
+            "baseline_document_id": null,
+            "resolved_document_id": "ECLI:CZ:NS:2025:6.TDO.21.2025.1",
+            "section_type": "reasoning"
+          },
+          {
+            "rank": 10,
+            "chunk_id": "26",
+            "baseline_document_id": "ECLI:CZ:NS:2024:26.CDO.125.2024.1",
+            "resolved_document_id": "ECLI:CZ:NS:2024:26.CDO.125.2024.1",
+            "section_type": "operative_part"
+          }
+        ]
+      },
+      "expected_source_content_check": {
+        "operative_hit_only_at_top": true,
+        "reasoning_support_for_requested_difference_is_strong": false,
+        "reasoning_contains_explicit_zamitnuti_vs_odmitnuti_distinction": false
+      },
+      "read_only_top50": {
+        "hybrid_rank": 4,
+        "dense_rank": 4,
+        "bm25_rank": null,
+        "first_explicit_zamita_hit_rank": 48
+      },
+      "classification": "dataset should be reformulated",
+      "secondary_factors": [
+        "boilerplate chunk ranking too high",
+        "source support genuinely weak"
+      ],
+      "is_real_retrieval_miss": false,
+      "recommended_action": "Reformulate the benchmark question or replace the single-document gold; do not count this case as a collection-coverage miss.",
+      "reingest_needed": false
+    }
+  ]
+}

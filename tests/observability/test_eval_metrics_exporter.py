@@ -29,15 +29,22 @@ def _sample_summary(run_name: str, corpus: str) -> dict:
         "run_name": run_name,
         "corpus": corpus,
         "gold": 5,
+        "gold_question_count": 5,
         "direct_support_count": 1,
         "partial_support_count": 4,
         "gap_count": 0,
         "boilerplate_noise_count": 0,
         "corpus_only_count": 0,
+        "citation_available_count": 5,
         "unsupported_answer_risk_count": 0,
+        "unsupported_risk_rate_gold": 0.0,
+        "gold_retrieval_miss_count": 0,
+        "gold_retrieval_miss_rate": 0.0,
+        "corpus_routing_support_rate": 0.0,
         "strict_direct_pass_rate_all": 0.05,
         "strict_direct_pass_rate_gold": 0.2,
         "usable_support_rate_gold": 1.0,
+        "citation_available_rate_gold": 1.0,
         "citation_available_rate": 1.0,
     }
 
@@ -54,17 +61,25 @@ def _write_run_dir(base: Path, run_name: str, summary: dict) -> Path:
 
 def test_build_summary_json_payload_fields() -> None:
     metrics = AnswerEvalMetrics(
-        total_questions=20,
-        gold_available_count=5,
+        total_question_count=20,
+        gold_question_count=5,
+        missing_gold_count=15,
+        evaluable_question_count=5,
+        not_evaluable_missing_gold_count=15,
         direct_support_count=1,
         partial_support_count=4,
         gap_count=0,
         boilerplate_noise_count=0,
         corpus_only_count=0,
-        citation_available_rate=1.0,
+        citation_available_count=5,
+        citation_available_rate_gold=1.0,
+        corpus_routing_support_rate=0.0,
         strict_direct_pass_rate_all=0.05,
         strict_direct_pass_rate_gold=0.2,
         usable_support_rate_gold=1.0,
+        unsupported_risk_rate_gold=0.0,
+        gold_retrieval_miss_count=0,
+        gold_retrieval_miss_rate=0.0,
         answer_eval_pass_rate=0.05,
         answer_eval_partial_rate=0.2,
         answer_eval_gap_rate=0.0,
@@ -82,6 +97,7 @@ def test_build_summary_json_payload_fields() -> None:
     assert payload["gold"] == 5
     assert payload["usable_support_rate_gold"] == 1.0
     assert payload["unsupported_answer_risk_count"] == 0
+    assert payload["citation_available_rate_gold"] == 1.0
 
 
 def test_write_answer_eval_outputs_writes_summary_json(tmp_path: Path) -> None:
@@ -109,6 +125,20 @@ def test_write_answer_eval_outputs_writes_summary_json(tmp_path: Path) -> None:
         dataset_path=tmp_path / "dataset.jsonl",
         retrieval_results_path=tmp_path / "retrieval.jsonl",
         gold_review_path=tmp_path / "review.md",
+        items=[item],
+        registry=registry,
+        retrieval_by_id={
+            item.id: {
+                "hits": [
+                    _hit(
+                        rank=1,
+                        chunk_id="1",
+                        text="Ústavní soud posuzuje právo na spravedlivý proces podle článku 36 Listiny.",
+                        document_id="ECLI:CZ:US:2026:1.US.1.1",
+                    )
+                ]
+            }
+        },
         results=[result],
         metrics=metrics,
         no_llm=True,

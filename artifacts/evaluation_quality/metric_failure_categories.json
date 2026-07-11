@@ -1,0 +1,44 @@
+{
+  "generated_at": "2026-07-10T17:30:27Z",
+  "aggregate_failure_category_counts": {
+    "corpus_only_no_document_citation_expected": 8,
+    "metric_denominator_warning": 2,
+    "not_evaluable_missing_gold": 18,
+    "true_retrieval_miss": 1,
+    "unsupported_boilerplate_or_gap": 1,
+    "usable_partial_support": 8,
+    "weak_partial_support": 3
+  },
+  "final_status": "FAIL_WITH_REAL_NSOUD_RISK",
+  "runs": [
+    {
+      "run_name": "mixed_no_llm_baseline",
+      "corpus": "mixed",
+      "failure_category_counts": {
+        "corpus_only_no_document_citation_expected": 8,
+        "metric_denominator_warning": 1,
+        "not_evaluable_missing_gold": 2
+      }
+    },
+    {
+      "run_name": "nsoud_no_llm_baseline",
+      "corpus": "nsoud",
+      "failure_category_counts": {
+        "metric_denominator_warning": 1,
+        "not_evaluable_missing_gold": 6,
+        "true_retrieval_miss": 1,
+        "unsupported_boilerplate_or_gap": 1,
+        "usable_partial_support": 2
+      }
+    },
+    {
+      "run_name": "usoud_no_llm_baseline",
+      "corpus": "usoud",
+      "failure_category_counts": {
+        "not_evaluable_missing_gold": 10,
+        "usable_partial_support": 6,
+        "weak_partial_support": 3
+      }
+    }
+  ]
+}

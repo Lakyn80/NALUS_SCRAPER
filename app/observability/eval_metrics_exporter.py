@@ -101,7 +101,7 @@ def _metrics_json_to_summary(payload: dict[str, Any], run_name: str) -> dict[str
         "generated_at": payload.get("generated_at"),
         "run_name": run_name,
         "corpus": corpus,
-        "gold": payload.get("gold_available_count", payload.get("gold", 0)),
+        "gold": payload.get("gold_question_count", payload.get("gold_available_count", payload.get("gold", 0))),
         "direct_support_count": payload.get("direct_support_count", 0),
         "partial_support_count": payload.get("partial_support_count", 0),
         "gap_count": payload.get("gap_count", 0),
@@ -111,7 +111,10 @@ def _metrics_json_to_summary(payload: dict[str, Any], run_name: str) -> dict[str
         "strict_direct_pass_rate_all": payload.get("strict_direct_pass_rate_all", 0.0),
         "strict_direct_pass_rate_gold": payload.get("strict_direct_pass_rate_gold", 0.0),
         "usable_support_rate_gold": payload.get("usable_support_rate_gold", 0.0),
-        "citation_available_rate": payload.get("citation_available_rate", 0.0),
+        "citation_available_rate": payload.get(
+            "citation_available_rate_gold",
+            payload.get("citation_available_rate", 0.0),
+        ),
     }
 
 

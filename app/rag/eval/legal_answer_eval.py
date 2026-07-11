@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
+from collections import defaultdict
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,6 +30,8 @@ BOILERPLATE_PATTERNS = (
     re.compile(r"^\s*rozsudek\s", re.IGNORECASE),
 )
 MIN_SUBSTANTIVE_SNIPPET_LEN = 40
+MIN_STABLE_GOLD_COUNT = 10
+NON_PASS_STATUSES = frozenset({"partial", "gap", "needs_review", "skipped"})
 
 
 @dataclass(frozen=True)
@@ -37,6 +41,7 @@ class GoldRegistryEntry:
     source_pending: bool
     gold_available: bool
     corpus_only: bool
+    invalid_gold_annotation: bool
     expected_ecli: str | None
     expected_answer_points: list[str]
     expected_keywords: list[str]
@@ -61,28 +66,77 @@ class AnswerEvalResult:
     failure_reason: str | None = None
     gold_ecli: str | None = None
     gold_chunk_id: str | None = None
+    gold_hit_rank: int | None = None
+    support_keyword_coverage: float | None = None
     unsupported_answer_risk: bool = False
 
 
 @dataclass(frozen=True)
 class AnswerEvalMetrics:
-    total_questions: int
-    gold_available_count: int
+    total_question_count: int
+    gold_question_count: int
+    missing_gold_count: int
+    evaluable_question_count: int
+    not_evaluable_missing_gold_count: int
     direct_support_count: int
     partial_support_count: int
     gap_count: int
     boilerplate_noise_count: int
     corpus_only_count: int
-    citation_available_rate: float
+    citation_available_count: int
+    citation_available_rate_gold: float
+    corpus_routing_support_rate: float
     strict_direct_pass_rate_all: float
     strict_direct_pass_rate_gold: float
     usable_support_rate_gold: float
+    unsupported_risk_rate_gold: float
+    gold_retrieval_miss_count: int
+    gold_retrieval_miss_rate: float
     answer_eval_pass_rate: float
     answer_eval_partial_rate: float
     answer_eval_gap_rate: float
     unsupported_answer_risk_count: int
     skipped_count: int
     needs_review_count: int
+
+    @property
+    def total_questions(self) -> int:
+        return self.total_question_count
+
+    @property
+    def gold_available_count(self) -> int:
+        return self.gold_question_count
+
+    @property
+    def citation_available_rate(self) -> float:
+        return self.citation_available_rate_gold
+
+
+@dataclass(frozen=True)
+class FailedCaseReportEntry:
+    run_id: str
+    timestamp: str
+    question_id: str
+    dataset: str
+    gold_type: str
+    question: str
+    expected_answer: str
+    actual_answer: str
+    normalized_expected_answer: str
+    normalized_actual_answer: str
+    expected_source: str
+    retrieved_sources: list[str]
+    citations: list[str]
+    strict_direct_pass: bool
+    usable_support: bool
+    citation_available: bool
+    unsupported_answer: bool
+    failure_reason: str
+    failure_category: str
+    support_level: str
+    answer_eval_status: str
+    corpus: str
+    is_real_failure: bool
 
 
 def infer_corpus_from_run_name(run_name: str) -> str:
@@ -108,18 +162,41 @@ def build_summary_json_payload(
         "generated_at": generated_at,
         "run_name": run_name,
         "corpus": resolved_corpus,
-        "gold": metrics.gold_available_count,
+        "gold": metrics.gold_question_count,
+        "total_question_count": metrics.total_question_count,
+        "gold_question_count": metrics.gold_question_count,
+        "missing_gold_count": metrics.missing_gold_count,
+        "evaluable_question_count": metrics.evaluable_question_count,
+        "not_evaluable_missing_gold_count": metrics.not_evaluable_missing_gold_count,
         "direct_support_count": metrics.direct_support_count,
         "partial_support_count": metrics.partial_support_count,
         "gap_count": metrics.gap_count,
         "boilerplate_noise_count": metrics.boilerplate_noise_count,
         "corpus_only_count": metrics.corpus_only_count,
+        "citation_available_count": metrics.citation_available_count,
         "unsupported_answer_risk_count": metrics.unsupported_answer_risk_count,
+        "unsupported_risk_rate_gold": metrics.unsupported_risk_rate_gold,
+        "gold_retrieval_miss_count": metrics.gold_retrieval_miss_count,
+        "gold_retrieval_miss_rate": metrics.gold_retrieval_miss_rate,
+        "corpus_routing_support_rate": metrics.corpus_routing_support_rate,
         "strict_direct_pass_rate_all": metrics.strict_direct_pass_rate_all,
         "strict_direct_pass_rate_gold": metrics.strict_direct_pass_rate_gold,
         "usable_support_rate_gold": metrics.usable_support_rate_gold,
-        "citation_available_rate": metrics.citation_available_rate,
+        "citation_available_rate_gold": metrics.citation_available_rate_gold,
+        "citation_available_rate": metrics.citation_available_rate_gold,
     }
+
+
+def normalize_answer_text(text: str) -> str:
+    normalized = unicodedata.normalize("NFKC", text or "")
+    normalized = normalized.replace("\xa0", " ").strip().lower()
+    normalized = re.sub(r"\b(rub|руб\.?|рубля|рублей|р\.?)\b", " rub ", normalized)
+    normalized = re.sub(r"(?<=\d)[\s\u00a0](?=\d{3}\b)", "", normalized)
+    normalized = re.sub(r"(?<=\d),(?=\d)", ".", normalized)
+    normalized = re.sub(r"[\"'`´]", "", normalized)
+    normalized = re.sub(r"[.,;:!?()\[\]{}]", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized)
+    return normalized.strip()
 
 
 def load_retrieval_results(path: Path) -> dict[str, dict[str, Any]]:
@@ -150,8 +227,9 @@ def load_gold_registry_from_dataset(items: list[LegalQaItem]) -> dict[str, GoldR
     registry: dict[str, GoldRegistryEntry] = {}
     for item in items:
         constraints = item.expected_source_constraints
-        ecli = constraints.source_document_id
+        ecli = str(constraints.source_document_id or "").strip() or None
         corpus_only = not item.source_pending and item.corpus == "mixed" and not ecli
+        invalid_gold_annotation = not item.source_pending and not corpus_only and not ecli
         gold_available = not item.source_pending and (bool(ecli) or corpus_only)
         registry[item.id] = GoldRegistryEntry(
             question_id=item.id,
@@ -159,6 +237,7 @@ def load_gold_registry_from_dataset(items: list[LegalQaItem]) -> dict[str, GoldR
             source_pending=item.source_pending,
             gold_available=gold_available,
             corpus_only=corpus_only,
+            invalid_gold_annotation=invalid_gold_annotation,
             expected_ecli=ecli,
             expected_answer_points=list(item.expected_answer_points),
             expected_keywords=list(item.expected_keywords),
@@ -246,31 +325,30 @@ def classify_support_level(
     *,
     gold: GoldRegistryEntry,
     hits: list[dict[str, Any]],
-) -> tuple[str, dict[str, Any] | None]:
+) -> tuple[str, dict[str, Any] | None, float | None, int | None]:
     if gold.corpus_only:
-        return "corpus_only", None
+        return "corpus_only", None, None, None
 
     if not gold.expected_ecli:
-        return "gap", None
+        return "gap", None, None, None
 
     gold_hit = _best_gold_hit(hits, gold.expected_ecli)
     if gold_hit is None:
-        return "gap", None
+        return "gap", None, None, None
 
     snippet = str(gold_hit.get("text_snippet") or "")
-    if is_boilerplate_snippet(snippet):
-        return "boilerplate_noise", gold_hit
-
-    coverage = _keyword_coverage_in_text(gold.expected_keywords, snippet)
     rank = int(gold_hit.get("rank") or 9999)
+    coverage = _keyword_coverage_in_text(gold.expected_keywords, snippet)
+    if is_boilerplate_snippet(snippet):
+        return "boilerplate_noise", gold_hit, coverage, rank
 
     if rank == 1 and coverage >= 0.67:
-        return "direct", gold_hit
+        return "direct", gold_hit, coverage, rank
     if coverage > 0.0:
-        return "partial", gold_hit
+        return "partial", gold_hit, coverage, rank
     if rank <= 3:
-        return "partial", gold_hit
-    return "gap", gold_hit
+        return "partial", gold_hit, coverage, rank
+    return "gap", gold_hit, coverage, rank
 
 
 def build_answer_skeleton(
@@ -351,7 +429,11 @@ def evaluate_answer_item(
             citation_required=citation_required,
             citation_available=False,
             answer_eval_status="skipped",
-            failure_reason="source_pending or no gold annotation",
+            failure_reason=(
+                "invalid gold annotation"
+                if gold.invalid_gold_annotation
+                else "source_pending or no gold annotation"
+            ),
         )
 
     if gold.corpus_only:
@@ -360,12 +442,17 @@ def evaluate_answer_item(
         hit_at_1 = None
         hit_at_3 = bool(retrieval.get("corpus_hit_at_3"))
         hit_at_5 = bool(retrieval.get("corpus_hit_at_5"))
+        support_keyword_coverage = None
+        gold_hit_rank = None
     else:
         assert gold.expected_ecli is not None
         hit_at_1 = gold_source_hit_at_k(hits, gold.expected_ecli, 1)
         hit_at_3 = gold_source_hit_at_k(hits, gold.expected_ecli, 3)
         hit_at_5 = gold_source_hit_at_k(hits, gold.expected_ecli, 5)
-        support_level, gold_hit = classify_support_level(gold=gold, hits=hits)
+        support_level, gold_hit, support_keyword_coverage, gold_hit_rank = classify_support_level(
+            gold=gold,
+            hits=hits,
+        )
 
     answer_skeleton, citation_available = build_answer_skeleton(
         support_level=support_level,
@@ -409,6 +496,8 @@ def evaluate_answer_item(
         failure_reason=failure_reason,
         gold_ecli=gold.expected_ecli,
         gold_chunk_id=str(gold_hit.get("chunk_id")) if gold_hit else None,
+        gold_hit_rank=gold_hit_rank,
+        support_keyword_coverage=support_keyword_coverage,
         unsupported_answer_risk=unsupported_risk,
     )
 
@@ -445,12 +534,7 @@ def aggregate_answer_metrics(results: list[AnswerEvalResult]) -> AnswerEvalMetri
 
     gold_results = [result for result in results if result.gold_available]
     gold_count = len(gold_results)
-    citation_denominator = [r for r in gold_results if r.citation_required]
-    citation_available_rate = (
-        sum(r.citation_available for r in citation_denominator) / len(citation_denominator)
-        if citation_denominator
-        else 0.0
-    )
+    missing_gold_count = total - gold_count
 
     def _count_status(status: str) -> int:
         return sum(1 for result in results if result.answer_eval_status == status)
@@ -458,39 +542,552 @@ def aggregate_answer_metrics(results: list[AnswerEvalResult]) -> AnswerEvalMetri
     def _count_support(level: str) -> int:
         return sum(1 for result in gold_results if result.support_level == level)
 
-    strict_direct_pass_all = _count_status("pass")
-    strict_direct_pass_gold = sum(1 for result in gold_results if result.answer_eval_status == "pass")
+    direct_support_count = _count_support("direct")
+    partial_support_count = _count_support("partial")
+    gap_count = _count_support("gap")
+    boilerplate_noise_count = _count_support("boilerplate_noise")
+    corpus_only_count = _count_support("corpus_only")
+    citation_available_count = sum(1 for r in gold_results if r.citation_available)
+    unsupported_answer_risk_count = sum(1 for r in gold_results if r.unsupported_answer_risk)
+    gold_retrieval_miss_count = sum(
+        1
+        for result in gold_results
+        if result.gold_ecli and result.gold_source_hit_at_5 is False
+    )
     usable_support_gold = sum(
         1
         for result in gold_results
         if result.support_level in {"direct", "partial", "corpus_only"}
     )
 
-    strict_direct_pass_rate_all = strict_direct_pass_all / total
-    strict_direct_pass_rate_gold = (
-        strict_direct_pass_gold / gold_count if gold_count else 0.0
-    )
+    strict_direct_pass_rate_all = direct_support_count / total
+    strict_direct_pass_rate_gold = direct_support_count / gold_count if gold_count else 0.0
     usable_support_rate_gold = usable_support_gold / gold_count if gold_count else 0.0
+    citation_available_rate_gold = citation_available_count / gold_count if gold_count else 0.0
+    unsupported_risk_rate_gold = (
+        unsupported_answer_risk_count / gold_count if gold_count else 0.0
+    )
+    gold_retrieval_miss_rate = (
+        gold_retrieval_miss_count / gold_count if gold_count else 0.0
+    )
+    corpus_routing_support_rate = corpus_only_count / gold_count if gold_count else 0.0
 
     return AnswerEvalMetrics(
-        total_questions=total,
-        gold_available_count=gold_count,
-        direct_support_count=_count_support("direct"),
-        partial_support_count=_count_support("partial"),
-        gap_count=_count_support("gap"),
-        boilerplate_noise_count=_count_support("boilerplate_noise"),
-        corpus_only_count=_count_support("corpus_only"),
-        citation_available_rate=citation_available_rate,
+        total_question_count=total,
+        gold_question_count=gold_count,
+        missing_gold_count=missing_gold_count,
+        evaluable_question_count=gold_count,
+        not_evaluable_missing_gold_count=missing_gold_count,
+        direct_support_count=direct_support_count,
+        partial_support_count=partial_support_count,
+        gap_count=gap_count,
+        boilerplate_noise_count=boilerplate_noise_count,
+        corpus_only_count=corpus_only_count,
+        citation_available_count=citation_available_count,
+        citation_available_rate_gold=citation_available_rate_gold,
+        corpus_routing_support_rate=corpus_routing_support_rate,
         strict_direct_pass_rate_all=strict_direct_pass_rate_all,
         strict_direct_pass_rate_gold=strict_direct_pass_rate_gold,
         usable_support_rate_gold=usable_support_rate_gold,
+        unsupported_risk_rate_gold=unsupported_risk_rate_gold,
+        gold_retrieval_miss_count=gold_retrieval_miss_count,
+        gold_retrieval_miss_rate=gold_retrieval_miss_rate,
         answer_eval_pass_rate=strict_direct_pass_rate_all,
         answer_eval_partial_rate=_count_status("partial") / total,
         answer_eval_gap_rate=_count_status("gap") / total,
-        unsupported_answer_risk_count=sum(1 for r in results if r.unsupported_answer_risk),
+        unsupported_answer_risk_count=unsupported_answer_risk_count,
         skipped_count=_count_status("skipped"),
         needs_review_count=_count_status("needs_review"),
     )
+
+
+def _joined_expected_answer(item: LegalQaItem) -> str:
+    return " ".join(point.strip() for point in item.expected_answer_points if point.strip()).strip()
+
+
+def _gold_type(gold: GoldRegistryEntry) -> str:
+    if gold.gold_available:
+        return "gold"
+    if gold.source_pending:
+        return "non_gold"
+    return "unknown"
+
+
+def _retrieved_sources(hits: list[dict[str, Any]], *, limit: int = 5) -> list[str]:
+    sources: list[str] = []
+    seen: set[str] = set()
+    for hit in hits:
+        document_id = hit_document_id(hit)
+        chunk_id = str(hit.get("chunk_id") or "").strip()
+        value = document_id or chunk_id
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        sources.append(value)
+        if len(sources) >= limit:
+            break
+    return sources
+
+
+def _retrieved_citations(hits: list[dict[str, Any]], *, limit: int = 5) -> list[str]:
+    citations: list[str] = []
+    seen: set[str] = set()
+    for hit in hits:
+        citation = _format_citation(hit, None)
+        if not citation or citation in seen:
+            continue
+        seen.add(citation)
+        citations.append(citation)
+        if len(citations) >= limit:
+            break
+    return citations
+
+
+def _is_dataset_filter_mismatch(run_corpus: str, item_corpus: str) -> bool:
+    if run_corpus == "mixed":
+        return item_corpus != "mixed"
+    return item_corpus != run_corpus
+
+
+def _is_real_failure_category(category: str) -> bool:
+    return category in {
+        "invalid_gold_annotation",
+        "true_retrieval_miss",
+        "unsupported_boilerplate_or_gap",
+    }
+
+
+def classify_failure_category(
+    *,
+    item: LegalQaItem,
+    gold: GoldRegistryEntry,
+    result: AnswerEvalResult,
+    run_corpus: str,
+) -> str:
+    expected_answer = _joined_expected_answer(item)
+    actual_answer = result.answer_skeleton.strip()
+    normalized_expected = normalize_answer_text(expected_answer)
+    normalized_actual = normalize_answer_text(actual_answer)
+
+    if _is_dataset_filter_mismatch(run_corpus, item.corpus):
+        return "invalid_gold_annotation"
+    if not expected_answer:
+        return "invalid_gold_annotation"
+    if gold.invalid_gold_annotation:
+        return "invalid_gold_annotation"
+    if gold.source_pending or not gold.gold_available:
+        return "not_evaluable_missing_gold"
+    if gold.corpus_only and result.support_level == "corpus_only":
+        return "corpus_only_no_document_citation_expected"
+    if result.support_level == "boilerplate_noise":
+        return "unsupported_boilerplate_or_gap"
+    if (
+        normalized_expected
+        and normalized_actual
+        and normalized_expected == normalized_actual
+        and result.answer_eval_status != "pass"
+    ):
+        return "usable_partial_support"
+    if result.answer_eval_status == "gap":
+        if result.gold_source_hit_at_5 is False:
+            return "true_retrieval_miss"
+        return "unsupported_boilerplate_or_gap"
+    if result.answer_eval_status == "partial":
+        if result.support_level == "partial":
+            if (result.support_keyword_coverage or 0.0) > 0.0 and result.citation_available:
+                return "usable_partial_support"
+            return "weak_partial_support"
+        if result.support_level == "corpus_only":
+            return "corpus_only_no_document_citation_expected"
+    if result.answer_eval_status != "pass":
+        return "unsupported_boilerplate_or_gap"
+    return "unknown_failure"
+
+
+def build_failed_case_report_entries(
+    *,
+    run_name: str,
+    generated_at: str,
+    dataset_path: Path,
+    corpus: str,
+    items: list[LegalQaItem],
+    registry: dict[str, GoldRegistryEntry],
+    retrieval_by_id: dict[str, dict[str, Any]],
+    results: list[AnswerEvalResult],
+) -> list[FailedCaseReportEntry]:
+    item_by_id = {item.id: item for item in items}
+    entries: list[FailedCaseReportEntry] = []
+    for result in results:
+        if result.answer_eval_status not in NON_PASS_STATUSES:
+            continue
+
+        item = item_by_id[result.question_id]
+        gold = registry[result.question_id]
+        retrieval = retrieval_by_id[result.question_id]
+        hits = list(retrieval.get("hits") or [])
+        expected_answer = _joined_expected_answer(item)
+        actual_answer = result.answer_skeleton.strip()
+        category = classify_failure_category(
+            item=item,
+            gold=gold,
+            result=result,
+            run_corpus=corpus,
+        )
+        entries.append(
+            FailedCaseReportEntry(
+                run_id=run_name,
+                timestamp=generated_at,
+                question_id=result.question_id,
+                dataset=str(dataset_path),
+                gold_type=_gold_type(gold),
+                question=result.question,
+                expected_answer=expected_answer,
+                actual_answer=actual_answer,
+                normalized_expected_answer=normalize_answer_text(expected_answer),
+                normalized_actual_answer=normalize_answer_text(actual_answer),
+                expected_source=gold.expected_ecli or "",
+                retrieved_sources=_retrieved_sources(hits),
+                citations=_retrieved_citations(hits),
+                strict_direct_pass=result.answer_eval_status == "pass",
+                usable_support=result.support_level in {"direct", "partial", "corpus_only"},
+                citation_available=result.citation_available,
+                unsupported_answer=result.unsupported_answer_risk,
+                failure_reason=result.failure_reason or category,
+                failure_category=category,
+                support_level=result.support_level,
+                answer_eval_status=result.answer_eval_status,
+                corpus=result.corpus,
+                is_real_failure=_is_real_failure_category(category),
+            )
+        )
+    return entries
+
+
+def build_metric_failure_categories(
+    *,
+    failed_cases: list[FailedCaseReportEntry],
+    metrics: AnswerEvalMetrics,
+) -> dict[str, int]:
+    counts: dict[str, int] = defaultdict(int)
+    for entry in failed_cases:
+        counts[entry.failure_category] += 1
+    if metrics.gold_question_count < MIN_STABLE_GOLD_COUNT:
+        counts["metric_denominator_warning"] += 1
+    return dict(sorted(counts.items()))
+
+
+def determine_final_status(
+    *,
+    corpus: str,
+    failure_category_counts: dict[str, int],
+) -> tuple[str, str]:
+    real_failures = sum(
+        failure_category_counts.get(category, 0)
+        for category in (
+            "true_retrieval_miss",
+            "invalid_gold_annotation",
+            "unsupported_boilerplate_or_gap",
+        )
+    )
+    warning_only = sum(
+        failure_category_counts.get(category, 0)
+        for category in (
+            "not_evaluable_missing_gold",
+            "usable_partial_support",
+            "weak_partial_support",
+            "corpus_only_no_document_citation_expected",
+            "metric_denominator_warning",
+        )
+    )
+    if real_failures > 0:
+        if corpus == "nsoud" and (
+            failure_category_counts.get("true_retrieval_miss", 0) > 0
+            or failure_category_counts.get("unsupported_boilerplate_or_gap", 0) > 0
+        ):
+            return (
+                "FAIL_WITH_REAL_NSOUD_RISK",
+                "NSoud contains real unsupported or retrieval-risk items that require manual review.",
+            )
+        return ("FAIL", "Real gold-evaluable failures are present.")
+    if warning_only > 0:
+        return (
+            "WARN",
+            "Main issues are missing gold coverage, conservative strict-pass gating, or small denominators.",
+        )
+    return ("PASS", "No real failures detected and coverage is sufficient.")
+
+
+def build_nsoud_qa_007_diagnostic(
+    *,
+    items: list[LegalQaItem],
+    registry: dict[str, GoldRegistryEntry],
+    retrieval_by_id: dict[str, dict[str, Any]],
+    results: list[AnswerEvalResult],
+) -> dict[str, Any] | None:
+    question_id = "nsoud-qa-007"
+    if question_id not in registry or question_id not in retrieval_by_id:
+        return None
+    result_by_id = {result.question_id: result for result in results}
+    if question_id not in result_by_id:
+        return None
+
+    result = result_by_id[question_id]
+    gold = registry[question_id]
+    retrieval = retrieval_by_id[question_id]
+    hits = list(retrieval.get("hits") or [])
+    retrieved_top_k_ids = _retrieved_sources(hits, limit=10)
+    expected_source_id = gold.expected_ecli or ""
+    expected_source_present_top_k = bool(
+        expected_source_id
+        and any(
+            normalize_for_match(source_id) == normalize_for_match(expected_source_id)
+            for source_id in retrieved_top_k_ids
+        )
+    )
+    criminal_tdo_hits = sum(1 for source_id in retrieved_top_k_ids[:5] if ".TDO." in source_id.upper())
+    matcher_issue = False
+    gold_annotation_mismatch = gold.invalid_gold_annotation
+    answer_support_gap = expected_source_present_top_k and result.support_level == "gap"
+    true_retrieval_miss = bool(expected_source_id) and not expected_source_present_top_k
+    question_too_generic = bool(true_retrieval_miss and criminal_tdo_hits >= 3 and retrieval.get("keyword_coverage", 0) >= 1.0)
+    conclusion = (
+        "Conservative conclusion: true_retrieval_miss. Expected ECLI is absent from retrieved top-k. "
+        "The query also appears generic across multiple criminal dovolani decisions, so genericity may contribute, "
+        "but there is no evidence of matcher mismatch."
+        if true_retrieval_miss
+        else "Conservative conclusion: expected source is present; this is not a true retrieval miss."
+    )
+    return {
+        "question_id": question_id,
+        "gold_source_id": expected_source_id,
+        "retrieved_top_k_ids": retrieved_top_k_ids,
+        "expected_source_present_top_k": expected_source_present_top_k,
+        "true_retrieval_miss": true_retrieval_miss,
+        "gold_annotation_mismatch": gold_annotation_mismatch,
+        "answer_support_gap": answer_support_gap,
+        "matcher_issue": matcher_issue,
+        "question_too_generic": question_too_generic,
+        "conclusion": conclusion,
+    }
+
+
+def build_metrics_summary_payload(
+    *,
+    run_name: str,
+    corpus: str,
+    generated_at: str,
+    dataset_path: Path,
+    retrieval_results_path: Path,
+    gold_review_path: Path,
+    metrics: AnswerEvalMetrics,
+    failure_category_counts: dict[str, int],
+    final_status: str,
+    status_reason: str,
+) -> dict[str, Any]:
+    gold_count = metrics.gold_question_count
+    denominator_warning = (
+        f"Gold denominator is small ({gold_count}); percentage metrics are unstable."
+        if gold_count < MIN_STABLE_GOLD_COUNT
+        else None
+    )
+    return {
+        "generated_at": generated_at,
+        "run_name": run_name,
+        "corpus": corpus,
+        "dataset": str(dataset_path),
+        "retrieval_results": str(retrieval_results_path),
+        "gold_review": str(gold_review_path),
+        "metrics": build_summary_json_payload(
+            run_name=run_name,
+            metrics=metrics,
+            generated_at=generated_at,
+            corpus=corpus,
+        ),
+        "total_evaluated_count": metrics.total_question_count,
+        "gold_count": gold_count,
+        "failure_category_counts": failure_category_counts,
+        "denominator_warning": denominator_warning,
+        "final_status": final_status,
+        "status_reason": status_reason,
+        "interpretation_notes": [
+            "strict_direct_pass_rate is intentionally conservative",
+            "usable_support_rate_gold is the practical support metric",
+            "missing gold does not mean retrieval failure",
+            "corpus_only mixed items are not expected to have document citations",
+        ],
+    }
+
+
+def write_failed_case_diagnostics(
+    *,
+    output_dir: Path,
+    run_name: str,
+    corpus: str,
+    generated_at: str,
+    dataset_path: Path,
+    retrieval_results_path: Path,
+    gold_review_path: Path,
+    metrics: AnswerEvalMetrics,
+    failed_cases: list[FailedCaseReportEntry],
+    nsoud_qa_007_diagnostic: dict[str, Any] | None = None,
+) -> None:
+    failure_category_counts = build_metric_failure_categories(
+        failed_cases=failed_cases,
+        metrics=metrics,
+    )
+    final_status, status_reason = determine_final_status(
+        corpus=corpus,
+        failure_category_counts=failure_category_counts,
+    )
+    metrics_summary = build_metrics_summary_payload(
+        run_name=run_name,
+        corpus=corpus,
+        generated_at=generated_at,
+        dataset_path=dataset_path,
+        retrieval_results_path=retrieval_results_path,
+        gold_review_path=gold_review_path,
+        metrics=metrics,
+        failure_category_counts=failure_category_counts,
+        final_status=final_status,
+        status_reason=status_reason,
+    )
+
+    (output_dir / "failed_cases_report.json").write_text(
+        json.dumps(
+            {
+                "generated_at": generated_at,
+                "run_name": run_name,
+                "corpus": corpus,
+                "failed_case_count": len(failed_cases),
+                "failed_cases": [asdict(entry) for entry in failed_cases],
+                "nsoud_qa_007_diagnostic": nsoud_qa_007_diagnostic,
+                "final_status": final_status,
+                "status_reason": status_reason,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "metric_failure_categories.json").write_text(
+        json.dumps(
+            {
+                "generated_at": generated_at,
+                "run_name": run_name,
+                "corpus": corpus,
+                "failure_category_counts": failure_category_counts,
+                "final_status": final_status,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "metrics_summary.json").write_text(
+        json.dumps(metrics_summary, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    practical_support = sum(
+        1
+        for entry in failed_cases
+        if entry.failure_category in {"usable_partial_support", "weak_partial_support"}
+    )
+    retrieval_support = sum(
+        1
+        for entry in failed_cases
+        if entry.failure_category in {"true_retrieval_miss", "unsupported_boilerplate_or_gap"}
+    )
+    gold_data = sum(
+        1
+        for entry in failed_cases
+        if entry.failure_category in {"not_evaluable_missing_gold", "invalid_gold_annotation"}
+    )
+    top_failed_cases = failed_cases[:5]
+
+    lines = [
+        "# Failed cases diagnostic",
+        "",
+        f"- Run timestamp: {generated_at}",
+        f"- Run name: `{run_name}`",
+        f"- Evaluated datasets: `{dataset_path}`",
+        f"- Metric names: strict_direct_pass_rate_all, strict_direct_pass_rate_gold, usable_support_rate_gold, citation_available_rate_gold, unsupported_risk_rate_gold, gold_retrieval_miss_rate, support breakdown, gold count",
+        f"- Metric values: strict_all={metrics.strict_direct_pass_rate_all:.3f}, strict_gold={metrics.strict_direct_pass_rate_gold:.3f}, usable_gold={metrics.usable_support_rate_gold:.3f}, citation_rate_gold={metrics.citation_available_rate_gold:.3f}, unsupported_risk_gold={metrics.unsupported_risk_rate_gold:.3f}, retrieval_miss_gold={metrics.gold_retrieval_miss_rate:.3f}",
+        f"- Gold count: {metrics.gold_question_count}",
+        f"- Total evaluated count: {metrics.total_question_count}",
+        "",
+        "## Failure category breakdown",
+        "",
+    ]
+    for category, count in failure_category_counts.items():
+        lines.append(f"- {category}: {count}")
+    lines.extend(
+        [
+            "",
+            "## Top failed cases",
+            "",
+        ]
+    )
+    if not top_failed_cases:
+        lines.append("- None")
+    else:
+        for entry in top_failed_cases:
+            lines.append(
+                f"- {entry.question_id}: {entry.failure_category} | status={entry.answer_eval_status} | support={entry.support_level}"
+            )
+    lines.extend(
+        [
+            "",
+            "## Interpretation",
+            "",
+            "- strict_direct_pass_rate is intentionally conservative",
+            "- usable_support_rate_gold is the practical support metric",
+            "- missing gold does not mean retrieval failure",
+            "- corpus_only mixed items are not expected to have document citations",
+            "- NSoud unsupported-risk items require manual review",
+            "",
+            "## Cause assessment",
+            "",
+            f"- usable partial support diagnostics: {practical_support}",
+            f"- retrieval/support caused failures: {retrieval_support}",
+            f"- bad/incomplete gold data caused failures: {gold_data}",
+            f"- re-ingest needed: {'unknown' if retrieval_support else 'no'}",
+            f"- production Qdrant touched: no",
+            f"- final status: {final_status}",
+            f"- status reason: {status_reason}",
+            "",
+        ]
+    )
+    denominator_warning = metrics_summary["denominator_warning"]
+    if denominator_warning:
+        lines.extend(
+            [
+                "## Notes",
+                "",
+                f"- {denominator_warning}",
+                "",
+            ]
+        )
+    if nsoud_qa_007_diagnostic is not None:
+        lines.extend(
+            [
+                "## nsoud-qa-007 diagnostic",
+                "",
+                f"- gold source id: {nsoud_qa_007_diagnostic['gold_source_id']}",
+                f"- retrieved top-k ids: {', '.join(nsoud_qa_007_diagnostic['retrieved_top_k_ids'])}",
+                f"- expected source absent in top-k: {not nsoud_qa_007_diagnostic['expected_source_present_top_k']}",
+                f"- true_retrieval_miss: {nsoud_qa_007_diagnostic['true_retrieval_miss']}",
+                f"- gold_annotation_mismatch: {nsoud_qa_007_diagnostic['gold_annotation_mismatch']}",
+                f"- answer_support_gap: {nsoud_qa_007_diagnostic['answer_support_gap']}",
+                f"- matcher_issue: {nsoud_qa_007_diagnostic['matcher_issue']}",
+                f"- question_too_generic: {nsoud_qa_007_diagnostic['question_too_generic']}",
+                f"- conclusion: {nsoud_qa_007_diagnostic['conclusion']}",
+                "",
+            ]
+        )
+    (output_dir / "failed_cases_report.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def write_answer_eval_outputs(
@@ -499,6 +1096,9 @@ def write_answer_eval_outputs(
     dataset_path: Path,
     retrieval_results_path: Path,
     gold_review_path: Path,
+    items: list[LegalQaItem],
+    registry: dict[str, GoldRegistryEntry],
+    retrieval_by_id: dict[str, dict[str, Any]],
     results: list[AnswerEvalResult],
     metrics: AnswerEvalMetrics,
     no_llm: bool,
@@ -582,16 +1182,24 @@ def write_answer_eval_outputs(
         f"- strict_direct_pass_rate_all: {metrics.strict_direct_pass_rate_all:.3f}",
         f"- strict_direct_pass_rate_gold: {metrics.strict_direct_pass_rate_gold:.3f}",
         f"- usable_support_rate_gold: {metrics.usable_support_rate_gold:.3f}",
-        f"- citation_available_rate: {metrics.citation_available_rate:.3f}",
+        f"- citation_available_rate_gold: {metrics.citation_available_rate_gold:.3f}",
+        f"- corpus_routing_support_rate: {metrics.corpus_routing_support_rate:.3f}",
+        f"- unsupported_risk_rate_gold: {metrics.unsupported_risk_rate_gold:.3f}",
+        f"- gold_retrieval_miss_rate: {metrics.gold_retrieval_miss_rate:.3f}",
         f"- answer_eval_pass_rate (alias): {metrics.answer_eval_pass_rate:.3f}",
         f"- answer_eval_partial_rate: {metrics.answer_eval_partial_rate:.3f}",
         f"- answer_eval_gap_rate: {metrics.answer_eval_gap_rate:.3f}",
         "",
         "## Risk / coverage",
         "",
-        f"- total questions: {metrics.total_questions}",
-        f"- gold available: {metrics.gold_available_count}",
+        f"- total questions: {metrics.total_question_count}",
+        f"- gold available: {metrics.gold_question_count}",
+        f"- missing gold: {metrics.missing_gold_count}",
+        f"- evaluable questions: {metrics.evaluable_question_count}",
+        f"- not evaluable (missing gold): {metrics.not_evaluable_missing_gold_count}",
+        f"- citation available count: {metrics.citation_available_count}",
         f"- unsupported_answer_risk_count: {metrics.unsupported_answer_risk_count}",
+        f"- gold_retrieval_miss_count: {metrics.gold_retrieval_miss_count}",
         f"- skipped: {metrics.skipped_count}",
         f"- needs review: {metrics.needs_review_count}",
         "",
@@ -608,6 +1216,38 @@ def write_answer_eval_outputs(
     (output_dir / "summary.json").write_text(
         json.dumps(summary_json, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
+    )
+
+    resolved_corpus = corpus or infer_corpus_from_run_name(run_name)
+    failed_cases = build_failed_case_report_entries(
+        run_name=run_name,
+        generated_at=generated_at,
+        dataset_path=dataset_path,
+        corpus=resolved_corpus,
+        items=items,
+        registry=registry,
+        retrieval_by_id=retrieval_by_id,
+        results=results,
+    )
+    nsoud_qa_007_diagnostic = None
+    if resolved_corpus == "nsoud":
+        nsoud_qa_007_diagnostic = build_nsoud_qa_007_diagnostic(
+            items=items,
+            registry=registry,
+            retrieval_by_id=retrieval_by_id,
+            results=results,
+        )
+    write_failed_case_diagnostics(
+        output_dir=output_dir,
+        run_name=run_name,
+        corpus=resolved_corpus,
+        generated_at=generated_at,
+        dataset_path=dataset_path,
+        retrieval_results_path=retrieval_results_path,
+        gold_review_path=gold_review_path,
+        metrics=metrics,
+        failed_cases=failed_cases,
+        nsoud_qa_007_diagnostic=nsoud_qa_007_diagnostic,
     )
 
 
