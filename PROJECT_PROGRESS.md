@@ -161,3 +161,37 @@
   `nsoud-qa-007` still needs a focused same-document chunk-selection follow-up before it can become a strict-direct pass.
 - Next recommended task:
   Re-annotate or replace `nsoud-qa-004` and `nsoud-qa-010`, then run a narrowly scoped follow-up on `nsoud-qa-007` to test whether a better same-document chunk can be surfaced without changing global BM25/dense/RRF scoring.
+
+## 2026-07-11 13:10 Europe/Moscow — Task: NALUS Production Task Validator
+
+- Goal:
+  Add a reusable deterministic validator for NALUS production tasks that checks dirty-file scope, risky diffs, documentation/test expectations, and task-safety signals before commit or final reporting.
+- What changed:
+  Added `app/project_validation/` with git-state parsing, file classification, diff scanning, reporting, and orchestration modules.
+  Added CLI entrypoint `scripts/validate_nalus_task.py`.
+  Added `tests/test_nalus_task_validator.py`.
+  Added `docs/NALUS_TASK_VALIDATOR.md`.
+- Why it changed:
+  The repo needed a project-specific equivalent of the Memorial/Eternal World task validator so future NALUS tasks can detect accidental baseline-artifact staging, risky retrieval/Qdrant/model changes, missing progress updates, and missing tests before commits.
+- Files changed:
+  `PROJECT_PROGRESS.md`
+  `app/project_validation/__init__.py`
+  `app/project_validation/schemas.py`
+  `app/project_validation/git_status.py`
+  `app/project_validation/file_classifier.py`
+  `app/project_validation/diff_scanner.py`
+  `app/project_validation/report.py`
+  `app/project_validation/validator.py`
+  `scripts/validate_nalus_task.py`
+  `tests/test_nalus_task_validator.py`
+  `docs/NALUS_TASK_VALIDATOR.md`
+- Tests run:
+  `python -m pytest tests/test_nalus_task_validator.py -q`
+  `python -m pytest tests/rag/test_legal_answer_eval.py tests/rag/test_legal_answer_eval_diagnostics.py tests/observability/test_eval_metrics_exporter.py tests/test_repair_nsoud_bm25_sidecar_provenance.py -q`
+  `python scripts/validate_nalus_task.py --task-name "NALUS Production Task Validator" --mode implementation --expected-branch main --no-write`
+- Known limitations:
+  The validator is intentionally heuristic and diff-based; it does not understand semantic intent beyond configured patterns.
+  Risk detection is intentionally conservative and currently scans changed source/test diffs, not full repository history.
+  Generated validation reports are optional runtime artifacts and are not committed by default.
+- Next recommended task:
+  Run the validator before future NALUS commits and extend allowlists/risk rules only when an intentional change type repeatedly appears in real workflow.
