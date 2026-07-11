@@ -22,6 +22,7 @@ PRODUCTION_COLLECTION_DENYLIST = {
     "nalus_live",
     "nalus_stable_20260326",
 }
+BM25_CHUNKS_TABLE = "bm25_chunks"
 
 
 class SafetyError(ValueError):
@@ -80,6 +81,70 @@ def scroll_payload_rows(client: Any, collection_name: str) -> list[dict[str, Any
     return rows
 
 
+def _normalize_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _parse_chunk_metadata(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return dict(value)
+    raw = _normalize_text(value)
+    if not raw:
+        return {}
+    try:
+        decoded = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return dict(decoded) if isinstance(decoded, dict) else {}
+
+
+def build_bm25_row(payload: dict[str, Any]) -> dict[str, Any]:
+    chunk_metadata = _parse_chunk_metadata(payload.get("chunk_metadata"))
+    document_id = _normalize_text(payload.get("document_id"))
+    source_document_id = _normalize_text(
+        payload.get("source_document_id") or chunk_metadata.get("source_document_id")
+    )
+    ecli = _normalize_text(payload.get("ecli"))
+    if not ecli:
+        for candidate in (document_id, source_document_id):
+            if candidate.startswith("ECLI:"):
+                ecli = candidate
+                break
+    case_number = _normalize_text(
+        payload.get("case_reference")
+        or payload.get("case_number")
+        or chunk_metadata.get("case_reference")
+        or chunk_metadata.get("case_number")
+    )
+    spisova_znacka = _normalize_text(
+        payload.get("spisova_znacka") or chunk_metadata.get("spisova_znacka")
+    )
+    court = _normalize_text(payload.get("court") or chunk_metadata.get("court"))
+    source = _normalize_text(payload.get("source"))
+    decision_date = _normalize_text(
+        payload.get("decision_date") or chunk_metadata.get("decision_date")
+    )
+    chunk_index_raw = payload.get("chunk_index")
+    chunk_index = int(chunk_index_raw) if chunk_index_raw is not None else -1
+
+    return {
+        "chunk_id": _normalize_text(payload.get("chunk_id")),
+        "text": str(payload.get("text") or ""),
+        "document_id": document_id,
+        "source_document_id": source_document_id,
+        "ecli": ecli,
+        "case_number": case_number,
+        "spisova_znacka": spisova_znacka,
+        "court": court,
+        "source": source,
+        "decision_date": decision_date,
+        "chunk_index": chunk_index,
+        "qdrant_collection": _normalize_text(payload.get("qdrant_collection")),
+        "retrieval_profile": _normalize_text(payload.get("retrieval_profile")),
+        "bm25_index_id": _normalize_text(payload.get("bm25_index_id")),
+    }
+
+
 def write_bm25_sqlite(rows: list[dict[str, Any]], sqlite_path: Path) -> int:
     sqlite_path.parent.mkdir(parents=True, exist_ok=True)
     if sqlite_path.exists():
@@ -94,6 +159,11 @@ def write_bm25_sqlite(rows: list[dict[str, Any]], sqlite_path: Path) -> int:
                 text TEXT NOT NULL,
                 document_id TEXT,
                 source_document_id TEXT,
+                ecli TEXT,
+                case_number TEXT,
+                spisova_znacka TEXT,
+                court TEXT,
+                source TEXT,
                 decision_date TEXT,
                 chunk_index INTEGER,
                 qdrant_collection TEXT,
@@ -109,26 +179,37 @@ def write_bm25_sqlite(rows: list[dict[str, Any]], sqlite_path: Path) -> int:
                 text,
                 document_id,
                 source_document_id,
+                ecli,
+                case_number,
+                spisova_znacka,
+                court,
+                source,
                 decision_date,
                 chunk_index,
                 qdrant_collection,
                 retrieval_profile,
                 bm25_index_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
-                    str(row.get("chunk_id")),
-                    str(row.get("text") or ""),
-                    str(row.get("document_id") or ""),
-                    str(row.get("source_document_id") or ""),
-                    str(row.get("decision_date") or ""),
-                    int(row.get("chunk_index") if row.get("chunk_index") is not None else -1),
-                    str(row.get("qdrant_collection") or ""),
-                    str(row.get("retrieval_profile") or ""),
-                    str(row.get("bm25_index_id") or ""),
+                    normalized["chunk_id"],
+                    normalized["text"],
+                    normalized["document_id"],
+                    normalized["source_document_id"],
+                    normalized["ecli"],
+                    normalized["case_number"],
+                    normalized["spisova_znacka"],
+                    normalized["court"],
+                    normalized["source"],
+                    normalized["decision_date"],
+                    normalized["chunk_index"],
+                    normalized["qdrant_collection"],
+                    normalized["retrieval_profile"],
+                    normalized["bm25_index_id"],
                 )
                 for row in rows
+                for normalized in [build_bm25_row(row)]
             ],
         )
         connection.commit()
@@ -166,7 +247,7 @@ def run_export(args: argparse.Namespace) -> dict[str, Any]:
         "collection_name": args.collection_name,
         "sqlite_path": str(sqlite_path),
         "row_count": row_count,
-        "table_name": "bm25_chunks",
+        "table_name": BM25_CHUNKS_TABLE,
         "final_status": "PASS",
     }
 

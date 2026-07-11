@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-07-11T06:49:40Z",
+  "run_name": "nsoud_sidecar_provenance_repaired",
+  "corpus": "nsoud",
+  "failure_category_counts": {
+    "metric_denominator_warning": 1,
+    "not_evaluable_missing_gold": 6,
+    "unsupported_boilerplate_or_gap": 1,
+    "usable_partial_support": 3
+  },
+  "final_status": "FAIL_WITH_REAL_NSOUD_RISK"
+}

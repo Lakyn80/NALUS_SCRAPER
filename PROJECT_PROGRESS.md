@@ -99,3 +99,34 @@
   `nsoud-qa-010` remains a benchmark-quality risk because the current expected source is mostly operative `Dovolání se odmítá` boilerplate and does not cleanly support the doctrinal distinction in the question.
 - Next recommended task:
   Remove `nsoud-qa-007` from the “true retrieval miss” bucket by fixing provenance/export visibility for BM25-backed NSoud hits, then reformulate or replace `nsoud-qa-010` before using it as a hard retrieval-quality signal.
+
+## 2026-07-11 09:50 Europe/Moscow — Task: NSoud BM25 sidecar provenance repair without scoring changes
+
+- Goal:
+  Repair the NSoud BM25 sidecar so BM25 and hybrid retrieval artifacts expose correct provenance metadata, while preserving BM25 scoring, dense scoring, and RRF behavior.
+- What changed:
+  Updated `scripts/build_bm25_sidecar_from_qdrant.py` to flatten and export richer provenance fields from Qdrant payloads.
+  Updated `app/rag/retrieval/bm25_sidecar.py` so BM25 retrieval results hydrate provenance metadata from explicit sidecar columns.
+  Added `scripts/repair_nsoud_bm25_sidecar_provenance.py` with `--dry-run` and `--execute` modes and strict `chunk_id`-based mapping to read-only Qdrant payloads.
+  Added `tests/test_repair_nsoud_bm25_sidecar_provenance.py`.
+  Wrote candidate repaired sidecar `storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.provenance_repaired.sqlite`.
+  Created candidate run `artifacts/rag_eval/legal_qa/runs/nsoud_sidecar_provenance_repaired/` and candidate answer eval `artifacts/rag_eval/legal_qa/answer_eval/nsoud_sidecar_provenance_repaired/`.
+  Added repair reports `artifacts/evaluation_quality/nsoud_bm25_sidecar_provenance_repair_20260710.md` and `.json`.
+- Why it changed:
+  The original NSoud sidecar had blank provenance in `1862/1862` rows, which made frozen BM25-backed hits lose usable `document_id` and `source_document_id` metadata even though the corresponding Qdrant points already had correct provenance.
+- Files changed:
+  `PROJECT_PROGRESS.md`
+  `app/rag/retrieval/bm25_sidecar.py`
+  `scripts/build_bm25_sidecar_from_qdrant.py`
+  `scripts/repair_nsoud_bm25_sidecar_provenance.py`
+  `tests/test_repair_nsoud_bm25_sidecar_provenance.py`
+  `artifacts/evaluation_quality/nsoud_bm25_sidecar_provenance_repair_20260710.md`
+  `artifacts/evaluation_quality/nsoud_bm25_sidecar_provenance_repair_20260710.json`
+- Tests run:
+  `python -m pytest tests/test_repair_nsoud_bm25_sidecar_provenance.py -q`
+  `python -m pytest tests/rag/test_production_bge_m3_profile.py tests/test_merge_bge_m3_candidate_collections.py tests/rag/test_legal_qa_benchmark.py -q`
+  `python -m pytest tests/rag/test_legal_answer_eval.py tests/rag/test_legal_answer_eval_diagnostics.py -q`
+- Smoke result:
+  `docker compose exec -T api python scripts/repair_nsoud_bm25_sidecar_provenance.py ... --dry-run` confirmed `1862/1862` deterministic matches and zero text mismatches.
+  `docker compose exec -T api python scripts/repair_nsoud_bm25_sidecar_provenance.py ... --execute` produced a repaired candidate sidecar with `0` blank `document_id`, `source_document_id`, `ecli`, `case_number`, and `source`.
+  Candidate retrieval benchmark kept `hit@1=0.700`, `hit@5=1.000`, `pass_rate=1.000`, while `nsoud-qa-007` now exposes rank-1 ECLI metadata directly from the retrieval artifact.

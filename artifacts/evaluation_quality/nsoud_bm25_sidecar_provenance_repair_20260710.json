@@ -1,0 +1,149 @@
+{
+  "task": "nsoud_bm25_sidecar_provenance_repair",
+  "date": "2026-07-10",
+  "collection_name": "nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1",
+  "original_sidecar_path": "storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite",
+  "repaired_sidecar_path": "storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.provenance_repaired.sqlite",
+  "safety": {
+    "qdrant_read_only": true,
+    "qdrant_write_happened": false,
+    "retrieval_scoring_changed": false,
+    "dense_scoring_changed": false,
+    "bm25_formula_changed": false,
+    "rrf_changed": false,
+    "llm_or_deepseek_called": false,
+    "reingest_run": false
+  },
+  "audit_before": {
+    "tables": [
+      "bm25_chunks"
+    ],
+    "row_count": 1862,
+    "columns": [
+      "chunk_id",
+      "text",
+      "document_id",
+      "source_document_id",
+      "decision_date",
+      "chunk_index",
+      "qdrant_collection",
+      "retrieval_profile",
+      "bm25_index_id"
+    ],
+    "provenance_columns_present": [
+      "document_id",
+      "source_document_id",
+      "chunk_index"
+    ],
+    "blank_or_null_counts": {
+      "document_id": 1862,
+      "source_document_id": 1862,
+      "ecli": 1862,
+      "case_number": 1862,
+      "chunk_index": 0,
+      "source": 1862
+    },
+    "placeholder_chunk_index_minus_one_count": 1862
+  },
+  "repair": {
+    "mapping_strategy": "strict_chunk_id_to_qdrant_payload",
+    "rows_processed": 1862,
+    "rows_enriched": 1862,
+    "rows_missing_qdrant_mapping": 0,
+    "text_mismatch_count": 0
+  },
+  "audit_after": {
+    "row_count": 1862,
+    "columns": [
+      "chunk_id",
+      "text",
+      "document_id",
+      "source_document_id",
+      "ecli",
+      "case_number",
+      "spisova_znacka",
+      "court",
+      "source",
+      "decision_date",
+      "chunk_index",
+      "qdrant_collection",
+      "retrieval_profile",
+      "bm25_index_id"
+    ],
+    "blank_or_null_counts": {
+      "document_id": 0,
+      "source_document_id": 0,
+      "ecli": 0,
+      "case_number": 0,
+      "chunk_index": 0,
+      "source": 0
+    },
+    "placeholder_chunk_index_minus_one_count": 0
+  },
+  "expected_source_verification": {
+    "question_id": "nsoud-qa-007",
+    "expected_source": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+    "searchable_in_repaired_sidecar": true,
+    "matching_repaired_rows": 12
+  },
+  "benchmark_comparison": {
+    "before": {
+      "run_path": "artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline",
+      "hit_at_1": 0.7,
+      "hit_at_3": 0.9,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mean_keyword_coverage": 0.8333333333333334,
+      "pass_rate": 1.0,
+      "mean_source_constraint_match": null
+    },
+    "after": {
+      "run_path": "artifacts/rag_eval/legal_qa/runs/nsoud_sidecar_provenance_repaired",
+      "hit_at_1": 0.7,
+      "hit_at_3": 0.9,
+      "hit_at_5": 1.0,
+      "hit_at_10": 1.0,
+      "mean_keyword_coverage": 0.8333333333333334,
+      "pass_rate": 1.0,
+      "mean_source_constraint_match": 1.0,
+      "source_hit_at_1": 0.75
+    }
+  },
+  "answer_eval_impact": {
+    "before": {
+      "run_path": "artifacts/rag_eval/legal_qa/answer_eval/nsoud_no_llm_baseline",
+      "partial_support_count": 2,
+      "boilerplate_noise_count": 1,
+      "usable_support_rate_gold": 0.5,
+      "unsupported_answer_risk_count": 2
+    },
+    "after": {
+      "run_path": "artifacts/rag_eval/legal_qa/answer_eval/nsoud_sidecar_provenance_repaired",
+      "gold_question_count": 4,
+      "partial_support_count": 3,
+      "boilerplate_noise_count": 1,
+      "citation_available_count": 3,
+      "citation_available_rate_gold": 0.75,
+      "usable_support_rate_gold": 0.75,
+      "gold_retrieval_miss_count": 1,
+      "gold_retrieval_miss_rate": 0.25,
+      "unsupported_answer_risk_count": 1
+    }
+  },
+  "candidate_diagnostics": {
+    "run_name": "nsoud_sidecar_provenance_repaired",
+    "nsoud_qa_007": {
+      "expected_source_present_top_k": true,
+      "true_retrieval_miss": false,
+      "failure_category": "usable_partial_support",
+      "answer_eval_status": "partial",
+      "conclusion": "Conservative conclusion: expected source is present; this is not a true retrieval miss."
+    },
+    "nsoud_qa_010": {
+      "failure_category": "unsupported_boilerplate_or_gap",
+      "answer_eval_status": "needs_review"
+    },
+    "final_status": "FAIL_WITH_REAL_NSOUD_RISK"
+  },
+  "reingest_needed": false
+}

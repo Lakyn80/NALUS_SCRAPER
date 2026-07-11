@@ -156,9 +156,7 @@ def _load_records(path: Path) -> list[Bm25Record]:
         if not chunk_id or not text:
             continue
         metadata = _parse_metadata(item.get("metadata") or item.get("payload") or item.get("payload_json"))
-        metadata.setdefault("source", item.get("source"))
-        metadata.setdefault("document_id", item.get("document_id"))
-        metadata.setdefault("chunk_index", item.get("chunk_index"))
+        _set_metadata_defaults(metadata, item)
         records.append(Bm25Record(id=chunk_id, text=text, metadata=metadata))
     return records
 
@@ -186,6 +184,26 @@ def _parse_metadata(value: Any) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return dict(decoded) if isinstance(decoded, dict) else {}
+
+
+def _set_metadata_defaults(metadata: dict[str, Any], row: dict[str, Any]) -> None:
+    for key in (
+        "source",
+        "document_id",
+        "source_document_id",
+        "ecli",
+        "case_number",
+        "spisova_znacka",
+        "court",
+        "decision_date",
+        "chunk_index",
+    ):
+        metadata.setdefault(key, row.get(key))
+
+    metadata.setdefault(
+        "case_reference",
+        row.get("case_reference") or row.get("case_number") or row.get("spisova_znacka"),
+    )
 
 
 def _tokenize(text: str) -> list[str]:
