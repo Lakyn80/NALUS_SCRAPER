@@ -130,3 +130,34 @@
   `docker compose exec -T api python scripts/repair_nsoud_bm25_sidecar_provenance.py ... --dry-run` confirmed `1862/1862` deterministic matches and zero text mismatches.
   `docker compose exec -T api python scripts/repair_nsoud_bm25_sidecar_provenance.py ... --execute` produced a repaired candidate sidecar with `0` blank `document_id`, `source_document_id`, `ecli`, `case_number`, and `source`.
   Candidate retrieval benchmark kept `hit@1=0.700`, `hit@5=1.000`, `pass_rate=1.000`, while `nsoud-qa-007` now exposes rank-1 ECLI metadata directly from the retrieval artifact.
+- Known limitations:
+  `court` and `spisova_znacka` remain blank where they are absent in Qdrant payloads; the repair does not invent fields.
+  `nsoud-qa-010` remains a real answer-support / boilerplate benchmark risk and still drives the candidate-only diagnostic final status to `FAIL_WITH_REAL_NSOUD_RISK`.
+  Existing dirty generated ÚS/mixed answer-eval artifacts in the worktree remain unrelated and untouched.
+- Next recommended task:
+  Use the repaired sidecar/export path as the NSoud benchmark candidate, then either update the diagnostics status wording to distinguish answer-support risk from retrieval-miss risk more explicitly, or reformulate `nsoud-qa-010` before treating NSoud as fully green.
+
+## 2026-07-11 12:40 Europe/Moscow — Task: NSoud strict direct pass audit
+
+- Goal:
+  Explain why `nsoud_sidecar_provenance_repaired` still has `strict_direct_pass_rate_gold=0.0` after provenance repair, and verify that the Grafana/Prometheus metrics path is reading the intended artifacts.
+- What changed:
+  Added `artifacts/evaluation_quality/nsoud_strict_direct_audit_20260711_124021.md`.
+  Added `artifacts/evaluation_quality/nsoud_strict_direct_audit_20260711_124021.json`.
+- Why it changed:
+  The repaired NSoud run improved citation availability and reduced unsupported answer risk, but the dashboard still showed weak strict-direct performance. A per-question audit was needed to separate benchmark/gold misalignment, same-document wrong-chunk retrieval, and any possible dashboard mapping issue.
+- Files changed:
+  `PROJECT_PROGRESS.md`
+  `artifacts/evaluation_quality/nsoud_strict_direct_audit_20260711_124021.md`
+  `artifacts/evaluation_quality/nsoud_strict_direct_audit_20260711_124021.json`
+- Tests run:
+  `python -m pytest tests/rag/test_legal_answer_eval.py tests/rag/test_legal_answer_eval_diagnostics.py tests/observability/test_eval_metrics_exporter.py tests/test_repair_nsoud_bm25_sidecar_provenance.py -q`
+- Smoke result:
+  Read-only inspection confirmed the dashboard exporter is reading per-run `summary.json` files from `artifacts/rag_eval/legal_qa/answer_eval/*` with labels `(run_name, corpus)`.
+  No dashboard query/label bug was needed to explain the NSoud strict-direct weakness.
+- Known limitations:
+  The audit is intentionally read-only; no retrieval logic, evaluator behavior, or benchmark source data was changed in this task.
+  `nsoud-qa-004` and `nsoud-qa-010` still look like benchmark/gold alignment risks rather than clean retrieval regressions.
+  `nsoud-qa-007` still needs a focused same-document chunk-selection follow-up before it can become a strict-direct pass.
+- Next recommended task:
+  Re-annotate or replace `nsoud-qa-004` and `nsoud-qa-010`, then run a narrowly scoped follow-up on `nsoud-qa-007` to test whether a better same-document chunk can be surfaced without changing global BM25/dense/RRF scoring.

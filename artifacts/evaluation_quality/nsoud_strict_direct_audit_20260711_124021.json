@@ -1,0 +1,1050 @@
+{
+  "generated_at": "2026-07-11 12:40:21 Europe/Moscow",
+  "artifact_paths": {
+    "markdown": "artifacts/evaluation_quality/nsoud_strict_direct_audit_20260711_124021.md",
+    "json": "artifacts/evaluation_quality/nsoud_strict_direct_audit_20260711_124021.json"
+  },
+  "task": "NSoud strict direct pass per-question audit after BM25 sidecar provenance repair",
+  "audit_only": true,
+  "code_changed": false,
+  "behavior_changed": false,
+  "main_comparison": [
+    "nsoud_sidecar_provenance_repaired",
+    "nsoud_no_llm_baseline"
+  ],
+  "secondary_context": [
+    "usoud_no_llm_baseline",
+    "mixed_no_llm_baseline"
+  ],
+  "metric_summary": {
+    "nsoud_sidecar_provenance_repaired": {
+      "run_name": "nsoud_sidecar_provenance_repaired",
+      "corpus": "nsoud",
+      "generated_at": "2026-07-11T06:49:40Z",
+      "gold": 4,
+      "strict_direct_pass_rate_gold": 0.0,
+      "usable_support_rate_gold": 0.75,
+      "citation_available_rate": 0.75,
+      "direct_support_count": 0,
+      "partial_support_count": 3,
+      "boilerplate_noise_count": 1,
+      "unsupported_answer_risk_count": 1
+    },
+    "nsoud_no_llm_baseline": {
+      "run_name": "nsoud_no_llm_baseline",
+      "corpus": "nsoud",
+      "generated_at": "2026-07-10T12:20:50Z",
+      "gold": 4,
+      "strict_direct_pass_rate_gold": 0.0,
+      "usable_support_rate_gold": 0.5,
+      "citation_available_rate": 0.5,
+      "direct_support_count": 0,
+      "partial_support_count": 2,
+      "boilerplate_noise_count": 1,
+      "unsupported_answer_risk_count": 2
+    },
+    "usoud_no_llm_baseline": {
+      "run_name": "usoud_no_llm_baseline",
+      "corpus": "usoud",
+      "generated_at": "2026-07-10T11:51:31Z",
+      "gold": 10,
+      "strict_direct_pass_rate_gold": 0.1,
+      "usable_support_rate_gold": 1.0,
+      "citation_available_rate": 1.0,
+      "direct_support_count": 1,
+      "partial_support_count": 9,
+      "boilerplate_noise_count": 0,
+      "unsupported_answer_risk_count": 0
+    },
+    "mixed_no_llm_baseline": {
+      "run_name": "mixed_no_llm_baseline",
+      "corpus": "mixed",
+      "generated_at": "2026-07-10T11:51:32Z",
+      "gold": 8,
+      "strict_direct_pass_rate_gold": 0.0,
+      "usable_support_rate_gold": 1.0,
+      "citation_available_rate": 0.0,
+      "direct_support_count": 0,
+      "partial_support_count": 0,
+      "boilerplate_noise_count": 0,
+      "unsupported_answer_risk_count": 0
+    }
+  },
+  "dashboard_validation": {
+    "artifacts_dir": "artifacts/rag_eval/legal_qa/answer_eval",
+    "exporter_uses_summary_json_first": true,
+    "exporter_label_dimensions": [
+      "run_name",
+      "corpus"
+    ],
+    "relevant_runs": [
+      {
+        "run_name": "nsoud_sidecar_provenance_repaired",
+        "corpus": "nsoud",
+        "generated_at": "2026-07-11T06:49:40Z",
+        "gold": 4,
+        "strict_direct_pass_rate_gold": 0.0,
+        "usable_support_rate_gold": 0.75,
+        "citation_available_rate": 0.75,
+        "direct_support_count": 0,
+        "partial_support_count": 3,
+        "boilerplate_noise_count": 1,
+        "unsupported_answer_risk_count": 1
+      },
+      {
+        "run_name": "nsoud_no_llm_baseline",
+        "corpus": "nsoud",
+        "generated_at": "2026-07-10T12:20:50Z",
+        "gold": 4,
+        "strict_direct_pass_rate_gold": 0.0,
+        "usable_support_rate_gold": 0.5,
+        "citation_available_rate": 0.5,
+        "direct_support_count": 0,
+        "partial_support_count": 2,
+        "boilerplate_noise_count": 1,
+        "unsupported_answer_risk_count": 2
+      },
+      {
+        "run_name": "usoud_no_llm_baseline",
+        "corpus": "usoud",
+        "generated_at": "2026-07-10T11:51:31Z",
+        "gold": 10,
+        "strict_direct_pass_rate_gold": 0.1,
+        "usable_support_rate_gold": 1.0,
+        "citation_available_rate": 1.0,
+        "direct_support_count": 1,
+        "partial_support_count": 9,
+        "boilerplate_noise_count": 0,
+        "unsupported_answer_risk_count": 0
+      },
+      {
+        "run_name": "mixed_no_llm_baseline",
+        "corpus": "mixed",
+        "generated_at": "2026-07-10T11:51:32Z",
+        "gold": 8,
+        "strict_direct_pass_rate_gold": 0.0,
+        "usable_support_rate_gold": 1.0,
+        "citation_available_rate": 0.0,
+        "direct_support_count": 0,
+        "partial_support_count": 0,
+        "boilerplate_noise_count": 0,
+        "unsupported_answer_risk_count": 0
+      }
+    ],
+    "no_corpus_mixing_found_for_named_runs": true,
+    "dashboard_metric_mapping_issue_found": false,
+    "stale_run_for_repaired_found": false,
+    "operational_note": "The exporter publishes every per-run subdirectory. The dashboard is comparing named runs, not a latest-only alias."
+  },
+  "per_question": [
+    {
+      "question_id": "nsoud-qa-003",
+      "question": "Kdy je dovolání přípustné ve věcech občanskoprávních?",
+      "expected_answer_points": [
+        "Kdy je dovolání přípustné ve věcech občanskoprávních?"
+      ],
+      "expected_keywords": [
+        "přípustnost",
+        "dovolání",
+        "občanské"
+      ],
+      "expected_gold_source": "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
+      "gold_doc_chunk_count": 13,
+      "gold_doc_best_chunk": {
+        "chunk_id": "1214",
+        "chunk_index": 5,
+        "coverage": 0.6666666666666666,
+        "matched_keywords": [
+          "přípustnost",
+          "dovolání"
+        ],
+        "text_excerpt": "6. Nejvyšší soud jako soud dovolací [§ 10a zákona č. 99/1963 Sb., občanský soudní řád, ve znění pozdějších předpisů (dále jen „o. s. ř.“)] po zjištění, že dovolání proti pravomocnému usnesení odvolacího soudu bylo podáno oprávněnou osobou (účastníkem řízení) ve lhůtě uvedené v § 240 odst. 1 o. s. ř., se nejprve zabýval otázkou přípustnosti dovolání. 7. Dovoláním lze napadnout pravomocná rozhodnutí odvolacího soudu, pokud to zákon připouští (§ 236 odst. 1 o. s. ř.). 8. Není-li stanoveno jinak, je dovolání přípustné proti každému rozhodnutí odvolacího soudu, kterým se odvolací řízení končí, jestliže napadené rozhodnutí závisí na vyřešení otázky hmotného nebo procesního práva, při jejímž řešení",
+        "rank_in_repaired_top10": 1
+      },
+      "baseline": {
+        "support_level": "partial",
+        "citation_available": true,
+        "answer_eval_status": "partial",
+        "unsupported_answer_risk": false,
+        "gold_source_hit_at_1": true,
+        "gold_source_hit_at_3": true,
+        "gold_source_hit_at_5": true,
+        "top_hits": [
+          {
+            "rank": 1,
+            "chunk_id": "1214",
+            "document_id": "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
+            "case_number": "21 Cdo 372/2024",
+            "chunk_index": 5,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.7010205,
+            "bm25_score": null,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "6. Nejvyšší soud jako soud dovolací [§ 10a zákona č. 99/1963 Sb., občanský soudní řád, ve znění pozdějších předpisů (dále jen „o. s. ř.“)] po zjištění, že dovolání proti pravomocnému usnesení odvolacího soudu bylo podáno oprávněnou osobo..."
+          },
+          {
+            "rank": 2,
+            "chunk_id": "923",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 13.776980449789143,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "1. 2024 do zaplacení. Se zbytkem uplatněného nároku na náhradu nemajetkové újmy byla poškozená podle § 229 odst. 2 tr. ř. odkázána na řízení ve věcech občanskoprávních. 3. O odvolání obviněného proti tomuto rozsudku rozhodl Vrchní soud v..."
+          },
+          {
+            "rank": 3,
+            "chunk_id": "46",
+            "document_id": "ECLI:CZ:NS:2024:20.CDO.2839.2024.1",
+            "case_number": "20 Cdo 2839/2024",
+            "chunk_index": 3,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.70037025,
+            "bm25_score": null,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "99/1963 Sb., občanský soudní řád, ve znění účinném od 1. ledna 2022 (srov. část první čl. II bod 1 zákona č. 286/2021 Sb.), a dospěl k závěru, že dovolání není přípustné. Nejvyšší soud předně uvádí, že dovolatelce lze přisvědčit v tom, ž..."
+          },
+          {
+            "rank": 4,
+            "chunk_id": "612",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 13.540021866689091,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "10. 2021 do 31. 10. 2021. 2. Za uvedený přečin soud prvního stupně obviněnému uložil podle § 146 odst. 1 tr. zákoníku za použití § 67 odst. 2 písm. b), § 68 odst. 1, odst. 2 tr. zákoníku peněžitý trest ve výměře 90 denních sazeb ve výši ..."
+          },
+          {
+            "rank": 5,
+            "chunk_id": "1114",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 12.061490964732501,
+            "rrf_score": 0.015873015873015872,
+            "text_snippet": "3. Zároveň podle § 228 odst. 1 tr. ř. nalézací soud obviněné uložil povinnost nahradit poškozenému J. J., nemajetkovou újmu ve výši 5 000 Kč (pět tisíc korun českých). Podle § 229 odst. 2 tr. ř. pak odkázal poškozeného J. se zbytkem jeho..."
+          }
+        ]
+      },
+      "repaired": {
+        "support_level": "partial",
+        "citation_available": true,
+        "answer_eval_status": "partial",
+        "unsupported_answer_risk": false,
+        "gold_hit_rank": 1,
+        "support_keyword_coverage": 0.3333333333333333,
+        "gold_source_hit_at_1": true,
+        "gold_source_hit_at_3": true,
+        "gold_source_hit_at_5": true,
+        "gold_chunk_id": "1214",
+        "gold_chunk_sidecar_original": {
+          "chunk_id": "1214",
+          "document_id": "",
+          "source_document_id": "",
+          "chunk_index": -1,
+          "text_excerpt": "6. Nejvyšší soud jako soud dovolací [§ 10a zákona č. 99/1963 Sb., občanský soudní řád, ve znění pozdějších předpisů (dále jen „o. s. ř.“)] po zjištění, že dovolání proti pravomocnému usnesení odvolacího soudu bylo podáno oprávněnou osobou (účastníkem řízení) ve lhůtě uvedené v § 240 odst. 1 o. s. ř., se nejprve zabýval otázkou přípustnosti dovolání. 7. Dovoláním lze napadnout pravomocná rozhodnutí odvolacího soudu, pokud to zákon připouští (§ 236 odst. 1 o. s. ř.). 8. Není-li stanoveno jinak, je dovolání přípustné proti každému rozhodnutí odvolacího soudu, kterým se odvolací řízení končí, jestliže napadené rozhodnutí závisí na vyřešení otázky hmotného nebo procesního práva, při jejímž řešení"
+        },
+        "gold_chunk_sidecar_repaired": {
+          "chunk_id": "1214",
+          "document_id": "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
+          "source_document_id": "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
+          "chunk_index": 5,
+          "text_excerpt": "6. Nejvyšší soud jako soud dovolací [§ 10a zákona č. 99/1963 Sb., občanský soudní řád, ve znění pozdějších předpisů (dále jen „o. s. ř.“)] po zjištění, že dovolání proti pravomocnému usnesení odvolacího soudu bylo podáno oprávněnou osobou (účastníkem řízení) ve lhůtě uvedené v § 240 odst. 1 o. s. ř., se nejprve zabýval otázkou přípustnosti dovolání. 7. Dovoláním lze napadnout pravomocná rozhodnutí odvolacího soudu, pokud to zákon připouští (§ 236 odst. 1 o. s. ř.). 8. Není-li stanoveno jinak, je dovolání přípustné proti každému rozhodnutí odvolacího soudu, kterým se odvolací řízení končí, jestliže napadené rozhodnutí závisí na vyřešení otázky hmotného nebo procesního práva, při jejímž řešení"
+        },
+        "top_hits": [
+          {
+            "rank": 1,
+            "chunk_id": "1214",
+            "document_id": "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
+            "case_number": "21 Cdo 372/2024",
+            "chunk_index": 5,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.7010205,
+            "bm25_score": null,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "6. Nejvyšší soud jako soud dovolací [§ 10a zákona č. 99/1963 Sb., občanský soudní řád, ve znění pozdějších předpisů (dále jen „o. s. ř.“)] po zjištění, že dovolání proti pravomocnému usnesení odvolacího soudu bylo podáno oprávněnou osobo..."
+          },
+          {
+            "rank": 2,
+            "chunk_id": "923",
+            "document_id": "ECLI:CZ:NS:2025:3.TDO.1120.2024.1",
+            "case_number": "3 Tdo 1120/2024",
+            "chunk_index": 3,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 13.776980449789143,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "1. 2024 do zaplacení. Se zbytkem uplatněného nároku na náhradu nemajetkové újmy byla poškozená podle § 229 odst. 2 tr. ř. odkázána na řízení ve věcech občanskoprávních. 3. O odvolání obviněného proti tomuto rozsudku rozhodl Vrchní soud v..."
+          },
+          {
+            "rank": 3,
+            "chunk_id": "46",
+            "document_id": "ECLI:CZ:NS:2024:20.CDO.2839.2024.1",
+            "case_number": "20 Cdo 2839/2024",
+            "chunk_index": 3,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.70037025,
+            "bm25_score": null,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "99/1963 Sb., občanský soudní řád, ve znění účinném od 1. ledna 2022 (srov. část první čl. II bod 1 zákona č. 286/2021 Sb.), a dospěl k závěru, že dovolání není přípustné. Nejvyšší soud předně uvádí, že dovolatelce lze přisvědčit v tom, ž..."
+          },
+          {
+            "rank": 4,
+            "chunk_id": "612",
+            "document_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+            "case_number": "11 Tdo 679/2024",
+            "chunk_index": 3,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 13.540021866689091,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "10. 2021 do 31. 10. 2021. 2. Za uvedený přečin soud prvního stupně obviněnému uložil podle § 146 odst. 1 tr. zákoníku za použití § 67 odst. 2 písm. b), § 68 odst. 1, odst. 2 tr. zákoníku peněžitý trest ve výměře 90 denních sazeb ve výši ..."
+          },
+          {
+            "rank": 5,
+            "chunk_id": "1114",
+            "document_id": "ECLI:CZ:NS:2025:4.TDO.1056.2024.1",
+            "case_number": "4 Tdo 1056/2024",
+            "chunk_index": 2,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 12.061490964732501,
+            "rrf_score": 0.015873015873015872,
+            "text_snippet": "3. Zároveň podle § 228 odst. 1 tr. ř. nalézací soud obviněné uložil povinnost nahradit poškozenému J. J., nemajetkovou újmu ve výši 5 000 Kč (pět tisíc korun českých). Podle § 229 odst. 2 tr. ř. pak odkázal poškozeného J. se zbytkem jeho..."
+          }
+        ]
+      },
+      "comparison": {
+        "citation_changed": false,
+        "support_level_changed": false,
+        "strict_direct_changed": false,
+        "unsupported_risk_changed": false,
+        "baseline_to_repaired_summary": "support partial -> partial; citation True -> True; unsupported_risk False -> False"
+      },
+      "human_diagnosis": {
+        "retrieved_evidence_directly_answers_question": true,
+        "answer_only_partially_supported": false,
+        "supported_but_not_direct_enough": false,
+        "failure_caused_by_missing_evidence": false,
+        "failure_caused_by_wrong_document": false,
+        "failure_caused_by_bad_chunk_granularity": false,
+        "failure_caused_by_evaluator_or_gold_mismatch": true,
+        "failure_caused_by_citation_or_provenance_issue": false,
+        "root_cause_category": "evaluator_too_strict_or_gold_mismatch",
+        "conclusion": "The repaired run already retrieves the gold document and the best same-document chunk at rank 1. Strict direct still fails because the evaluator uses exact substring keyword coverage with a >=0.67 gate; the best chunk reaches 2/3 = 0.6667, so lexical form mismatch keeps it in partial.",
+        "recommended_action": "Keep retrieval unchanged; refine expected answer markers or keyword matching semantics before treating this item as a retrieval regression."
+      }
+    },
+    {
+      "question_id": "nsoud-qa-004",
+      "question": "Jak Nejvyšší soud hodnotí zásadní právní význam v civilním dovolání?",
+      "expected_answer_points": [
+        "Jak Nejvyšší soud hodnotí zásadní právní význam v civilním dovolání?"
+      ],
+      "expected_keywords": [
+        "zásadní",
+        "právní",
+        "význam"
+      ],
+      "expected_gold_source": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+      "gold_doc_chunk_count": 28,
+      "gold_doc_best_chunk": {
+        "chunk_id": "345",
+        "chunk_index": 11,
+        "coverage": 0.6666666666666666,
+        "matched_keywords": [
+          "právní",
+          "význam"
+        ],
+        "text_excerpt": "19. Další námitky v dovolání obviněný opřel též o důvody podle § 265b odst. 1 písm. g), h) tr. ř., k nimž je třeba nejprve uvést, že důvod podle § 265b odst. 1 písm. g) tr. ř. se uplatní, když rozhodná skutková zjištění, která jsou určující pro naplnění znaků trestného činu, jsou ve zjevném rozporu s obsahem provedených důkazů nebo jsou založena na procesně nepoužitelných důkazech nebo ve vztahu k nim nebyly nedůvodně provedeny navrhované podstatné důkazy. Tento důvod je dán třemi alternativami procesních vad a vždy je třeba, aby v jejich důsledku byla vytýkána skutková zjištění, která mají určující význam pro naplnění znaků trestného činu, jenž je na nich založen. Postačí, když je naplněna ",
+        "rank_in_repaired_top10": null
+      },
+      "baseline": {
+        "support_level": "partial",
+        "citation_available": true,
+        "answer_eval_status": "partial",
+        "unsupported_answer_risk": false,
+        "gold_source_hit_at_1": true,
+        "gold_source_hit_at_3": true,
+        "gold_source_hit_at_5": true,
+        "top_hits": [
+          {
+            "rank": 1,
+            "chunk_id": "346",
+            "document_id": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+            "case_number": "8 Tdo 760/2024",
+            "chunk_index": 12,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.62354136,
+            "bm25_score": null,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "21. Pro posouzení správnosti právních otázek ve smyslu uvedeného dovolacího důvodu je zásadně rozhodný skutkový stav zjištěný soudy prvního, příp. druhého stupně, přičemž Nejvyšší soud jej nemůže změnit, a to jak na základě případného do..."
+          },
+          {
+            "rank": 2,
+            "chunk_id": "910",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 13.580751217936271,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "45. Obviněný v dovolání výslovně uplatnil první variantu citovaného dovolacího důvodu, a to, že rozhodná skutková zjištění jsou ve zjevném (obviněným uváděno extrémním) rozporu mezi provedenými důkazy a z nich se podávajícími skutkovými ..."
+          },
+          {
+            "rank": 3,
+            "chunk_id": "1031",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 11.824858502199838,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "16. V souvislosti s argumentací obviněného, která nikterak nevybočuje z prosté polemiky s hodnocením důkazů, jak bylo provedeno soudy nižších stupňů, lze uvést, že soudy nižších stupňů provedly dokazování v rozsahu potřebném pro rozhodnu..."
+          },
+          {
+            "rank": 4,
+            "chunk_id": "1814",
+            "document_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+            "case_number": "11 Tdo 75/2025",
+            "chunk_index": 18,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.600907,
+            "bm25_score": null,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "9. 2004, sp. zn. II. ÚS 279/03). 32. Nadto Nejvyšší soud i při respektování shora uvedeného interpretuje a aplikuje podmínky připuštění dovolání tak, aby dodržel maximy práva na spravedlivý proces vymezené Úmluvou o ochraně lidských práv..."
+          },
+          {
+            "rank": 5,
+            "chunk_id": "6",
+            "document_id": "ECLI:CZ:NS:2024:24.CDO.671.2024.1",
+            "case_number": "24 Cdo 671/2024; 24 Cdo 675/2024",
+            "chunk_index": 5,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.5987161,
+            "bm25_score": null,
+            "rrf_score": 0.015873015873015872,
+            "text_snippet": "8. Nejvyšší soud jako soud dovolací (§ 10a zákona č. 99/1963 Sb., občanský soudní řád, ve znění pozdějších předpisů – dále jen „o. s. ř.“) po zjištění, že dovolání proti pravomocnému rozsudku odvolacího soudu bylo podáno oprávněnými osob..."
+          }
+        ]
+      },
+      "repaired": {
+        "support_level": "partial",
+        "citation_available": true,
+        "answer_eval_status": "partial",
+        "unsupported_answer_risk": false,
+        "gold_hit_rank": 1,
+        "support_keyword_coverage": 0.3333333333333333,
+        "gold_source_hit_at_1": true,
+        "gold_source_hit_at_3": true,
+        "gold_source_hit_at_5": true,
+        "gold_chunk_id": "346",
+        "gold_chunk_sidecar_original": {
+          "chunk_id": "346",
+          "document_id": "",
+          "source_document_id": "",
+          "chunk_index": -1,
+          "text_excerpt": "21. Pro posouzení správnosti právních otázek ve smyslu uvedeného dovolacího důvodu je zásadně rozhodný skutkový stav zjištěný soudy prvního, příp. druhého stupně, přičemž Nejvyšší soud jej nemůže změnit, a to jak na základě případného doplnění dokazování, tak ani v závislosti na jiném hodnocení v předcházejícím řízení provedených důkazů (srov. nález Ústavního soudu ze dne 8. 7. 2003, sp. zn. IV. ÚS 564/02, či usnesení Ústavního soudu ze dne 30. 10. 2003, sp. zn. III. ÚS 282/03, aj.). Zásah Nejvyššího soudu do hodnocení důkazů přichází v úvahu jen v případě, že by skutková zjištění byla v extrémním nesouladu s právními závěry učiněnými v napadeném rozhodnutí (viz např. nálezy Ústavního soudu "
+        },
+        "gold_chunk_sidecar_repaired": {
+          "chunk_id": "346",
+          "document_id": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+          "source_document_id": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+          "chunk_index": 12,
+          "text_excerpt": "21. Pro posouzení správnosti právních otázek ve smyslu uvedeného dovolacího důvodu je zásadně rozhodný skutkový stav zjištěný soudy prvního, příp. druhého stupně, přičemž Nejvyšší soud jej nemůže změnit, a to jak na základě případného doplnění dokazování, tak ani v závislosti na jiném hodnocení v předcházejícím řízení provedených důkazů (srov. nález Ústavního soudu ze dne 8. 7. 2003, sp. zn. IV. ÚS 564/02, či usnesení Ústavního soudu ze dne 30. 10. 2003, sp. zn. III. ÚS 282/03, aj.). Zásah Nejvyššího soudu do hodnocení důkazů přichází v úvahu jen v případě, že by skutková zjištění byla v extrémním nesouladu s právními závěry učiněnými v napadeném rozhodnutí (viz např. nálezy Ústavního soudu "
+        },
+        "top_hits": [
+          {
+            "rank": 1,
+            "chunk_id": "346",
+            "document_id": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+            "case_number": "8 Tdo 760/2024",
+            "chunk_index": 12,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.62354136,
+            "bm25_score": null,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "21. Pro posouzení správnosti právních otázek ve smyslu uvedeného dovolacího důvodu je zásadně rozhodný skutkový stav zjištěný soudy prvního, příp. druhého stupně, přičemž Nejvyšší soud jej nemůže změnit, a to jak na základě případného do..."
+          },
+          {
+            "rank": 2,
+            "chunk_id": "910",
+            "document_id": "ECLI:CZ:NS:2024:3.TDO.980.2024.1",
+            "case_number": "3 Tdo 980/2024",
+            "chunk_index": 23,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 13.580751217936271,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "45. Obviněný v dovolání výslovně uplatnil první variantu citovaného dovolacího důvodu, a to, že rozhodná skutková zjištění jsou ve zjevném (obviněným uváděno extrémním) rozporu mezi provedenými důkazy a z nich se podávajícími skutkovými ..."
+          },
+          {
+            "rank": 3,
+            "chunk_id": "1031",
+            "document_id": "ECLI:CZ:NS:2024:8.TDO.1022.2024.1",
+            "case_number": "8 Tdo 1022/2024",
+            "chunk_index": 13,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 11.824858502199838,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "16. V souvislosti s argumentací obviněného, která nikterak nevybočuje z prosté polemiky s hodnocením důkazů, jak bylo provedeno soudy nižších stupňů, lze uvést, že soudy nižších stupňů provedly dokazování v rozsahu potřebném pro rozhodnu..."
+          },
+          {
+            "rank": 4,
+            "chunk_id": "1814",
+            "document_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+            "case_number": "11 Tdo 75/2025",
+            "chunk_index": 18,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.600907,
+            "bm25_score": null,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "9. 2004, sp. zn. II. ÚS 279/03). 32. Nadto Nejvyšší soud i při respektování shora uvedeného interpretuje a aplikuje podmínky připuštění dovolání tak, aby dodržel maximy práva na spravedlivý proces vymezené Úmluvou o ochraně lidských práv..."
+          },
+          {
+            "rank": 5,
+            "chunk_id": "6",
+            "document_id": "ECLI:CZ:NS:2024:24.CDO.671.2024.1",
+            "case_number": "24 Cdo 671/2024; 24 Cdo 675/2024",
+            "chunk_index": 5,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.5987161,
+            "bm25_score": null,
+            "rrf_score": 0.015873015873015872,
+            "text_snippet": "8. Nejvyšší soud jako soud dovolací (§ 10a zákona č. 99/1963 Sb., občanský soudní řád, ve znění pozdějších předpisů – dále jen „o. s. ř.“) po zjištění, že dovolání proti pravomocnému rozsudku odvolacího soudu bylo podáno oprávněnými osob..."
+          }
+        ]
+      },
+      "comparison": {
+        "citation_changed": false,
+        "support_level_changed": false,
+        "strict_direct_changed": false,
+        "unsupported_risk_changed": false,
+        "baseline_to_repaired_summary": "support partial -> partial; citation True -> True; unsupported_risk False -> False"
+      },
+      "human_diagnosis": {
+        "retrieved_evidence_directly_answers_question": false,
+        "answer_only_partially_supported": true,
+        "supported_but_not_direct_enough": true,
+        "failure_caused_by_missing_evidence": false,
+        "failure_caused_by_wrong_document": false,
+        "failure_caused_by_bad_chunk_granularity": false,
+        "failure_caused_by_evaluator_or_gold_mismatch": true,
+        "failure_caused_by_citation_or_provenance_issue": false,
+        "root_cause_category": "evaluator_too_strict_or_gold_mismatch",
+        "conclusion": "The benchmark question asks about civil dovolání and zásadní právní význam, but the annotated gold source is a criminal 8 Tdo case. Even though the retrieved rank-1 document matches the stored gold ECLI, the content does not cleanly answer the stated benchmark question.",
+        "recommended_action": "Replace or re-annotate this item with a civil Cdo decision, or reformulate the question to the criminal doctrine actually represented by the gold source."
+      }
+    },
+    {
+      "question_id": "nsoud-qa-007",
+      "question": "Jak Nejvyšší soud posuzuje dovolací důvod podle § 265b tr. ř.?",
+      "expected_answer_points": [
+        "Jak Nejvyšší soud posuzuje dovolací důvod podle § 265b tr. ř.?"
+      ],
+      "expected_keywords": [
+        "265b",
+        "trestní",
+        "dovolání"
+      ],
+      "expected_gold_source": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+      "gold_doc_chunk_count": 12,
+      "gold_doc_best_chunk": {
+        "chunk_id": "728",
+        "chunk_index": 2,
+        "coverage": 1.0,
+        "matched_keywords": [
+          "265b",
+          "trestní",
+          "dovolání"
+        ],
+        "text_excerpt": "Odůvodnění: I. Rozhodnutí soudů nižších stupňů 1. Rozsudkem Okresního soudu v Ostravě ze dne 29. 1. 2024, sp. zn. 71 T 172/2020, byl obviněný P. P. uznán vinným přečinem porušení práv k ochranné známce a jiným označením podle § 268 odst. 1 zákona č. 40/2009 Sb., trestního zákoníku, ve znění pozdějších předpisů (dále ve zkratce jen „tr. zákoník“), za nějž mu byl podle § 268 odst. 1 tr. zákoníku uložen trest odnětí svobody v trvání 6 měsíců, jehož výkon byl podle § 81 odst. 1 a § 82 odst. 1 tr. zákoníku podmíněně odložen na zkušební dobu v trvání 18 měsíců. Dále byl obviněnému uložen podle § 67 odst. 1 a § 68 odst. 1 a 2 tr. zákoníku peněžitý trest v celkové výši 18 000 Kč (vyměřený ve 180 den",
+        "rank_in_repaired_top10": null
+      },
+      "baseline": {
+        "support_level": "gap",
+        "citation_available": false,
+        "answer_eval_status": "gap",
+        "unsupported_answer_risk": true,
+        "gold_source_hit_at_1": false,
+        "gold_source_hit_at_3": false,
+        "gold_source_hit_at_5": false,
+        "top_hits": [
+          {
+            "rank": 1,
+            "chunk_id": "735",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": 0.678883,
+            "bm25_score": 16.17858472820603,
+            "rrf_score": 0.02877846790890269,
+            "text_snippet": "IV. Závěrečné shrnutí 9. Lze tak shrnout, že obviněný uplatnil jediný dovolací důvod uvedený v § 265b odst. 1 písm. g) tr. ř., avšak ve znění účinném do 31. 12. 2021, nyní jde o dovolací důvod uvedený v § 265b odst. 1 písm. h) tr. ř., av..."
+          },
+          {
+            "rank": 2,
+            "chunk_id": "131",
+            "document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+            "case_number": "11 Tdo 765/2024",
+            "chunk_index": 10,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.7172469,
+            "bm25_score": null,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "14. Protože platí, že dovolání lze podat jen z některého z důvodů taxativně vymezených v § 265b tr. řádu, musel dále Nejvyšší soud posoudit, zda obviněným uplatněnou argumentaci lze podřadit pod některý z dovolacích důvodů, jejichž exist..."
+          },
+          {
+            "rank": 3,
+            "chunk_id": "991",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 18.10510251494355,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "23. Obviněný P. D., ve svém dovolání uplatnil taktéž dovolací důvod podle ustanovení § 265b odst. 1 písm. h) tr. ř. Podle tohoto dovolacího důvodu lze dovolání podat, jestliže rozhodnutí spočívá na nesprávném právním posouzení skutku neb..."
+          },
+          {
+            "rank": 4,
+            "chunk_id": "1789",
+            "document_id": "ECLI:CZ:NS:2025:3.TDO.53.2025.1",
+            "case_number": "3 Tdo 53/2025",
+            "chunk_index": 7,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.7095351,
+            "bm25_score": null,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "13. Státní zástupkyně proto navrhuje, aby Nejvyšší soud dovolání obviněného odmítl podle § 265i odst. 1 písm. e) tr. ř. jako zjevně neopodstatněné. Současně vyjádřila výslovný souhlas s rozhodnutím věci v neveřejném zasedání ve smyslu us..."
+          },
+          {
+            "rank": 5,
+            "chunk_id": "1834",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 17.47069976244405,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "55. Nad rámec výše uvedeného Nejvyšší soud ve shodě s judikaturou Ústavního soudu (srov. nález Ústavního soudu ze dne 4. 5. 2006, sp. zn. I. ÚS 17/05) konstatuje, že obviněná N. A. za situace, kdy bylo její odvolání podané proti odsuzují..."
+          }
+        ]
+      },
+      "repaired": {
+        "support_level": "partial",
+        "citation_available": true,
+        "answer_eval_status": "partial",
+        "unsupported_answer_risk": false,
+        "gold_hit_rank": 1,
+        "support_keyword_coverage": 0.3333333333333333,
+        "gold_source_hit_at_1": true,
+        "gold_source_hit_at_3": true,
+        "gold_source_hit_at_5": true,
+        "gold_chunk_id": "735",
+        "gold_chunk_sidecar_original": {
+          "chunk_id": "735",
+          "document_id": "",
+          "source_document_id": "",
+          "chunk_index": -1,
+          "text_excerpt": "IV. Závěrečné shrnutí 9. Lze tak shrnout, že obviněný uplatnil jediný dovolací důvod uvedený v § 265b odst. 1 písm. g) tr. ř., avšak ve znění účinném do 31. 12. 2021, nyní jde o dovolací důvod uvedený v § 265b odst. 1 písm. h) tr. ř., avšak jím vznesené námitky tomuto ani žádnému jinému dovolacímu důvodu neodpovídaly. Nejvyšší soud proto dovolání obviněného odmítl podle § 265i odst. 1 písm. b) tr. ř., aniž by přezkoumával zákonnost a odůvodněnost napadeného rozhodnutí nebo jemu předcházejícího řízení. Protože Nejvyšší soud rozhodl o odmítnutí dovolání podle § 265i tr. ř., mohl tak učinit v neveřejném zasedání podle § 265r odst. 1 písm. a) tr. ř. "
+        },
+        "gold_chunk_sidecar_repaired": {
+          "chunk_id": "735",
+          "document_id": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+          "source_document_id": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+          "chunk_index": 9,
+          "text_excerpt": "IV. Závěrečné shrnutí 9. Lze tak shrnout, že obviněný uplatnil jediný dovolací důvod uvedený v § 265b odst. 1 písm. g) tr. ř., avšak ve znění účinném do 31. 12. 2021, nyní jde o dovolací důvod uvedený v § 265b odst. 1 písm. h) tr. ř., avšak jím vznesené námitky tomuto ani žádnému jinému dovolacímu důvodu neodpovídaly. Nejvyšší soud proto dovolání obviněného odmítl podle § 265i odst. 1 písm. b) tr. ř., aniž by přezkoumával zákonnost a odůvodněnost napadeného rozhodnutí nebo jemu předcházejícího řízení. Protože Nejvyšší soud rozhodl o odmítnutí dovolání podle § 265i tr. ř., mohl tak učinit v neveřejném zasedání podle § 265r odst. 1 písm. a) tr. ř. "
+        },
+        "top_hits": [
+          {
+            "rank": 1,
+            "chunk_id": "735",
+            "document_id": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+            "case_number": "5 Tdo 1086/2024",
+            "chunk_index": 9,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": 0.678883,
+            "bm25_score": 16.17858472820603,
+            "rrf_score": 0.02877846790890269,
+            "text_snippet": "IV. Závěrečné shrnutí 9. Lze tak shrnout, že obviněný uplatnil jediný dovolací důvod uvedený v § 265b odst. 1 písm. g) tr. ř., avšak ve znění účinném do 31. 12. 2021, nyní jde o dovolací důvod uvedený v § 265b odst. 1 písm. h) tr. ř., av..."
+          },
+          {
+            "rank": 2,
+            "chunk_id": "131",
+            "document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+            "case_number": "11 Tdo 765/2024",
+            "chunk_index": 10,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.7172469,
+            "bm25_score": null,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "14. Protože platí, že dovolání lze podat jen z některého z důvodů taxativně vymezených v § 265b tr. řádu, musel dále Nejvyšší soud posoudit, zda obviněným uplatněnou argumentaci lze podřadit pod některý z dovolacích důvodů, jejichž exist..."
+          },
+          {
+            "rank": 3,
+            "chunk_id": "991",
+            "document_id": "ECLI:CZ:NS:2025:4.TDO.1137.2024.1",
+            "case_number": "4 Tdo 1137/2024",
+            "chunk_index": 18,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 18.10510251494355,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "23. Obviněný P. D., ve svém dovolání uplatnil taktéž dovolací důvod podle ustanovení § 265b odst. 1 písm. h) tr. ř. Podle tohoto dovolacího důvodu lze dovolání podat, jestliže rozhodnutí spočívá na nesprávném právním posouzení skutku neb..."
+          },
+          {
+            "rank": 4,
+            "chunk_id": "1789",
+            "document_id": "ECLI:CZ:NS:2025:3.TDO.53.2025.1",
+            "case_number": "3 Tdo 53/2025",
+            "chunk_index": 7,
+            "section_type": "reasoning",
+            "source": "hybrid",
+            "dense_score": 0.7095351,
+            "bm25_score": null,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "13. Státní zástupkyně proto navrhuje, aby Nejvyšší soud dovolání obviněného odmítl podle § 265i odst. 1 písm. e) tr. ř. jako zjevně neopodstatněné. Současně vyjádřila výslovný souhlas s rozhodnutím věci v neveřejném zasedání ve smyslu us..."
+          },
+          {
+            "rank": 5,
+            "chunk_id": "1834",
+            "document_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+            "case_number": "11 Tdo 75/2025",
+            "chunk_index": 38,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 17.47069976244405,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "55. Nad rámec výše uvedeného Nejvyšší soud ve shodě s judikaturou Ústavního soudu (srov. nález Ústavního soudu ze dne 4. 5. 2006, sp. zn. I. ÚS 17/05) konstatuje, že obviněná N. A. za situace, kdy bylo její odvolání podané proti odsuzují..."
+          }
+        ]
+      },
+      "comparison": {
+        "citation_changed": true,
+        "support_level_changed": true,
+        "strict_direct_changed": false,
+        "unsupported_risk_changed": true,
+        "baseline_to_repaired_summary": "support gap -> partial; citation False -> True; unsupported_risk True -> False"
+      },
+      "human_diagnosis": {
+        "retrieved_evidence_directly_answers_question": false,
+        "answer_only_partially_supported": true,
+        "supported_but_not_direct_enough": true,
+        "failure_caused_by_missing_evidence": false,
+        "failure_caused_by_wrong_document": false,
+        "failure_caused_by_bad_chunk_granularity": true,
+        "failure_caused_by_evaluator_or_gold_mismatch": false,
+        "failure_caused_by_citation_or_provenance_issue": false,
+        "root_cause_category": "retrieval_right_document_wrong_chunk",
+        "conclusion": "Provenance repair fixes the old false gap: the repaired run now cites the gold document at rank 1. Strict direct still fails because rank-1 chunk 735 is only the case-specific closing summary, while same-document chunks 728/732/733 carry the more doctrinal § 265b discussion and do not appear in top 10.",
+        "recommended_action": "Keep the repaired provenance path; next investigate within-document chunk selection or query reformulation for this benchmark item before touching global scoring."
+      }
+    },
+    {
+      "question_id": "nsoud-qa-010",
+      "question": "Jaký je rozdíl mezi odmítnutím a zamítnutím dovolání?",
+      "expected_answer_points": [
+        "Jaký je rozdíl mezi odmítnutím a zamítnutím dovolání?"
+      ],
+      "expected_keywords": [
+        "odmítnutí",
+        "zamítnutí",
+        "dovolání"
+      ],
+      "expected_gold_source": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+      "gold_doc_chunk_count": 7,
+      "gold_doc_best_chunk": {
+        "chunk_id": "1642",
+        "chunk_index": 0,
+        "coverage": 0.3333333333333333,
+        "matched_keywords": [
+          "dovolání"
+        ],
+        "text_excerpt": "KSPH 71 INS 18101/2015 29 NSČR 1/2025-B-219 USNESENÍ Nejvyšší soud České republiky rozhodl v senátě složeném z předsedy Mgr. Milana Poláška a soudců JUDr. Zdeňka Krčmáře a Mgr. Hynka Zoubka v insolvenční věci dlužníka V. P. , zastoupeného Mgr. Tomášem Urbanem, advokátem, se sídlem v Rakovníku, Sadová 2446, PSČ 269 01, vedené u Krajského soudu v Praze pod sp. zn. KSPH 71 INS 18101/2015, o vydání výtěžku zpeněžení zajištěnému věřiteli, o dovolání dlužníka proti usnesení Vrchního soudu v Praze ze dne 16. září 2024, č. j. KSPH 71 INS 18101/2015, 4 VSPH 845/2024-B-196, ",
+        "rank_in_repaired_top10": null
+      },
+      "baseline": {
+        "support_level": "boilerplate_noise",
+        "citation_available": false,
+        "answer_eval_status": "needs_review",
+        "unsupported_answer_risk": true,
+        "gold_source_hit_at_1": true,
+        "gold_source_hit_at_3": true,
+        "gold_source_hit_at_5": true,
+        "top_hits": [
+          {
+            "rank": 1,
+            "chunk_id": "1643",
+            "document_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+            "case_number": "29 NSCR 1/2025",
+            "chunk_index": 1,
+            "section_type": "operative_part",
+            "source": "hybrid",
+            "dense_score": 0.6933068,
+            "bm25_score": null,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "takto: Dovolání se odmítá ."
+          },
+          {
+            "rank": 2,
+            "chunk_id": "884",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 9.658702890154446,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "182/2006 Sb., o úpadku a způsobech jeho řešení (insolvenčního zákona), podle něhož nemá ve sporu o pravost, výši nebo pořadí přihlášených pohledávek žádný z účastníků právo na náhradu nákladů řízení proti insolvenčnímu správci. Výrok o p..."
+          },
+          {
+            "rank": 3,
+            "chunk_id": "1533",
+            "document_id": "ECLI:CZ:NS:2025:29.NSCR.70.2024.1",
+            "case_number": "29 NSCR 70/2024",
+            "chunk_index": 1,
+            "section_type": "operative_part",
+            "source": "hybrid",
+            "dense_score": 0.6933068,
+            "bm25_score": null,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "takto: Dovolání se odmítá ."
+          },
+          {
+            "rank": 4,
+            "chunk_id": "632",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 7.677500470420231,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "1. 2023, č. j. 25 Co 288,289/2022-132, zastavil odvolací řízení ve vztahu mezi žalobkyní a 1. žalovanou a rozhodl o náhradě nákladů odvolacího řízení mezi nimi. Poté rozsudkem ze dne 20. 4. 2023, č. j. 25 Co 288,289/2022-147, změnil rozs..."
+          },
+          {
+            "rank": 5,
+            "chunk_id": "1427",
+            "document_id": null,
+            "case_number": null,
+            "chunk_index": -1,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 7.650998361237728,
+            "rrf_score": 0.015873015873015872,
+            "text_snippet": "IV. Posouzení důvodnosti dovolání a) Obecná východiska 15. Nejvyšší soud zjistil, že byly splněny všechny formální podmínky k podání dovolání. Dále se zabýval otázkou povahy a opodstatněnosti uplatněných námitek ve vztahu k označeným dov..."
+          }
+        ]
+      },
+      "repaired": {
+        "support_level": "boilerplate_noise",
+        "citation_available": false,
+        "answer_eval_status": "needs_review",
+        "unsupported_answer_risk": true,
+        "gold_hit_rank": 9,
+        "support_keyword_coverage": 0.3333333333333333,
+        "gold_source_hit_at_1": false,
+        "gold_source_hit_at_3": false,
+        "gold_source_hit_at_5": false,
+        "gold_chunk_id": "1643",
+        "gold_chunk_sidecar_original": {
+          "chunk_id": "1643",
+          "document_id": "",
+          "source_document_id": "",
+          "chunk_index": -1,
+          "text_excerpt": "takto: Dovolání se odmítá . "
+        },
+        "gold_chunk_sidecar_repaired": {
+          "chunk_id": "1643",
+          "document_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+          "source_document_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+          "chunk_index": 1,
+          "text_excerpt": "takto: Dovolání se odmítá . "
+        },
+        "top_hits": [
+          {
+            "rank": 1,
+            "chunk_id": "26",
+            "document_id": "ECLI:CZ:NS:2024:26.CDO.125.2024.1",
+            "case_number": "26 Cdo 125/2024",
+            "chunk_index": 1,
+            "section_type": "operative_part",
+            "source": "hybrid",
+            "dense_score": 0.6933068,
+            "bm25_score": null,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "takto: Dovolání se odmítá ."
+          },
+          {
+            "rank": 2,
+            "chunk_id": "884",
+            "document_id": "ECLI:CZ:NS:2025:29.ICDO.3.2025.1",
+            "case_number": "29 ICdo 3/2025",
+            "chunk_index": 3,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 9.658702890154446,
+            "rrf_score": 0.01639344262295082,
+            "text_snippet": "182/2006 Sb., o úpadku a způsobech jeho řešení (insolvenčního zákona), podle něhož nemá ve sporu o pravost, výši nebo pořadí přihlášených pohledávek žádný z účastníků právo na náhradu nákladů řízení proti insolvenčnímu správci. Výrok o p..."
+          },
+          {
+            "rank": 3,
+            "chunk_id": "497",
+            "document_id": "ECLI:CZ:NS:2025:27.CDO.1921.2024.1",
+            "case_number": "27 Cdo 1921/2024",
+            "chunk_index": 1,
+            "section_type": "operative_part",
+            "source": "hybrid",
+            "dense_score": 0.6933068,
+            "bm25_score": null,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "takto: Dovolání se odmítá ."
+          },
+          {
+            "rank": 4,
+            "chunk_id": "632",
+            "document_id": "ECLI:CZ:NS:2024:25.CDO.3217.2023.1",
+            "case_number": "25 Cdo 3217/2023",
+            "chunk_index": 3,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 7.677500470420231,
+            "rrf_score": 0.016129032258064516,
+            "text_snippet": "1. 2023, č. j. 25 Co 288,289/2022-132, zastavil odvolací řízení ve vztahu mezi žalobkyní a 1. žalovanou a rozhodl o náhradě nákladů odvolacího řízení mezi nimi. Poté rozsudkem ze dne 20. 4. 2023, č. j. 25 Co 288,289/2022-147, změnil rozs..."
+          },
+          {
+            "rank": 5,
+            "chunk_id": "1427",
+            "document_id": "ECLI:CZ:NS:2025:5.TDO.1071.2024.1",
+            "case_number": "5 Tdo 1071/2024",
+            "chunk_index": 8,
+            "section_type": null,
+            "source": "hybrid",
+            "dense_score": null,
+            "bm25_score": 7.650998361237728,
+            "rrf_score": 0.015873015873015872,
+            "text_snippet": "IV. Posouzení důvodnosti dovolání a) Obecná východiska 15. Nejvyšší soud zjistil, že byly splněny všechny formální podmínky k podání dovolání. Dále se zabýval otázkou povahy a opodstatněnosti uplatněných námitek ve vztahu k označeným dov..."
+          }
+        ]
+      },
+      "comparison": {
+        "citation_changed": false,
+        "support_level_changed": false,
+        "strict_direct_changed": false,
+        "unsupported_risk_changed": false,
+        "baseline_to_repaired_summary": "support boilerplate_noise -> boilerplate_noise; citation False -> False; unsupported_risk True -> True"
+      },
+      "human_diagnosis": {
+        "retrieved_evidence_directly_answers_question": false,
+        "answer_only_partially_supported": false,
+        "supported_but_not_direct_enough": false,
+        "failure_caused_by_missing_evidence": true,
+        "failure_caused_by_wrong_document": false,
+        "failure_caused_by_bad_chunk_granularity": true,
+        "failure_caused_by_evaluator_or_gold_mismatch": true,
+        "failure_caused_by_citation_or_provenance_issue": false,
+        "root_cause_category": "evaluator_too_strict_or_gold_mismatch",
+        "conclusion": "This item is not fixed by provenance. The repaired run still retrieves mostly operative-part boilerplate, and the gold document itself does not contain a clean comparison between odmítnutí and zamítnutí. Across all chunks in the gold document, the best keyword coverage is only 1/3.",
+        "recommended_action": "Reformulate or replace the benchmark item; if kept, annotate a genuinely comparative doctrinal source or a multi-source gold instead of a single odmítnutí case."
+      }
+    }
+  ],
+  "root_cause_breakdown": {
+    "evaluator_too_strict_or_gold_mismatch": 3,
+    "retrieval_right_document_wrong_chunk": 1
+  },
+  "secondary_patterns": {
+    "strict_threshold_edge_case": 1,
+    "lexical_keyword_mismatch": 1,
+    "question_gold_domain_mismatch": 1,
+    "same_document_chunk_selection": 1,
+    "operative_part_boilerplate": 1,
+    "single_source_gold_too_weak": 1
+  },
+  "files_read": [
+    "PROJECT_EXECUTION_PROTOCOL.md",
+    "PROJECT_PROGRESS.md",
+    "app/rag/eval/legal_answer_eval.py",
+    "app/observability/eval_metrics_exporter.py",
+    "monitoring/grafana/dashboards/legal_answer_eval_dashboard.json",
+    "monitoring/prometheus/prometheus.yml",
+    "artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl",
+    "artifacts/rag_eval/legal_qa/gold_source_review_20260709.md",
+    "artifacts/rag_eval/legal_qa/answer_eval/nsoud_no_llm_baseline/summary.json",
+    "artifacts/rag_eval/legal_qa/answer_eval/nsoud_no_llm_baseline/metrics.json",
+    "artifacts/rag_eval/legal_qa/answer_eval/nsoud_no_llm_baseline/answer_eval_results.jsonl",
+    "artifacts/rag_eval/legal_qa/answer_eval/nsoud_sidecar_provenance_repaired/summary.json",
+    "artifacts/rag_eval/legal_qa/answer_eval/nsoud_sidecar_provenance_repaired/metrics.json",
+    "artifacts/rag_eval/legal_qa/answer_eval/nsoud_sidecar_provenance_repaired/answer_eval_results.jsonl",
+    "artifacts/rag_eval/legal_qa/answer_eval/nsoud_sidecar_provenance_repaired/failed_cases_report.json",
+    "artifacts/rag_eval/legal_qa/runs/nsoud_full_baseline/retrieval_results.jsonl",
+    "artifacts/rag_eval/legal_qa/runs/nsoud_sidecar_provenance_repaired/retrieval_results.jsonl",
+    "storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.sqlite",
+    "storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.provenance_repaired.sqlite"
+  ],
+  "commands_run": [
+    "git branch --show-current",
+    "git status --short",
+    "rg -n \"strict_direct_pass|support_level|support_keyword_coverage|boilerplate|expected_keywords|gold_hit_rank|citation_available\" app/rag/eval/legal_answer_eval.py",
+    "python -m pytest tests/rag/test_legal_answer_eval.py tests/rag/test_legal_answer_eval_diagnostics.py tests/observability/test_eval_metrics_exporter.py tests/test_repair_nsoud_bm25_sidecar_provenance.py -q",
+    "python analysis snippets over answer_eval_results.jsonl, retrieval_results.jsonl, summary.json, and repaired/original BM25 sidecars"
+  ],
+  "tests": {
+    "command": "python -m pytest tests/rag/test_legal_answer_eval.py tests/rag/test_legal_answer_eval_diagnostics.py tests/observability/test_eval_metrics_exporter.py tests/test_repair_nsoud_bm25_sidecar_provenance.py -q",
+    "result": "passed",
+    "passed_tests": 39,
+    "warnings": [
+      "pytest-asyncio default fixture loop scope deprecation warning"
+    ]
+  },
+  "recommended_next_actions": [
+    "Re-annotate or replace nsoud-qa-004 and nsoud-qa-010, because their gold/question alignment is not strong enough for strict-direct benchmarking.",
+    "For nsoud-qa-007, investigate within-document chunk selection or question reformulation before changing any global retrieval score weights.",
+    "If strict direct remains a KPI, revisit evaluator keyword semantics for morphological variants and threshold edges, starting with nsoud-qa-003."
+  ]
+}
