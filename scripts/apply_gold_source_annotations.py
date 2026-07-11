@@ -30,7 +30,7 @@ USOUD_GOLD_ECLI: dict[str, str] = {
 
 NSOUD_GOLD_ECLI: dict[str, str] = {
     "nsoud-qa-003": "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
-    "nsoud-qa-004": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+    "nsoud-qa-004": "ECLI:CZ:NS:2025:33.CDO.79.2024.1",
     "nsoud-qa-007": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
     "nsoud-qa-010": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
 }

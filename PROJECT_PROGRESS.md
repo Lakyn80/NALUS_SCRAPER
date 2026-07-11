@@ -224,3 +224,61 @@
   Mixed citation availability remains `0.0` by design because all eight Mixed gold items are corpus-only and do not require document citations.
 - Next recommended task:
   Complete the evidence-backed NSoud QA dataset/gold repair and regenerate an isolated `nsoud_dataset_repaired` candidate without changing retrieval scoring.
+
+## 2026-07-12 00:45 Europe/Moscow — Task: NSoud QA dataset and gold repair
+
+- Goal:
+  Conservatively repair the four NSoud benchmark/gold issues identified by the strict-direct audit, regenerate an isolated retrieval/no-LLM candidate, and verify monitoring compatibility without changing retrieval scoring.
+- Original issues and decisions:
+  `nsoud-qa-003`: `evaluator_followup_needed` — corrected the inflection-specific expected keyword `občanské` to source form `občanský`; retained question and ECLI.
+  `nsoud-qa-004`: `safe_gold_reannotation` — replaced the mismatched criminal `8 Tdo` gold with civil rank-1 `ECLI:CZ:NS:2025:33.CDO.79.2024.1` and reformulated the item to the § 237 o. s. ř. criteria explicitly supported by chunk `1000`.
+  `nsoud-qa-007`: `safe_same_document_chunk_refinement` — retained the verified ECLI and query; replaced the tautological answer point with doctrine from same-document chunks `732–733`, while recording weaker rank-1 closing-summary chunk `735`.
+  `nsoud-qa-010`: `safe_question_reformulation` — removed the unsupported odmítnutí-versus-zamítnutí comparison and asked the narrower admissibility question directly supported by existing-gold chunk `1644`.
+- Dataset/gold changes:
+  Updated only `nsoud-qa-003`, `004`, `007`, and `010` in `nsoud_qa_v1.jsonl`.
+  Updated the reproducible NSoud ECLI map in `scripts/apply_gold_source_annotations.py` and the human gold review table.
+  Added idempotence, evidence-alignment, unchanged-item, and no-invented-provenance regression coverage in `tests/test_nsoud_dataset_repair.py`.
+- Candidate artifacts:
+  Retrieval: `artifacts/rag_eval/legal_qa/runs/nsoud_dataset_repaired/` using the existing repaired sidecar and read-only Qdrant search.
+  Answer eval/diagnostics: `artifacts/rag_eval/legal_qa/answer_eval/nsoud_dataset_repaired/` with `--no-llm --require-citations`.
+  Repair audit: `artifacts/evaluation_quality/nsoud_dataset_repair_20260711.md` and `.json`.
+- Metrics before (`nsoud_sidecar_provenance_repaired`):
+  `gold=4`, `direct=0`, `partial=3`, `gap=0`, `boilerplate_noise=1`, `citation_available_rate=0.75`, `usable_support_rate_gold=0.75`, `unsupported_answer_risk_count=1`, `strict_direct_pass_rate_gold=0.0`.
+- Metrics after (`nsoud_dataset_repaired`):
+  `gold=4`, `direct=0`, `partial=3`, `gap=1`, `boilerplate_noise=0`, `citation_available_rate=0.75`, `usable_support_rate_gold=0.75`, `unsupported_answer_risk_count=1`, `strict_direct_pass_rate_gold=0.0`.
+  Retrieval candidate: `pass_rate=0.9`, `source_hit@1=0.75`, `source_hit@3=0.75`, `source_hit@5=1.0`, `mean_source_constraint_match=1.0`.
+- Monitoring verification:
+  Restarted `nalus-eval-metrics-exporter`; all requested `legal_answer_eval_*` metrics for `run_name="nsoud_dataset_repaired"` were exposed with actual values.
+  Prometheus query for `legal_answer_eval_gold{run_name="nsoud_dataset_repaired"}` returned `4`; metric names remain Grafana-compatible and no dashboard query changed.
+- Files changed:
+  `PROJECT_PROGRESS.md`
+  `artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl`
+  `artifacts/rag_eval/legal_qa/gold_source_review_20260709.md`
+  `scripts/apply_gold_source_annotations.py`
+  `tests/test_nsoud_dataset_repair.py`
+  `artifacts/evaluation_quality/nsoud_dataset_repair_20260711.md`
+  `artifacts/evaluation_quality/nsoud_dataset_repair_20260711.json`
+  `artifacts/rag_eval/legal_qa/runs/nsoud_dataset_repaired/*`
+  `artifacts/rag_eval/legal_qa/answer_eval/nsoud_dataset_repaired/*`
+- Tests run:
+  `python -m pytest tests/rag/test_legal_answer_eval.py -q` -> `22 passed`.
+  `python -m pytest tests/rag/test_legal_answer_eval_diagnostics.py -q` -> `2 passed`.
+  `python -m pytest tests/rag/test_legal_qa_benchmark.py -q` -> `19 passed`.
+  `python -m pytest tests/observability/test_eval_metrics_exporter.py -q` -> `10 passed`.
+  `python -m pytest tests/test_repair_nsoud_bm25_sidecar_provenance.py -q` -> `5 passed`.
+  `python -m pytest tests/test_nalus_task_validator.py -q` -> `9 passed`.
+  `python -m pytest tests/test_nsoud_dataset_repair.py -q` -> `3 passed`.
+  Repeated `pytest-asyncio` default-loop-scope deprecation warning is non-blocking and unrelated to this task.
+- Runtime/infra safety:
+  Qdrant access was read-only search; no ingest, collection rebuild, write, or alias switch occurred.
+  BGE-M3 loaded from the existing local cache; no model download occurred.
+  Redis was not enabled or used; no LLM or DeepSeek call occurred.
+  Dense scoring, BM25 scoring, RRF, global `top_k`, embeddings, cache behavior, and fallback behavior were unchanged.
+- Validator result:
+  `python scripts/validate_nalus_task.py --task-name "NSoud QA dataset repair" --mode eval_change --expected-branch main --no-write` -> understood `WARN` with exactly two `unknown_dirty_file` findings.
+  Both warnings are intentional classifier limitations for the explicitly allowed task files `artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl` and `artifacts/rag_eval/legal_qa/gold_source_review_20260709.md`; documentation/test checks passed and all safety summaries remained `no`.
+- Known limitations:
+  `nsoud-qa-010` remains an honest unsupported risk: the correct doctrinal gold chunk is rank 4, but its fixed 240-character exported snippet ends before the supporting sentences.
+  `nsoud-qa-003` remains at exported-snippet coverage `2/3 = 0.6667`, below the unchanged `>= 0.67` strict gate.
+- Next recommended task:
+  Add and test deterministic evidence-window handling for gold chunks whose relevant doctrine lies beyond the exported snippet, without lowering the strict threshold or changing global retrieval scoring.

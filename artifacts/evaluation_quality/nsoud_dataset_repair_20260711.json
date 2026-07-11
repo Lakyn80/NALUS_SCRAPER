@@ -1,0 +1,208 @@
+{
+  "generated_at": "2026-07-12 00:45:45 Europe/Moscow",
+  "task": "NSoud QA dataset and gold repair",
+  "candidate_run_name": "nsoud_dataset_repaired",
+  "collection_name": "nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1",
+  "bm25_sidecar_path": "storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.provenance_repaired.sqlite",
+  "qdrant_access_mode": "read_only_search",
+  "questions": [
+    {
+      "question_id": "nsoud-qa-003",
+      "original_question": "Kdy je dovolání přípustné ve věcech občanskoprávních?",
+      "original_gold_source": "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
+      "issue_type": "inflection_specific_expected_keyword_and_threshold_edge",
+      "evidence_reviewed": [
+        "strict-direct audit per-question record",
+        "candidate retrieval top 10",
+        "all 13 repaired-sidecar chunks for the gold document",
+        "candidate no-LLM answer-eval result"
+      ],
+      "current_top_hits": [
+        {"rank": 1, "chunk_id": "1214", "source_document_id": "ECLI:CZ:NS:2025:21.CDO.372.2024.1"},
+        {"rank": 2, "chunk_id": "923", "source_document_id": "ECLI:CZ:NS:2025:3.TDO.1120.2024.1"},
+        {"rank": 3, "chunk_id": "46", "source_document_id": "ECLI:CZ:NS:2024:20.CDO.2839.2024.1"}
+      ],
+      "same_document_chunks_reviewed": [
+        {
+          "chunk_id": "1214",
+          "chunk_index": 5,
+          "role": "strongest doctrinal chunk and rank-1 hit",
+          "full_chunk_keyword_coverage_after_repair": 1.0,
+          "exported_snippet_keyword_coverage_after_repair": 0.6666666666666666
+        }
+      ],
+      "decision": "evaluator_followup_needed",
+      "applied_change": "Correct expected keyword from the absent inflection 'občanské' to the source form 'občanský'; keep question and gold source unchanged.",
+      "final_question": "Kdy je dovolání přípustné ve věcech občanskoprávních?",
+      "final_gold_source": "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
+      "final_expected_keywords": ["přípustnost", "dovolání", "občanský"],
+      "final_answer_points": ["Kdy je dovolání přípustné ve věcech občanskoprávních?"],
+      "final_expected_chunk_constraints": null,
+      "retrieval_implicated": false,
+      "evaluator_implicated": true,
+      "confidence": "high",
+      "reason": "The original missing marker was 'občanské', an inflection mismatch with 'občanský soudní řád'. The full rank-1 chunk supports all corrected markers; the fixed 240-character exported snippet still exposes only two of three and remains just below the global 0.67 strict gate.",
+      "unresolved_limitations": ["Deterministic Czech morphological normalization or longer evidence snippets require a separately tested evaluator change; the global threshold was not lowered."]
+    },
+    {
+      "question_id": "nsoud-qa-004",
+      "original_question": "Jak Nejvyšší soud hodnotí zásadní právní význam v civilním dovolání?",
+      "original_gold_source": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+      "issue_type": "civil_question_criminal_gold_domain_mismatch",
+      "evidence_reviewed": [
+        "strict-direct audit per-question record",
+        "original repaired-run top 10",
+        "candidate retrieval top 10 after civil reformulation",
+        "all 16 repaired-sidecar chunks for the final civil gold document"
+      ],
+      "current_top_hits": [
+        {"rank": 1, "chunk_id": "1000", "source_document_id": "ECLI:CZ:NS:2025:33.CDO.79.2024.1"},
+        {"rank": 2, "chunk_id": "172", "source_document_id": "ECLI:CZ:NS:2024:28.CDO.2866.2024.1"},
+        {"rank": 3, "chunk_id": "1651", "source_document_id": "ECLI:CZ:NS:2025:28.CDO.3513.2024.1"}
+      ],
+      "same_document_chunks_reviewed": [
+        {
+          "chunk_id": "1000",
+          "chunk_index": 5,
+          "role": "rank-1 civil doctrinal chunk",
+          "doctrinal_support": "Expressly states the § 237 o. s. ř. legal-question criteria and the four decisional-practice alternatives.",
+          "full_chunk_keyword_coverage": 1.0
+        },
+        {"chunk_id": "1006", "chunk_index": 11, "role": "case-specific application of settled-question criteria"}
+      ],
+      "decision": "safe_gold_reannotation",
+      "applied_change": "Reformulate the item to the current § 237 o. s. ř. criteria and replace the criminal Tdo gold with the rank-1 civil Cdo source.",
+      "final_question": "Jaké právní otázky mohou podle § 237 o. s. ř. založit přípustnost dovolání?",
+      "final_gold_source": "ECLI:CZ:NS:2025:33.CDO.79.2024.1",
+      "final_expected_keywords": ["hmotného", "procesního", "ustálené rozhodovací praxe"],
+      "final_answer_points": [
+        "Napadené rozhodnutí musí záviset na vyřešení otázky hmotného nebo procesního práva.",
+        "Přípustnost může založit odchýlení od ustálené rozhodovací praxe, dosud nevyřešená nebo rozdílně rozhodovaná otázka, anebo důvod, aby již vyřešená otázka byla posouzena jinak."
+      ],
+      "final_expected_chunk_constraints": null,
+      "retrieval_implicated": false,
+      "evaluator_implicated": true,
+      "confidence": "high",
+      "reason": "The final rank-1 civil chunk directly states the benchmark doctrine. The original 8 Tdo source was a criminal-domain mismatch and was removed rather than adapting the civil question to criminal content.",
+      "unresolved_limitations": ["The evaluator's 240-character exported rank-1 snippet ends before the expected markers, so no-LLM support remains partial despite direct full-chunk support."]
+    },
+    {
+      "question_id": "nsoud-qa-007",
+      "original_question": "Jak Nejvyšší soud posuzuje dovolací důvod podle § 265b tr. ř.?",
+      "original_gold_source": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+      "issue_type": "correct_document_weaker_rank_1_chunk",
+      "evidence_reviewed": [
+        "strict-direct audit per-question record",
+        "candidate retrieval top 10",
+        "all 12 repaired-sidecar chunks for the gold document",
+        "candidate no-LLM answer-eval result"
+      ],
+      "current_top_hits": [
+        {"rank": 1, "chunk_id": "735", "source_document_id": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1"},
+        {"rank": 2, "chunk_id": "131", "source_document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1"},
+        {"rank": 3, "chunk_id": "991", "source_document_id": "ECLI:CZ:NS:2025:4.TDO.1137.2024.1"}
+      ],
+      "same_document_chunks_reviewed": [
+        {"chunk_id": "728", "chunk_index": 2, "role": "audit keyword-coverage leader", "support_keyword_coverage": 1.0},
+        {"chunk_id": "732", "chunk_index": 6, "role": "strongest amendment and § 265b(g)/(h) doctrinal explanation"},
+        {"chunk_id": "733", "chunk_index": 7, "role": "strongest requirement that concrete objections fit a statutory ground"},
+        {"chunk_id": "735", "chunk_index": 9, "role": "current rank-1 closing summary", "support_keyword_coverage": 0.3333333333333333}
+      ],
+      "decision": "safe_same_document_chunk_refinement",
+      "applied_change": "Keep the verified ECLI and query; replace the tautological answer point with three evidence-backed doctrinal points from chunks 732–733.",
+      "final_question": "Jak Nejvyšší soud posuzuje dovolací důvod podle § 265b tr. ř.?",
+      "final_gold_source": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+      "final_expected_keywords": ["265b", "trestní", "dovolání"],
+      "final_answer_points": [
+        "Po novele účinné od 1. ledna 2022 je nesprávné právní posouzení skutku dovolacím důvodem podle § 265b odst. 1 písm. h) tr. ř.",
+        "Dovolací důvod podle § 265b odst. 1 písm. g) tr. ř. se týká zjevného rozporu rozhodných skutkových zjištění s důkazy a závažných vad dokazování.",
+        "Konkrétní námitky musí obsahově odpovídat uplatněnému dovolacímu důvodu; pouhá polemika s hodnocením důkazů nepostačuje."
+      ],
+      "final_expected_chunk_constraints": null,
+      "retrieval_implicated": true,
+      "evaluator_implicated": false,
+      "confidence": "high",
+      "reason": "The verified document remains rank 1, but chunk 735 is only a closing summary. Chunks 732–733 contain the substantive doctrine. The current dataset schema does not support a chunk-id constraint, so none was invented.",
+      "unresolved_limitations": ["A future within-document chunk-selection change may be warranted, but global dense/BM25/RRF scoring was not changed in this task."]
+    },
+    {
+      "question_id": "nsoud-qa-010",
+      "original_question": "Jaký je rozdíl mezi odmítnutím a zamítnutím dovolání?",
+      "original_gold_source": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+      "issue_type": "unsupported_comparative_question_and_operative_boilerplate",
+      "evidence_reviewed": [
+        "strict-direct audit per-question record",
+        "original repaired-run top 10",
+        "candidate retrieval top 10",
+        "all 7 repaired-sidecar chunks for the gold document",
+        "candidate no-LLM answer-eval result"
+      ],
+      "current_top_hits": [
+        {"rank": 1, "chunk_id": "1014", "source_document_id": "ECLI:CZ:NS:2025:29.ICDO.172.2024.1"},
+        {"rank": 2, "chunk_id": "1214", "source_document_id": "ECLI:CZ:NS:2025:21.CDO.372.2024.1"},
+        {"rank": 3, "chunk_id": "172", "source_document_id": "ECLI:CZ:NS:2024:28.CDO.2866.2024.1"},
+        {"rank": 4, "chunk_id": "1644", "source_document_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1"}
+      ],
+      "same_document_chunks_reviewed": [
+        {"chunk_id": "1642", "chunk_index": 0, "role": "caption"},
+        {"chunk_id": "1643", "chunk_index": 1, "role": "operative boilerplate"},
+        {
+          "chunk_id": "1644",
+          "chunk_index": 2,
+          "role": "direct doctrinal support for the final narrower question",
+          "doctrinal_support": "States objective inadmissibility under § 238(1)(e) and identifies žaloba pro zmatečnost under § 229(4)."
+        },
+        {"chunk_id": "1645", "chunk_index": 3, "role": "separate § 237 case-specific inadmissibility reasoning"}
+      ],
+      "decision": "safe_question_reformulation",
+      "applied_change": "Remove the unsupported comparison and ask the narrower admissibility question directly answered by the existing gold reasoning.",
+      "final_question": "Je dovolání přípustné proti rozhodnutí, jímž odvolací soud odmítl odvolání?",
+      "final_gold_source": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+      "final_expected_keywords": ["odmítl odvolání", "objektivně přípustné", "žaloba pro zmatečnost"],
+      "final_answer_points": [
+        "Dovolání proti rozhodnutí, jímž odvolací soud odmítl odvolání, není podle § 238 odst. 1 písm. e) o. s. ř. objektivně přípustné.",
+        "Správnost takového rozhodnutí lze prověřit žalobou pro zmatečnost podle § 229 odst. 4 o. s. ř."
+      ],
+      "final_expected_chunk_constraints": null,
+      "retrieval_implicated": true,
+      "evaluator_implicated": true,
+      "confidence": "high",
+      "reason": "The original gold never supported a general odmítnutí-versus-zamítnutí comparison. Chunk 1644 directly supports the final narrower question, but the exported top-k snippet is truncated before the doctrinal sentences and the item remains a reported gap.",
+      "unresolved_limitations": ["The gold is retrieved at rank 4, but citation availability remains false because the exported snippet does not expose the expected support markers; a future evidence-window or chunking follow-up is required."]
+    }
+  ],
+  "metrics_comparison": {
+    "nsoud_sidecar_provenance_repaired": {
+      "gold": 4,
+      "direct_support_count": 0,
+      "partial_support_count": 3,
+      "gap_count": 0,
+      "boilerplate_noise_count": 1,
+      "citation_available_rate": 0.75,
+      "usable_support_rate_gold": 0.75,
+      "unsupported_answer_risk_count": 1,
+      "strict_direct_pass_rate_gold": 0.0
+    },
+    "nsoud_dataset_repaired": {
+      "gold": 4,
+      "direct_support_count": 0,
+      "partial_support_count": 3,
+      "gap_count": 1,
+      "boilerplate_noise_count": 0,
+      "citation_available_rate": 0.75,
+      "usable_support_rate_gold": 0.75,
+      "unsupported_answer_risk_count": 1,
+      "strict_direct_pass_rate_gold": 0.0
+    }
+  },
+  "safety": {
+    "retrieval_scoring_changed": false,
+    "embedding_changed": false,
+    "qdrant_modified": false,
+    "redis_enabled": false,
+    "llm_called": false,
+    "model_downloaded": false,
+    "fallback_introduced": false,
+    "invented_legal_metadata": false
+  }
+}
