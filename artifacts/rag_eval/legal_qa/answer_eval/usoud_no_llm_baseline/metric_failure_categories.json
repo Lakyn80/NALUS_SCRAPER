@@ -1,0 +1,11 @@
+{
+  "generated_at": "2026-07-11T21:18:32Z",
+  "run_name": "usoud_no_llm_baseline",
+  "corpus": "usoud",
+  "failure_category_counts": {
+    "not_evaluable_missing_gold": 10,
+    "usable_partial_support": 6,
+    "weak_partial_support": 3
+  },
+  "final_status": "WARN"
+}

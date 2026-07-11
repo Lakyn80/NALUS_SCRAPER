@@ -1,0 +1,11 @@
+{
+  "generated_at": "2026-07-11T21:18:40Z",
+  "run_name": "mixed_no_llm_baseline",
+  "corpus": "mixed",
+  "failure_category_counts": {
+    "corpus_only_no_document_citation_expected": 8,
+    "metric_denominator_warning": 1,
+    "not_evaluable_missing_gold": 2
+  },
+  "final_status": "WARN"
+}

@@ -195,3 +195,32 @@
   Generated validation reports are optional runtime artifacts and are not committed by default.
 - Next recommended task:
   Run the validator before future NALUS commits and extend allowlists/risk rules only when an intentional change type repeatedly appears in real workflow.
+
+## 2026-07-12 00:36 Europe/Moscow — Task: Refresh ÚS and Mixed no-LLM canonical answer-eval baselines
+
+- Goal:
+  Persist the intentionally regenerated canonical ÚS and Mixed no-LLM answer-eval artifacts so a clean checkout and exporter restart preserve the current verified monitoring values.
+- What changed:
+  Refreshed the canonical `usoud_no_llm_baseline` artifacts to represent `10/20` gold questions with `1` direct and `9` partial support results.
+  Refreshed the canonical `mixed_no_llm_baseline` artifacts to represent `8/10` corpus-only gold questions with successful corpus routing.
+  Persisted the generated diagnostics files emitted alongside both canonical runs.
+- Why it changed:
+  Gold annotation coverage was expanded after the prior canonical artifacts were committed. Persisting the regenerated outputs prevents Grafana and Prometheus values from reverting after checkout or restart.
+- Expected metrics:
+  ÚS: `gold=10`, `usable_support_rate_gold=1.0`, `citation_available_rate=1.0`, `unsupported_answer_risk_count=0`.
+  Mixed: `gold=8`, `corpus_only_count=8`, `usable_support_rate_gold=1.0`, `corpus_routing_support_rate=1.0`, `citation_available_rate=0.0`, `unsupported_answer_risk_count=0`.
+- Exporter/Grafana verification:
+  Restarted `nalus-eval-metrics-exporter` and confirmed the expected `legal_answer_eval_gold`, `legal_answer_eval_usable_support_rate_gold`, and `legal_answer_eval_citation_available_rate` series for both named runs at `http://localhost:9108/metrics`.
+  The exporter uses `legal_answer_eval_citation_available_rate`; no Grafana query change was required.
+- Files changed:
+  `PROJECT_PROGRESS.md`
+  `artifacts/rag_eval/legal_qa/answer_eval/usoud_no_llm_baseline/*`
+  `artifacts/rag_eval/legal_qa/answer_eval/mixed_no_llm_baseline/*`
+- Tests run:
+  `python -m pytest tests/rag/test_legal_answer_eval.py tests/observability/test_eval_metrics_exporter.py -q` -> `32 passed` with one non-blocking `pytest-asyncio` deprecation warning.
+- Behavior preserved:
+  Retrieval, BGE-M3, embedding dimensions/provider, dense scoring, BM25 scoring, RRF, global `top_k`, Qdrant collections/aliases/data, Redis/cache behavior, model loading, and LLM/DeepSeek behavior were not changed.
+- Known limitations:
+  Mixed citation availability remains `0.0` by design because all eight Mixed gold items are corpus-only and do not require document citations.
+- Next recommended task:
+  Complete the evidence-backed NSoud QA dataset/gold repair and regenerate an isolated `nsoud_dataset_repaired` candidate without changing retrieval scoring.

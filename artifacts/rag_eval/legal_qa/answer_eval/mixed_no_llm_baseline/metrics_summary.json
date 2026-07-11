@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-07-11T21:18:40Z",
+  "run_name": "mixed_no_llm_baseline",
+  "corpus": "mixed",
+  "dataset": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\legal_qa\\datasets\\mixed_qa_v1.jsonl",
+  "retrieval_results": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\legal_qa\\runs\\mixed_two_pass_baseline\\retrieval_results.jsonl",
+  "gold_review": "C:\\Users\\lukas\\Desktop\\PYTHON_PROJECTS_DESKTOP\\PYTHON_PROJECTS\\nalus-scraper\\artifacts\\rag_eval\\legal_qa\\gold_source_review_20260709.md",
+  "metrics": {
+    "generated_at": "2026-07-11T21:18:40Z",
+    "run_name": "mixed_no_llm_baseline",
+    "corpus": "mixed",
+    "gold": 8,
+    "total_question_count": 10,
+    "gold_question_count": 8,
+    "missing_gold_count": 2,
+    "evaluable_question_count": 8,
+    "not_evaluable_missing_gold_count": 2,
+    "direct_support_count": 0,
+    "partial_support_count": 0,
+    "gap_count": 0,
+    "boilerplate_noise_count": 0,
+    "corpus_only_count": 8,
+    "citation_available_count": 0,
+    "unsupported_answer_risk_count": 0,
+    "unsupported_risk_rate_gold": 0.0,
+    "gold_retrieval_miss_count": 0,
+    "gold_retrieval_miss_rate": 0.0,
+    "corpus_routing_support_rate": 1.0,
+    "strict_direct_pass_rate_all": 0.0,
+    "strict_direct_pass_rate_gold": 0.0,
+    "usable_support_rate_gold": 1.0,
+    "citation_available_rate_gold": 0.0,
+    "citation_available_rate": 0.0
+  },
+  "total_evaluated_count": 10,
+  "gold_count": 8,
+  "failure_category_counts": {
+    "corpus_only_no_document_citation_expected": 8,
+    "metric_denominator_warning": 1,
+    "not_evaluable_missing_gold": 2
+  },
+  "denominator_warning": "Gold denominator is small (8); percentage metrics are unstable.",
+  "final_status": "WARN",
+  "status_reason": "Main issues are missing gold coverage, conservative strict-pass gating, or small denominators.",
+  "interpretation_notes": [
+    "strict_direct_pass_rate is intentionally conservative",
+    "usable_support_rate_gold is the practical support metric",
+    "missing gold does not mean retrieval failure",
+    "corpus_only mixed items are not expected to have document citations"
+  ]
+}
