@@ -490,3 +490,43 @@
   This first implementation groups and scores already retrieved candidates. It does not yet benchmark document-level recall against legal QA datasets and does not implement document-level reranking or follow-up retrieval.
 - Next recommended task:
   Add an offline document-level retrieval benchmark that compares unique-document recall against the existing chunk-level benchmark under controlled candidate pool and threshold settings.
+
+## 2026-07-13 01:52 Europe/Moscow — Task: Offline document-level retrieval benchmark
+
+- Goal:
+  Add a production-quality offline benchmark for the additive document-level retrieval pipeline, measuring multi-document recall and diagnostics without changing retrieval, ranking, embeddings, Qdrant, BM25, RRF, Redis, LLM behavior, APIs, or frontend behavior.
+- Scope:
+  Added a separate benchmark only. Existing legal QA benchmark, answer evaluation, document-level retrieval runtime endpoint, hybrid retrieval, and all production retrieval components remain unchanged.
+- What changed:
+  Added `app/rag/eval/document_retrieval_benchmark.py` with typed JSONL dataset support for multiple relevant documents per question, deterministic candidate/final recall metrics, precision@K, duplicate rate, zero-result rate, latency metrics, failure classification, and report writing.
+  Added `scripts/run_document_retrieval_benchmark.py` as a read-only runner using the existing `build_hybrid_retriever` search function without modifying retrieval behavior.
+  Extended `app/observability/eval_metrics_exporter.py` to expose document benchmark summaries through the existing Prometheus exporter and conventions. New metrics use bounded labels only: `run_name` and `corpus`.
+  Added `docs/DOCUMENT_LEVEL_RETRIEVAL_BENCHMARK.md` documenting dataset format, metrics, failure categories, reports, runner usage, Prometheus label safety, and extension points.
+  Added tests for dataset loading, duplicate gold normalization, candidate recall, final recall, precision, large/multiple gold sets, zero relevant documents, failure categories, report generation, runner config, and exporter metrics.
+- Dataset format:
+  JSONL items include `id`, `corpus`, `question`, and `relevant_document_ids`. Optional metadata includes `legal_topic` and `difficulty`.
+  `relevant_document_ids` supports arbitrary counts. Duplicate identifiers are normalized and deduplicated deterministically.
+- Metrics implemented:
+  Chunk recall@10/20/50/100, document recall@10/20/50/100, precision@10/20/50/100, candidate pool coverage, unique document coverage, duplicate rate, zero result rate, average retrieved documents, average candidate chunks, average latency, and document aggregation latency.
+- Failure diagnostics:
+  `relevant_document_never_retrieved`, `relevant_document_removed_by_aggregation`, `relevant_document_removed_by_threshold`, `relevant_document_removed_by_returned_document_limit`, `duplicate_handling_issue`, `metadata_issue`, and `unknown`.
+- Reports:
+  Writer produces `metrics.json`, `summary.json`, `per_question.jsonl`, `per_question.csv`, and `summary.md`.
+  No real benchmark output artifact was generated or committed in this task.
+- Observability:
+  Reused the existing Prometheus exporter. No second metrics system was added.
+  Prometheus labels remain bounded to `run_name` and `corpus`; tests verify raw query text, document ids, and ECLI values are not emitted as labels.
+- Tests run:
+  `python -m pytest tests/rag/test_document_retrieval_benchmark.py -q` -> `9 passed`.
+  `python -m pytest tests/test_run_document_retrieval_benchmark.py -q` -> `2 passed`.
+  `python -m pytest tests/observability/test_eval_metrics_exporter.py -q` -> `11 passed`.
+  `python -m pytest tests/rag/test_document_retrieval_benchmark.py tests/test_run_document_retrieval_benchmark.py tests/observability/test_eval_metrics_exporter.py tests/rag/test_document_retrieval.py tests/rag/test_legal_qa_benchmark.py -q` -> `51 passed`.
+  Repeated `pytest-asyncio` loop-scope deprecation warning is non-blocking and unrelated.
+- Validator:
+  Initial validator run failed only because `PROJECT_PROGRESS.md` had not yet been updated. Diff-scan warnings were for intentional evaluation terms (`top_k`, BM25/RRF mentions in safety documentation, Redis rejection, and logger calls without raw query logging).
+- Behavior preserved:
+  Retrieval logic, ranking, embeddings, Qdrant collections/data, BM25 scoring, RRF fusion, Redis behavior, DeepSeek/LLM prompts, API behavior, and frontend behavior were not changed.
+- Known limitations:
+  This task implements and tests the framework. It does not create a curated multi-document gold dataset and does not run a real corpus benchmark artifact.
+- Next recommended task:
+  Build a reviewed multi-document gold dataset for ÚS/NSoud and run the new benchmark once the gold set is approved.

@@ -15,6 +15,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, Gauge, generate_latest
 logger = logging.getLogger(__name__)
 
 DEFAULT_ARTIFACTS_DIR = Path("artifacts/rag_eval/legal_qa/answer_eval")
+DEFAULT_DOCUMENT_BENCHMARK_DIR = Path("artifacts/rag_eval/legal_qa/document_retrieval_benchmark")
 
 SUMMARY_COUNT_FIELDS = (
     "gold",
@@ -69,6 +70,74 @@ METRIC_SPECS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 
 _LABEL_NAMES = ("run_name", "corpus")
 
+DOCUMENT_METRIC_SPECS: tuple[tuple[str, str, str], ...] = (
+    (
+        "legal_document_retrieval_recall_at_10",
+        "Mean document recall at 10 for offline document retrieval benchmark.",
+        "document_recall_at_10",
+    ),
+    (
+        "legal_document_retrieval_recall_at_20",
+        "Mean document recall at 20 for offline document retrieval benchmark.",
+        "document_recall_at_20",
+    ),
+    (
+        "legal_document_retrieval_recall_at_50",
+        "Mean document recall at 50 for offline document retrieval benchmark.",
+        "document_recall_at_50",
+    ),
+    (
+        "legal_document_retrieval_recall_at_100",
+        "Mean document recall at 100 for offline document retrieval benchmark.",
+        "document_recall_at_100",
+    ),
+    (
+        "legal_document_retrieval_precision_at_10",
+        "Mean precision at 10 for offline document retrieval benchmark.",
+        "precision_at_10",
+    ),
+    (
+        "legal_document_retrieval_unique_document_coverage",
+        "Unique relevant document coverage for offline document retrieval benchmark.",
+        "unique_document_coverage",
+    ),
+    (
+        "legal_document_retrieval_candidate_pool_coverage",
+        "Candidate-pool relevant document coverage for offline document retrieval benchmark.",
+        "candidate_pool_coverage",
+    ),
+    (
+        "legal_document_retrieval_duplicate_rate",
+        "Average duplicate rate for offline document retrieval benchmark.",
+        "duplicate_rate",
+    ),
+    (
+        "legal_document_retrieval_zero_result_rate",
+        "Zero-result rate for offline document retrieval benchmark.",
+        "zero_result_rate",
+    ),
+    (
+        "legal_document_retrieval_average_retrieved_documents",
+        "Average final retrieved document count for offline document retrieval benchmark.",
+        "average_retrieved_documents",
+    ),
+    (
+        "legal_document_retrieval_average_candidate_chunks",
+        "Average candidate chunk count for offline document retrieval benchmark.",
+        "average_candidate_chunks",
+    ),
+    (
+        "legal_document_retrieval_average_latency_ms",
+        "Average retrieval latency in milliseconds for offline document retrieval benchmark.",
+        "average_latency_ms",
+    ),
+    (
+        "legal_document_retrieval_aggregation_latency_ms",
+        "Average document aggregation latency in milliseconds for offline document retrieval benchmark.",
+        "document_aggregation_latency_ms",
+    ),
+)
+
 
 def infer_corpus_from_run_name(run_name: str) -> str:
     name = run_name.lower()
@@ -84,6 +153,10 @@ def infer_corpus_from_run_name(run_name: str) -> str:
 _GAUGES: dict[str, Gauge] = {
     metric_name: Gauge(metric_name, description, _LABEL_NAMES)
     for metric_name, description, _ in METRIC_SPECS
+}
+_DOCUMENT_GAUGES: dict[str, Gauge] = {
+    metric_name: Gauge(metric_name, description, _LABEL_NAMES)
+    for metric_name, description, _ in DOCUMENT_METRIC_SPECS
 }
 
 _FIELD_TO_METRIC: dict[str, str] = {
@@ -153,8 +226,35 @@ def discover_run_summaries(artifacts_dir: Path) -> list[dict[str, Any]]:
     return summaries
 
 
-def refresh_prometheus_gauges(artifacts_dir: Path) -> int:
+def discover_document_benchmark_summaries(artifacts_dir: Path) -> list[dict[str, Any]]:
+    if not artifacts_dir.exists():
+        return []
+
+    summaries: list[dict[str, Any]] = []
+    for child in sorted(artifacts_dir.iterdir()):
+        if not child.is_dir():
+            continue
+        summary_path = child / "summary.json"
+        metrics_path = child / "metrics.json"
+        path = summary_path if summary_path.exists() else metrics_path
+        if not path.exists():
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            continue
+        payload.setdefault("run_name", child.name)
+        payload.setdefault("corpus", infer_corpus_from_run_name(str(payload["run_name"])))
+        summaries.append(payload)
+    return summaries
+
+
+def refresh_prometheus_gauges(
+    artifacts_dir: Path,
+    document_artifacts_dir: Path | None = None,
+) -> int:
     for gauge in _GAUGES.values():
+        gauge.clear()
+    for gauge in _DOCUMENT_GAUGES.values():
         gauge.clear()
 
     summaries = discover_run_summaries(artifacts_dir)
@@ -165,11 +265,25 @@ def refresh_prometheus_gauges(artifacts_dir: Path) -> int:
         for field, metric_name in _FIELD_TO_METRIC.items():
             value = summary.get(field, 0)
             _GAUGES[metric_name].labels(*labels).set(float(value))
-    return len(summaries)
+
+    document_summaries: list[dict[str, Any]] = []
+    if document_artifacts_dir is not None:
+        document_summaries = discover_document_benchmark_summaries(document_artifacts_dir)
+        for summary in document_summaries:
+            run_name = str(summary["run_name"])
+            corpus = str(summary["corpus"])
+            labels = (run_name, corpus)
+            for metric_name, _, field in DOCUMENT_METRIC_SPECS:
+                value = summary.get(field, 0)
+                _DOCUMENT_GAUGES[metric_name].labels(*labels).set(float(value))
+    return len(summaries) + len(document_summaries)
 
 
-def render_metrics(artifacts_dir: Path) -> bytes:
-    refresh_prometheus_gauges(artifacts_dir)
+def render_metrics(
+    artifacts_dir: Path,
+    document_artifacts_dir: Path | None = None,
+) -> bytes:
+    refresh_prometheus_gauges(artifacts_dir, document_artifacts_dir=document_artifacts_dir)
     return generate_latest()
 
 
@@ -185,11 +299,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_ARTIFACTS_DIR,
         help="Directory containing per-run answer eval output folders.",
     )
+    parser.add_argument(
+        "--document-artifacts-dir",
+        type=Path,
+        default=DEFAULT_DOCUMENT_BENCHMARK_DIR,
+        help="Directory containing per-run document retrieval benchmark output folders.",
+    )
     return parser.parse_args(argv)
 
 
 class _MetricsHandler(BaseHTTPRequestHandler):
     artifacts_dir: Path = DEFAULT_ARTIFACTS_DIR
+    document_artifacts_dir: Path = DEFAULT_DOCUMENT_BENCHMARK_DIR
 
     def do_GET(self) -> None:  # noqa: N802
         if self.path not in {"/metrics", "/metrics/"}:
@@ -198,7 +319,10 @@ class _MetricsHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            payload = render_metrics(self.artifacts_dir)
+            payload = render_metrics(
+                self.artifacts_dir,
+                document_artifacts_dir=self.document_artifacts_dir,
+            )
         except Exception:
             logger.exception("Failed to render Prometheus metrics")
             self.send_response(500)
@@ -219,15 +343,21 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     args = parse_args(argv)
     artifacts_dir = args.artifacts_dir.resolve()
+    document_artifacts_dir = args.document_artifacts_dir.resolve()
     _MetricsHandler.artifacts_dir = artifacts_dir
+    _MetricsHandler.document_artifacts_dir = document_artifacts_dir
 
-    run_count = refresh_prometheus_gauges(artifacts_dir)
+    run_count = refresh_prometheus_gauges(
+        artifacts_dir,
+        document_artifacts_dir=document_artifacts_dir,
+    )
     logger.info(
-        "Starting legal answer eval metrics exporter on %s:%s (runs=%s, artifacts=%s)",
+        "Starting legal eval metrics exporter on %s:%s (runs=%s, answer_artifacts=%s, document_artifacts=%s)",
         args.host,
         args.port,
         run_count,
         artifacts_dir,
+        document_artifacts_dir,
     )
 
     server = HTTPServer((args.host, args.port), _MetricsHandler)

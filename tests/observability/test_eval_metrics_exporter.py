@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from app.observability.eval_metrics_exporter import (
+    discover_document_benchmark_summaries,
     discover_run_summaries,
     infer_corpus_from_run_name,
     load_run_summary,
@@ -50,6 +51,16 @@ def _sample_summary(run_name: str, corpus: str) -> dict:
 
 
 def _write_run_dir(base: Path, run_name: str, summary: dict) -> Path:
+    run_dir = base / run_name
+    run_dir.mkdir(parents=True)
+    (run_dir / "summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return run_dir
+
+
+def _write_document_benchmark_dir(base: Path, run_name: str, summary: dict) -> Path:
     run_dir = base / run_name
     run_dir.mkdir(parents=True)
     (run_dir / "summary.json").write_text(
@@ -167,6 +178,56 @@ def test_exporter_exposes_prometheus_text_format(tmp_path: Path) -> None:
     assert "# HELP legal_answer_eval_usable_support_rate_gold" in text
     assert "# TYPE legal_answer_eval_usable_support_rate_gold gauge" in text
     assert 'run_name="usoud_no_llm_baseline"' in text
+
+
+def test_exporter_exposes_document_benchmark_metrics_without_high_cardinality_labels(
+    tmp_path: Path,
+) -> None:
+    answer_dir = tmp_path / "answer"
+    document_dir = tmp_path / "document"
+    _write_run_dir(
+        answer_dir,
+        "usoud_no_llm_baseline",
+        _sample_summary("usoud_no_llm_baseline", "usoud"),
+    )
+    _write_document_benchmark_dir(
+        document_dir,
+        "usoud_document_retrieval_benchmark",
+        {
+            "generated_at": "2026-07-13T00:00:00Z",
+            "run_name": "usoud_document_retrieval_benchmark",
+            "corpus": "usoud",
+            "document_recall_at_10": 0.75,
+            "document_recall_at_20": 0.8,
+            "document_recall_at_50": 0.9,
+            "document_recall_at_100": 1.0,
+            "precision_at_10": 0.2,
+            "unique_document_coverage": 0.85,
+            "candidate_pool_coverage": 0.95,
+            "duplicate_rate": 0.1,
+            "zero_result_rate": 0.0,
+            "average_retrieved_documents": 12.0,
+            "average_candidate_chunks": 200.0,
+            "average_latency_ms": 34.5,
+            "document_aggregation_latency_ms": 2.5,
+            "question": "raw query must not become a label",
+            "document_id": "ECLI:CZ:US:2026:1.TEST.1",
+        },
+    )
+
+    summaries = discover_document_benchmark_summaries(document_dir)
+    assert len(summaries) == 1
+    rendered = render_metrics(answer_dir, document_artifacts_dir=document_dir).decode("utf-8")
+
+    assert "# HELP legal_document_retrieval_recall_at_10" in rendered
+    assert (
+        'legal_document_retrieval_recall_at_10{corpus="usoud",'
+        'run_name="usoud_document_retrieval_benchmark"} 0.75'
+    ) in rendered
+    assert "raw query must not become a label" not in rendered
+    assert "ECLI:CZ:US" not in rendered
+    assert "question=" not in rendered
+    assert "document_id=" not in rendered
 
 
 def test_exporter_includes_usoud_nsoud_mixed_metrics(tmp_path: Path) -> None:
