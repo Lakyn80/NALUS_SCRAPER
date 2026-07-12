@@ -662,7 +662,7 @@ def aggregate_answer_metrics(results: list[AnswerEvalResult]) -> AnswerEvalMetri
         1 for result in evidence_window_results if result.evidence_window_provenance_valid is True
     )
     evidence_window_failed_count = sum(
-        1 for result in evidence_window_results if result.evidence_window_provenance_valid is not True
+        1 for result in evidence_window_results if result.evidence_window_provenance_valid is False
     )
     evidence_window_truncated_count = sum(
         1 for result in evidence_window_results if result.evidence_window_truncated

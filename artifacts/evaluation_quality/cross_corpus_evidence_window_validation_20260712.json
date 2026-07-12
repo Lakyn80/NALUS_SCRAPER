@@ -1,0 +1,141 @@
+{
+  "generated_at": "2026-07-12T22:23:16+03:00",
+  "task": "Cross-corpus evidence-window validation",
+  "default_behavior_changed": false,
+  "retrieval_changed": false,
+  "scoring_changed": false,
+  "threshold_changed": false,
+  "qdrant_access": "none",
+  "candidates": {
+    "nsoud_reference": {
+      "run_name": "nsoud_evidence_window_candidate",
+      "gold": 4,
+      "direct_support_count": 3,
+      "partial_support_count": 1,
+      "gap_count": 0,
+      "boilerplate_noise_count": 0,
+      "usable_support_rate_gold": 1.0,
+      "citation_available_rate": 1.0,
+      "unsupported_answer_risk_count": 0,
+      "strict_direct_pass_rate_gold": 0.75,
+      "evidence_window_used_count": 4,
+      "evidence_window_failed_count": 0,
+      "evidence_window_truncated_count": 1
+    },
+    "usoud": {
+      "baseline_run": "usoud_no_llm_baseline",
+      "candidate_run": "usoud_evidence_window_candidate",
+      "retrieval_results": "artifacts/rag_eval/legal_qa/runs/usoud_full_baseline/retrieval_results.jsonl",
+      "dataset": "artifacts/rag_eval/legal_qa/datasets/usoud_qa_v1.jsonl",
+      "evidence_source": "storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite",
+      "metrics_before": {
+        "gold": 10,
+        "direct_support_count": 1,
+        "partial_support_count": 9,
+        "gap_count": 0,
+        "boilerplate_noise_count": 0,
+        "usable_support_rate_gold": 1.0,
+        "citation_available_rate": 1.0,
+        "unsupported_answer_risk_count": 0,
+        "strict_direct_pass_rate_gold": 0.1
+      },
+      "metrics_after": {
+        "gold": 10,
+        "direct_support_count": 7,
+        "partial_support_count": 3,
+        "gap_count": 0,
+        "boilerplate_noise_count": 0,
+        "usable_support_rate_gold": 1.0,
+        "citation_available_rate": 1.0,
+        "unsupported_answer_risk_count": 0,
+        "strict_direct_pass_rate_gold": 0.7,
+        "evidence_window_used_count": 10,
+        "evidence_window_failed_count": 0,
+        "evidence_window_truncated_count": 0,
+        "same_document_neighbor_count": 20
+      },
+      "direct_improvement_question_ids": [
+        "usoud-qa-001",
+        "usoud-qa-003",
+        "usoud-qa-007",
+        "usoud-qa-009",
+        "usoud-qa-010",
+        "usoud-qa-011"
+      ],
+      "acceptance": {
+        "usable_support_not_regressed": true,
+        "citation_not_regressed": true,
+        "unsupported_risk_remains_zero": true,
+        "cross_document_leakage": false,
+        "fabricated_citations": false
+      }
+    },
+    "mixed": {
+      "baseline_run": "mixed_no_llm_baseline",
+      "candidate_run": "mixed_evidence_window_candidate",
+      "retrieval_results": "artifacts/rag_eval/legal_qa/runs/mixed_two_pass_baseline/retrieval_results.jsonl",
+      "dataset": "artifacts/rag_eval/legal_qa/datasets/mixed_qa_v1.jsonl",
+      "evidence_source": null,
+      "metrics_before": {
+        "gold": 8,
+        "direct_support_count": 0,
+        "partial_support_count": 0,
+        "gap_count": 0,
+        "boilerplate_noise_count": 0,
+        "corpus_only_count": 8,
+        "usable_support_rate_gold": 1.0,
+        "citation_available_rate": 0.0,
+        "corpus_routing_support_rate": 1.0,
+        "unsupported_answer_risk_count": 0,
+        "strict_direct_pass_rate_gold": 0.0
+      },
+      "metrics_after": {
+        "gold": 8,
+        "direct_support_count": 0,
+        "partial_support_count": 0,
+        "gap_count": 0,
+        "boilerplate_noise_count": 0,
+        "corpus_only_count": 8,
+        "usable_support_rate_gold": 1.0,
+        "citation_available_rate": 0.0,
+        "corpus_routing_support_rate": 1.0,
+        "unsupported_answer_risk_count": 0,
+        "strict_direct_pass_rate_gold": 0.0,
+        "evidence_window_used_count": 0,
+        "evidence_window_failed_count": 0,
+        "evidence_window_truncated_count": 0,
+        "same_document_neighbor_count": 0
+      },
+      "corpus_only_behavior": {
+        "document_evidence_windows": "skipped",
+        "corpus_only_count_preserved": true,
+        "citation_rate_remains_zero": true,
+        "corpus_routing_preserved": true,
+        "fabricated_document_direct_pass": false
+      }
+    }
+  },
+  "safety": {
+    "same_document_validation": "passed",
+    "cross_document_evidence_leakage": false,
+    "corpus_only_citation_fabrication": false,
+    "raw_legal_text_in_metric_labels": false,
+    "invented_provenance": false,
+    "qdrant_modified": false,
+    "redis_used": false,
+    "model_downloaded": false,
+    "llm_or_deepseek_called": false
+  },
+  "recommendation": {
+    "global_default": "reject",
+    "document_gold_default_future_task": "recommended",
+    "current_task_default_mode": "remain_opt_in",
+    "rationale": "Document-gold corpora improved or stayed safe, while Mixed corpus-only evaluation must continue to skip document evidence windows."
+  },
+  "known_limitations": [
+    "Validation covers offline no-LLM answer evaluation artifacts, not live generation.",
+    "Mixed corpus-only validation confirms skip behavior, not document-window quality.",
+    "Evidence-window improvements do not imply retrieval ranking changes."
+  ],
+  "next_recommended_task": "Prepare a separate default-policy task that enables evidence windows only for document-gold no-LLM evaluation and documents corpus-only skip behavior."
+}

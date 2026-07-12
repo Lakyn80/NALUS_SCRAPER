@@ -151,16 +151,31 @@ class Bm25SidecarEvidenceSource:
             return {}
         with _connect_read_only(self._path) as connection:
             table_name = _select_chunks_table(connection)
+            columns = _table_columns(connection, table_name)
+            _validate_sidecar_columns(columns, table_name)
+            identity_columns = [
+                column
+                for column in ("source_document_id", "document_id", "ecli")
+                if column in columns
+            ]
             placeholders = ", ".join("?" for _ in chunk_indexes)
-            params: list[Any] = [document_id, document_id, document_id, *sorted(chunk_indexes)]
+            identity_clause = " OR ".join(f"{column} = ?" for column in identity_columns)
+            select_columns = [
+                "chunk_id",
+                "text",
+                _column_or_null(columns, "document_id"),
+                _column_or_null(columns, "source_document_id"),
+                _column_or_null(columns, "ecli"),
+                "chunk_index",
+            ]
+            params: list[Any] = [document_id for _ in identity_columns]
+            params.extend(sorted(chunk_indexes))
             rows = connection.execute(
                 f"""
-                SELECT chunk_id, text, document_id, source_document_id, ecli, chunk_index
+                SELECT {", ".join(select_columns)}
                 FROM {table_name}
                 WHERE (
-                    source_document_id = ?
-                    OR document_id = ?
-                    OR ecli = ?
+                    {identity_clause}
                 )
                 AND chunk_index IN ({placeholders})
                 """,
@@ -466,3 +481,27 @@ def _select_chunks_table(connection: sqlite3.Connection) -> str:
         if table_name in tables:
             return table_name
     raise RetrievalConfigurationError("Evidence sidecar does not contain a supported chunks table.")
+
+
+def _table_columns(connection: sqlite3.Connection, table_name: str) -> set[str]:
+    return {row[1] for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()}
+
+
+def _validate_sidecar_columns(columns: set[str], table_name: str) -> None:
+    required = {"chunk_id", "text", "chunk_index"}
+    missing = sorted(required.difference(columns))
+    if missing:
+        joined = ", ".join(missing)
+        raise RetrievalConfigurationError(
+            f"Evidence sidecar table {table_name!r} is missing required columns: {joined}."
+        )
+    if not {"source_document_id", "document_id", "ecli"}.intersection(columns):
+        raise RetrievalConfigurationError(
+            f"Evidence sidecar table {table_name!r} lacks document identity columns."
+        )
+
+
+def _column_or_null(columns: set[str], column: str) -> str:
+    if column in columns:
+        return column
+    return f"NULL AS {column}"

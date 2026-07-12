@@ -90,6 +90,29 @@ def _write_sidecar(path: Path, rows: list[tuple[str, str, str, str, str, int]]) 
         )
 
 
+def _write_sidecar_without_ecli(path: Path, rows: list[tuple[str, str, str, str, int]]) -> None:
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE bm25_chunks (
+                chunk_id TEXT PRIMARY KEY,
+                text TEXT NOT NULL,
+                document_id TEXT,
+                source_document_id TEXT,
+                chunk_index INTEGER
+            )
+            """
+        )
+        connection.executemany(
+            """
+            INSERT INTO bm25_chunks
+            (chunk_id, text, document_id, source_document_id, chunk_index)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+
+
 def _sidecar_with_document(path: Path, *, ecli: str = "ECLI:CZ:NS:2025:1.TEST.1.1") -> Path:
     _write_sidecar(
         path,
@@ -147,6 +170,27 @@ def test_previous_anchor_next_selection(tmp_path: Path) -> None:
         "anchor beta text with enough legal context for evaluation\n\n"
         "next gamma text with enough legal context for evaluation"
     )
+
+
+def test_sidecar_without_ecli_uses_source_document_identity(tmp_path: Path) -> None:
+    ecli = "ECLI:CZ:US:2025:1.US.1.1"
+    _write_sidecar_without_ecli(
+        tmp_path / "sidecar.sqlite",
+        [
+            ("10", "previous alpha text with enough legal context", ecli, ecli, 0),
+            ("11", "anchor beta text with enough legal context", ecli, ecli, 1),
+            ("12", "next gamma text with enough legal context", ecli, ecli, 2),
+        ],
+    )
+    window = build_evidence_window(
+        anchor_hit=_hit(chunk_id="11", chunk_index=1, ecli=ecli),
+        hits=[],
+        config=EvidenceWindowConfig(enabled=True),
+        sidecar_path=tmp_path / "sidecar.sqlite",
+    )
+    assert window.provenance_valid is True
+    assert window.ordered_chunk_ids == ["10", "11", "12"]
+    assert window.source == "bm25_sidecar"
 
 
 def test_same_document_enforcement_accepts_matching_identity(tmp_path: Path) -> None:
@@ -302,6 +346,59 @@ def test_citation_source_matching_remains_verified_document_provenance(tmp_path:
     )
     assert result.citation_available is True
     assert ecli in result.answer_skeleton
+
+
+def test_mixed_corpus_only_skips_document_evidence_window(tmp_path: Path) -> None:
+    item = LegalQaItem(
+        id="mixed-qa-test",
+        corpus="mixed",
+        question="Porovnání korpusů?",
+        expected_answer_points=["Smíšená otázka ověřuje jen směrování mezi korpusy."],
+        expected_source_constraints=SourceConstraints(),
+        expected_keywords=["ústavní", "nejvyšší"],
+        forbidden_answer_patterns=[],
+        difficulty="medium",
+        legal_topic="mixed",
+        evaluation_type="retrieval",
+        source_pending=False,
+        expected_target_corpus="both",
+    )
+    registry = load_gold_registry_from_dataset([item])
+    results = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id={
+            item.id: {
+                "hits": [
+                    _hit(
+                        rank=1,
+                        chunk_id="11",
+                        chunk_index=1,
+                        ecli="ECLI:CZ:NS:2025:1.TEST.1.1",
+                        snippet="document-level text must not become a mixed citation",
+                    )
+                ],
+                "corpus_hit_at_3": True,
+                "corpus_hit_at_5": True,
+            }
+        },
+        citation_required=True,
+        evidence_window_config=EvidenceWindowConfig(enabled=True),
+        evidence_sidecar_path=tmp_path / "unused.sqlite",
+    )
+    metrics = aggregate_answer_metrics(results)
+    result = results[0]
+    assert result.support_level == "corpus_only"
+    assert result.citation_available is False
+    assert result.evidence_window_enabled is True
+    assert result.evidence_window_chunk_ids == []
+    assert result.evidence_window_provenance_valid is None
+    assert metrics.corpus_only_count == 1
+    assert metrics.corpus_routing_support_rate == 1.0
+    assert metrics.usable_support_rate_gold == 1.0
+    assert metrics.citation_available_rate_gold == 0.0
+    assert metrics.evidence_window_used_count == 0
+    assert metrics.evidence_window_failed_count == 0
 
 
 def test_no_qdrant_writes_are_performed() -> None:

@@ -1,0 +1,11 @@
+{
+  "generated_at": "2026-07-12T19:22:26Z",
+  "run_name": "mixed_evidence_window_candidate",
+  "corpus": "mixed",
+  "failure_category_counts": {
+    "corpus_only_no_document_citation_expected": 8,
+    "metric_denominator_warning": 1,
+    "not_evaluable_missing_gold": 2
+  },
+  "final_status": "WARN"
+}

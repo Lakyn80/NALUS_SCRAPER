@@ -365,3 +365,49 @@
   Evidence windows improve evaluator visibility only and do not change retrieval ranking. `nsoud-qa-010` remains `partial` because the verified gold hit is rank `4`, and the strict-direct definition still requires rank `1`.
 - Next recommended task:
   Validate evidence-window mode across ÚS and Mixed before deciding whether it should become the default no-LLM answer-eval behavior.
+
+## 2026-07-12 22:23 Europe/Moscow — Task: Cross-corpus evidence-window validation
+
+- Goal:
+  Validate deterministic evidence-window evaluation across ÚS and Mixed corpora before considering any default behavior change, while keeping evidence windows opt-in.
+- What changed:
+  Extended `app/rag/eval/evidence_window.py` so the read-only BM25 sidecar evidence loader supports both known sidecar schemas: NSoud with explicit `ecli` and ÚS without `ecli` but with `document_id` / `source_document_id`.
+  Fixed `evidence_window_failed_count` so corpus-only skips (`provenance_valid=None`) are not counted as failed evidence windows.
+  Added focused regression tests for sidecars without `ecli` and Mixed corpus-only skip behavior.
+  Created `usoud_evidence_window_candidate` and `mixed_evidence_window_candidate` answer-eval artifact directories.
+  Added `artifacts/evaluation_quality/cross_corpus_evidence_window_validation_20260712.md` and `.json`.
+- Candidate runs:
+  ÚS: `artifacts/rag_eval/legal_qa/answer_eval/usoud_evidence_window_candidate/`.
+  Mixed: `artifacts/rag_eval/legal_qa/answer_eval/mixed_evidence_window_candidate/`.
+- Evidence sources:
+  ÚS used `storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite` in SQLite read-only mode.
+  Mixed used no document evidence source because all gold items are corpus-only and evidence windows are skipped by design.
+- ÚS before/after:
+  Baseline `usoud_no_llm_baseline`: `gold=10`, `direct=1`, `partial=9`, `gap=0`, `boilerplate=0`, `usable_support_rate_gold=1.0`, `citation_available_rate=1.0`, `unsupported_answer_risk_count=0`, `strict_direct_pass_rate_gold=0.1`.
+  Candidate `usoud_evidence_window_candidate`: `gold=10`, `direct=7`, `partial=3`, `gap=0`, `boilerplate=0`, `usable_support_rate_gold=1.0`, `citation_available_rate=1.0`, `unsupported_answer_risk_count=0`, `strict_direct_pass_rate_gold=0.7`, `evidence_window_used_count=10`, `evidence_window_failed_count=0`, `evidence_window_truncated_count=0`, `same_document_neighbor_count=20`.
+- Mixed before/after:
+  Baseline `mixed_no_llm_baseline`: `gold=8`, `corpus_only_count=8`, `usable_support_rate_gold=1.0`, `citation_available_rate=0.0`, `corpus_routing_support_rate=1.0`, `unsupported_answer_risk_count=0`.
+  Candidate `mixed_evidence_window_candidate`: `gold=8`, `corpus_only_count=8`, `usable_support_rate_gold=1.0`, `citation_available_rate=0.0`, `corpus_routing_support_rate=1.0`, `unsupported_answer_risk_count=0`, `evidence_window_used_count=0`, `evidence_window_failed_count=0`, `evidence_window_truncated_count=0`.
+- NSoud reference:
+  `nsoud_evidence_window_candidate` remains green as the reference document-gold candidate: `gold=4`, `direct=3`, `partial=1`, `gap=0`, `usable_support_rate_gold=1.0`, `citation_available_rate=1.0`, `unsupported_answer_risk_count=0`, `strict_direct_pass_rate_gold=0.75`.
+- Safety verification:
+  ÚS per-row validation found no cross-document mismatch, no invalid evidence windows, and no fabricated citations.
+  Mixed per-row validation found no valid or failed document evidence windows, no corpus-only citation, and no corpus-only row with evidence-window chunks.
+- Tests run:
+  `python -m pytest tests/rag/test_legal_evidence_window.py -q` -> `22 passed`.
+  `python -m pytest tests/rag/test_legal_answer_eval.py -q` -> `22 passed`.
+  `python -m pytest tests/rag/test_legal_answer_eval_diagnostics.py -q` -> `2 passed`.
+  `python -m pytest tests/observability/test_eval_metrics_exporter.py -q` -> `10 passed`.
+  `python -m pytest tests/test_nalus_task_validator.py -q` -> `11 passed`.
+  `python -m pytest tests/rag/test_legal_evidence_window.py tests/rag/test_legal_answer_eval.py tests/rag/test_legal_answer_eval_diagnostics.py tests/observability/test_eval_metrics_exporter.py tests/test_nalus_task_validator.py -q` -> `67 passed`.
+  Repeated `pytest-asyncio` loop-scope deprecation warning is non-blocking and unrelated.
+- Monitoring verification:
+  Restarted `nalus-eval-metrics-exporter`. The new `usoud_evidence_window_candidate` and `mixed_evidence_window_candidate` runs were visible at `http://localhost:9108/metrics` through existing `legal_answer_eval_*` metrics and bounded labels `(run_name, corpus)`. No Grafana query changed.
+- Validator:
+  Exact validator command without allowlist returned `WARN` for the intentional `bm25_change` sidecar-read diff. The validator run with `--allow-risk bm25_change` returned `PASS` with zero findings. No BM25 scoring changed.
+- Default-mode recommendation:
+  Keep evidence windows opt-in for now. Future default activation is recommended only for document-gold no-LLM answer evaluation, not globally and not for Mixed corpus-only routing evaluation.
+- Known limitations:
+  This validates offline no-LLM answer-eval artifacts only. It does not change or validate live generation behavior.
+- Next recommended task:
+  Prepare a separate default-policy task that enables evidence windows only for document-gold no-LLM evaluation, with corpus-only skip behavior explicitly documented and tested.
