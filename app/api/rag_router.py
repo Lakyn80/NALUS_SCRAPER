@@ -14,6 +14,8 @@ or test injection.
 """
 
 import os
+import time
+from dataclasses import asdict
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -29,6 +31,12 @@ from app.rag.execution.execution_service import ExecutionService
 from app.rag.orchestration.pipeline import RetrievalPipeline
 from app.rag.orchestrator.orchestrator_service import OrchestratorResult, OrchestratorService
 from app.rag.planner.planner_service import MockPlannerLLM, PlannerService
+from app.rag.retrieval.document_retrieval import (
+    DocumentRetrievalConfig,
+    build_document_level_results,
+    document_retrieval_config_from_env,
+)
+from app.rag.retrieval.errors import RetrievalConfigurationError
 from app.rag.retrieval.production_profile import DEFAULT_QDRANT_COLLECTION
 from app.rag.synthesis.synthesis_service import MockSynthesisLLM, SynthesisService
 
@@ -86,6 +94,53 @@ class RetrievedResult(BaseModel):
 
 class RetrieveResponse(BaseModel):
     results: list[RetrievedResult]
+
+
+class DocumentRetrieveRequest(BaseModel):
+    query: str
+    sources: list[str] | None = None
+
+
+class SupportingPassageResult(BaseModel):
+    chunk_id: str
+    text: str
+    score: float
+    source: str | None = None
+    chunk_index: int | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DocumentRetrievedResult(BaseModel):
+    document_id: str
+    score: float
+    best_passages: list[SupportingPassageResult]
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    candidate_chunk_count: int
+    best_chunk_score: float
+
+
+class DocumentRetrievalDiagnosticsResult(BaseModel):
+    candidate_chunks_retrieved: int
+    unique_documents_produced: int
+    duplicate_document_hits_removed: int
+    duplicate_chunks_removed: int
+    chunks_missing_document_id: int
+    documents_filtered: int
+    final_document_count: int
+    scoring_strategy: str
+    document_relevance_threshold: float
+    max_candidate_chunks: int
+    max_returned_documents: int
+    max_supporting_chunks_per_document: int
+    retrieval_latency_ms: float | None = None
+    aggregation_latency_ms: float | None = None
+    latency_budget_ms: int | None = None
+    latency_budget_exceeded: bool = False
+
+
+class DocumentRetrieveResponse(BaseModel):
+    documents: list[DocumentRetrievedResult]
+    diagnostics: DocumentRetrievalDiagnosticsResult
 
 
 # ---------------------------------------------------------------------------
@@ -276,6 +331,33 @@ def _to_retrieved_result(chunk) -> RetrievedResult:
     )
 
 
+def _document_retrieval_config() -> DocumentRetrievalConfig:
+    try:
+        return document_retrieval_config_from_env()
+    except RetrievalConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def _to_document_retrieve_response(result) -> DocumentRetrieveResponse:
+    return DocumentRetrieveResponse(
+        documents=[
+            DocumentRetrievedResult(
+                document_id=document.document_id,
+                score=document.score,
+                best_passages=[
+                    SupportingPassageResult(**asdict(passage))
+                    for passage in document.best_passages
+                ],
+                metadata=document.metadata,
+                candidate_chunk_count=document.candidate_chunk_count,
+                best_chunk_score=document.best_chunk_score,
+            )
+            for document in result.documents
+        ],
+        diagnostics=DocumentRetrievalDiagnosticsResult(**asdict(result.diagnostics)),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -339,6 +421,61 @@ def retrieve(
     logger.info("[api] retrieve completed results=%d", len(results))
     trace_event(logger, "api.retrieve.done", results=len(results))
     return RetrieveResponse(results=results)
+
+
+@router.post("/retrieve-documents", response_model=DocumentRetrieveResponse)
+def retrieve_documents(
+    req: DocumentRetrieveRequest,
+    orchestrator: OrchestratorService = Depends(get_orchestrator),
+) -> DocumentRetrieveResponse:
+    config = _document_retrieval_config()
+    if not config.enabled:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Document-level retrieval is disabled. Set "
+                "NALUS_DOCUMENT_RETRIEVAL_ENABLED=1 to enable the additive endpoint."
+            ),
+        )
+
+    requested_sources = _normalize_filter_values(req.sources)
+    trace_event(
+        logger,
+        "api.retrieve_documents.start",
+        query_length=len(req.query),
+        max_candidate_chunks=config.max_candidate_chunks,
+        sources=sorted(requested_sources),
+    )
+    retrieval_started = time.perf_counter()
+    try:
+        candidate_chunks = orchestrator.retrieve(req.query, top_k=config.max_candidate_chunks)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[api] document retrieve raised unexpectedly (%s); returning empty response", exc)
+        candidate_chunks = []
+    retrieval_latency_ms = (time.perf_counter() - retrieval_started) * 1000
+
+    filtered_candidates = [
+        chunk for chunk in candidate_chunks
+        if _matches_source_filters(chunk, requested_sources)
+    ]
+    document_result = build_document_level_results(
+        candidate_chunks=filtered_candidates,
+        config=config,
+        retrieval_latency_ms=retrieval_latency_ms,
+    )
+    trace_event(
+        logger,
+        "api.retrieve_documents.done",
+        candidate_chunks_retrieved=document_result.diagnostics.candidate_chunks_retrieved,
+        final_document_count=document_result.diagnostics.final_document_count,
+        retrieval_latency_ms=round(retrieval_latency_ms, 3),
+        aggregation_latency_ms=(
+            round(document_result.diagnostics.aggregation_latency_ms, 3)
+            if document_result.diagnostics.aggregation_latency_ms is not None
+            else None
+        ),
+    )
+    return _to_document_retrieve_response(document_result)
 
 
 @router.post("/query", response_model=QueryResponse)

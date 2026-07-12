@@ -328,6 +328,103 @@ class TestRawRetrieveEndpoint:
         assert resp.status_code == 200
         assert resp.json() == {"results": []}
 
+    def test_document_retrieve_disabled_by_default(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("NALUS_DOCUMENT_RETRIEVAL_ENABLED", raising=False)
+        client = TestClient(_make_app(_FakeOrchestrator()))
+
+        resp = client.post("/api/rag/retrieve-documents", json={"query": "dotaz"})
+
+        assert resp.status_code == 404
+        assert "Document-level retrieval is disabled" in resp.json()["detail"]
+
+    def test_document_retrieve_returns_unique_documents_with_diagnostics(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_DOCUMENT_RETRIEVAL_ENABLED", "1")
+        monkeypatch.setenv("NALUS_DOCUMENT_MAX_CANDIDATE_CHUNKS", "4")
+        monkeypatch.setenv("NALUS_DOCUMENT_MAX_RETURNED_DOCUMENTS", "10")
+        monkeypatch.setenv("NALUS_DOCUMENT_MAX_SUPPORTING_CHUNKS_PER_DOCUMENT", "2")
+        monkeypatch.setenv("NALUS_DOCUMENT_RELEVANCE_THRESHOLD", "0.0")
+        fake = _FakeOrchestrator(
+            retrieve_results=[
+                _chunk(
+                    chunk_id="doc-a-1",
+                    score=0.9,
+                    text="A first passage",
+                    metadata={
+                        "source": "nalus",
+                        "document_id": "DOC-A",
+                        "case_reference": "III.ÚS 1/26",
+                        "chunk_index": 1,
+                    },
+                ),
+                _chunk(
+                    chunk_id="doc-a-2",
+                    score=0.7,
+                    text="A second passage",
+                    metadata={"source": "nalus", "document_id": "DOC-A", "chunk_index": 2},
+                ),
+                _chunk(
+                    chunk_id="doc-b-1",
+                    score=0.8,
+                    text="B passage",
+                    metadata={"source": "nalus", "document_id": "DOC-B", "chunk_index": 1},
+                ),
+            ]
+        )
+        client = TestClient(_make_app(fake))
+
+        resp = client.post("/api/rag/retrieve-documents", json={"query": "dotaz"})
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert [item["document_id"] for item in payload["documents"]] == ["DOC-A", "DOC-B"]
+        assert payload["documents"][0]["best_passages"][0]["chunk_id"] == "doc-a-1"
+        assert payload["diagnostics"]["candidate_chunks_retrieved"] == 3
+        assert payload["diagnostics"]["unique_documents_produced"] == 2
+        assert payload["diagnostics"]["duplicate_document_hits_removed"] == 1
+        assert fake.retrieve_calls == [("dotaz", 4)]
+
+    def test_document_retrieve_threshold_empty_result_has_no_fallback(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_DOCUMENT_RETRIEVAL_ENABLED", "1")
+        monkeypatch.setenv("NALUS_DOCUMENT_RELEVANCE_THRESHOLD", "0.95")
+        fake = _FakeOrchestrator(
+            retrieve_results=[
+                _chunk(score=0.6, metadata={"source": "nalus", "document_id": "DOC-A"})
+            ]
+        )
+        client = TestClient(_make_app(fake))
+
+        resp = client.post("/api/rag/retrieve-documents", json={"query": "dotaz"})
+
+        assert resp.status_code == 200
+        assert resp.json()["documents"] == []
+        assert resp.json()["diagnostics"]["documents_filtered"] == 1
+
+    def test_existing_retrieve_response_shape_remains_backward_compatible(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_DOCUMENT_RETRIEVAL_ENABLED", "1")
+        fake = _FakeOrchestrator(
+            retrieve_results=[
+                _chunk(metadata={"source": "nalus", "document_id": "DOC-A"})
+            ]
+        )
+        client = TestClient(_make_app(fake))
+
+        resp = client.post("/api/rag/retrieve", json={"query": "dotaz", "top_k": 1})
+
+        assert resp.status_code == 200
+        assert set(resp.json().keys()) == {"results"}
+
 
 # ---------------------------------------------------------------------------
 # Success — response shape

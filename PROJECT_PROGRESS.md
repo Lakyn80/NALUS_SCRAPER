@@ -451,3 +451,42 @@
   The new policy affects offline deterministic no-LLM answer evaluation only. Candidate run directories are generated artifacts for local review and are not part of the application runtime.
 - Next recommended task:
   Use the new `document_gold` policy for future offline no-LLM legal answer-eval runs, and keep live generation unchanged until a separate runtime evidence policy is explicitly designed and reviewed.
+
+## 2026-07-13 00:18 Europe/Moscow — Task: Add document-level exhaustive retrieval pipeline
+
+- Goal:
+  Add a production-grade document-level retrieval path that returns bounded unique court decisions identified from candidate chunks, while preserving the existing chunk-level retrieval path and API compatibility.
+- Scope:
+  Implemented an additive module and endpoint only. Existing `/api/rag/retrieve`, `/api/rag/query`, hybrid retrieval, dense retrieval, BM25 sidecar scoring, RRF fusion, BGE-M3 embeddings, Qdrant collections, Redis/cache behavior, ingest, LLM behavior, and frontend behavior remain unchanged.
+- What changed:
+  Added `app/rag/retrieval/document_retrieval.py` with typed configuration, canonical document grouping, duplicate removal, deterministic document scoring, dynamic threshold filtering, best supporting passages, safe document metadata projection, and bounded diagnostics.
+  Added `POST /api/rag/retrieve-documents` as an explicit additive endpoint in `app/api/rag_router.py`.
+  Added disabled-by-default document retrieval configuration to `.env.example`.
+  Added `docs/DOCUMENT_LEVEL_RETRIEVAL.md` describing the pipeline, config, scoring strategy, API response, safety properties, and future extension points.
+  Added `tests/rag/test_document_retrieval.py` and expanded `tests/api/test_rag_api.py`.
+- Configuration:
+  `NALUS_DOCUMENT_RETRIEVAL_ENABLED=0` keeps the new endpoint disabled by default.
+  `NALUS_DOCUMENT_MAX_CANDIDATE_CHUNKS`, `NALUS_DOCUMENT_MAX_RETURNED_DOCUMENTS`, `NALUS_DOCUMENT_MAX_SUPPORTING_CHUNKS_PER_DOCUMENT`, `NALUS_DOCUMENT_RELEVANCE_THRESHOLD`, `NALUS_DOCUMENT_SCORING_STRATEGY`, and optional `NALUS_DOCUMENT_LATENCY_BUDGET_MS` centralize document-level retrieval behavior.
+- Scoring:
+  The first deterministic strategy is `best_plus_average_top_chunks`, combining best chunk score with average top supporting chunk score. The strategy is explicit and can be extended without changing grouping or API contracts.
+- API behavior:
+  Existing `/api/rag/retrieve` response remains chunk-oriented and unchanged.
+  New `/api/rag/retrieve-documents` returns `documents` and `diagnostics`. If the configured threshold filters all documents, the endpoint returns an empty `documents` list with diagnostics and does not silently lower thresholds or fall back to unrelated documents.
+- Tests run:
+  `python -m pytest tests/rag/test_document_retrieval.py -q` -> `10 passed`.
+  `python -m pytest tests/api/test_rag_api.py -q` -> `34 passed`.
+  `python -m pytest tests/rag/test_production_bge_m3_profile.py tests/rag/test_retrieval_service.py -q` -> `39 passed`.
+  `python -m pytest tests/rag/test_document_retrieval.py tests/api/test_rag_api.py tests/rag/test_production_bge_m3_profile.py tests/rag/test_retrieval_service.py tests/test_nalus_task_validator.py -q` -> `94 passed`.
+  Repeated `pytest-asyncio` loop-scope deprecation warning is non-blocking and unrelated.
+- Validator:
+  Initial validator run failed only because `PROJECT_PROGRESS.md` had not yet been updated; diff-scan warnings matched intentional runtime/API/config terms and existing generated candidate output directories from the previous task.
+  Follow-up validator run with explicit allowlist for the intentional `top_k_change`, `logger_change`, `bm25_change`, `rrf_change`, `dense_change`, and existing generated candidate run directories returned `PASS` with zero findings.
+- Runtime/API smoke:
+  `docker compose ps` showed `api`, `qdrant`, `redis`, `prometheus`, `grafana`, and `nalus-eval-metrics-exporter` running.
+  Focused API smoke `python -m pytest tests/api/test_rag_api.py::TestRawRetrieveEndpoint::test_document_retrieve_returns_unique_documents_with_diagnostics tests/api/test_rag_api.py::TestRawRetrieveEndpoint::test_existing_retrieve_response_shape_remains_backward_compatible -q` -> `2 passed`.
+- Behavior preserved:
+  No ingest, no Qdrant write, no embedding regeneration, no model download, no Redis enablement, no LLM/DeepSeek call, no BM25 scoring change, no RRF change, no default API behavior change, and no hidden threshold fallback.
+- Known limitations:
+  This first implementation groups and scores already retrieved candidates. It does not yet benchmark document-level recall against legal QA datasets and does not implement document-level reranking or follow-up retrieval.
+- Next recommended task:
+  Add an offline document-level retrieval benchmark that compares unique-document recall against the existing chunk-level benchmark under controlled candidate pool and threshold settings.
