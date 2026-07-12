@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.rag.eval.legal_answer_eval import (  # noqa: E402
+    EvidenceWindowConfig,
     aggregate_answer_metrics,
     build_nsoud_qa_007_diagnostic,
     build_failed_case_report_entries,
@@ -63,6 +64,22 @@ def _load_run_context(run_dir: Path) -> dict[str, Any]:
     gold_review_path = Path(str(payload.get("gold_review") or "")).resolve()
     corpus = str(payload.get("corpus") or infer_corpus_from_run_name(run_dir.name))
     citation_required = bool(payload.get("citation_required"))
+    evidence_window_payload = payload.get("evidence_window") or {}
+    evidence_window_config = EvidenceWindowConfig(
+        enabled=bool(evidence_window_payload.get("enabled", False)),
+        neighbor_chunks_before=int(evidence_window_payload.get("neighbor_chunks_before", 1)),
+        neighbor_chunks_after=int(evidence_window_payload.get("neighbor_chunks_after", 1)),
+        max_chunks=int(evidence_window_payload.get("max_chunks", 3)),
+        max_characters=int(evidence_window_payload.get("max_characters", 6000)),
+        require_same_document=bool(evidence_window_payload.get("require_same_document", True)),
+    )
+    evidence_window_config.validate()
+    evidence_sidecar_value = payload.get("evidence_sidecar")
+    evidence_sidecar_path = (
+        Path(str(evidence_sidecar_value)).resolve()
+        if evidence_sidecar_value
+        else None
+    )
 
     if not dataset_path.exists():
         raise RetrievalConfigurationError(f"Dataset not found for run {run_dir.name}: {dataset_path}")
@@ -71,6 +88,10 @@ def _load_run_context(run_dir: Path) -> dict[str, Any]:
             f"Retrieval results not found for run {run_dir.name}: {retrieval_results_path}"
         )
     validate_gold_review_path(gold_review_path)
+    if evidence_sidecar_path is not None and not evidence_sidecar_path.exists():
+        raise RetrievalConfigurationError(
+            f"Evidence sidecar not found for run {run_dir.name}: {evidence_sidecar_path}"
+        )
 
     return {
         "run_name": run_dir.name,
@@ -79,6 +100,8 @@ def _load_run_context(run_dir: Path) -> dict[str, Any]:
         "retrieval_results_path": retrieval_results_path,
         "gold_review_path": gold_review_path,
         "citation_required": citation_required,
+        "evidence_window_config": evidence_window_config,
+        "evidence_sidecar_path": evidence_sidecar_path,
     }
 
 
@@ -112,6 +135,8 @@ def _build_run_diagnostic(run_dir: Path) -> dict[str, Any]:
         registry=registry,
         retrieval_by_id=retrieval_by_id,
         citation_required=context["citation_required"],
+        evidence_window_config=context["evidence_window_config"],
+        evidence_sidecar_path=context["evidence_sidecar_path"],
     )
     metrics = aggregate_answer_metrics(results)
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -160,6 +185,10 @@ def _build_run_diagnostic(run_dir: Path) -> dict[str, Any]:
         "retrieval_results_path": str(context["retrieval_results_path"]),
         "gold_review_path": str(context["gold_review_path"]),
         "citation_required": context["citation_required"],
+        "evidence_window": context["evidence_window_config"].__dict__,
+        "evidence_sidecar_path": str(context["evidence_sidecar_path"])
+        if context["evidence_sidecar_path"]
+        else None,
         "metrics": metrics_summary,
         "failure_category_counts": failure_category_counts,
         "failed_cases": [entry.__dict__ for entry in failed_cases],

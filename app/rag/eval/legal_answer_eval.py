@@ -6,11 +6,16 @@ import json
 import re
 import unicodedata
 from collections import defaultdict
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.rag.eval.evidence_window import (
+    EvidenceWindow,
+    EvidenceWindowConfig,
+    build_evidence_window,
+)
 from app.rag.eval.legal_qa_benchmark import (
     LegalQaItem,
     SourceConstraints,
@@ -69,6 +74,19 @@ class AnswerEvalResult:
     gold_hit_rank: int | None = None
     support_keyword_coverage: float | None = None
     unsupported_answer_risk: bool = False
+    evidence_window_enabled: bool = False
+    evidence_window_anchor_chunk_id: str | None = None
+    evidence_window_chunk_ids: list[str] = field(default_factory=list)
+    evidence_window_chunk_indexes: list[int] = field(default_factory=list)
+    evidence_window_document_id: str | None = None
+    evidence_window_source: str | None = None
+    evidence_window_truncated: bool = False
+    evidence_window_provenance_valid: bool | None = None
+    evidence_window_failure_reason: str | None = None
+    evidence_window_construction_reason: str | None = None
+    evidence_window_missing_neighbors: list[int] = field(default_factory=list)
+    original_snippet_length: int | None = None
+    combined_evidence_length: int | None = None
 
 
 @dataclass(frozen=True)
@@ -98,6 +116,10 @@ class AnswerEvalMetrics:
     unsupported_answer_risk_count: int
     skipped_count: int
     needs_review_count: int
+    evidence_window_used_count: int = 0
+    evidence_window_failed_count: int = 0
+    evidence_window_truncated_count: int = 0
+    same_document_neighbor_count: int = 0
 
     @property
     def total_questions(self) -> int:
@@ -184,6 +206,10 @@ def build_summary_json_payload(
         "usable_support_rate_gold": metrics.usable_support_rate_gold,
         "citation_available_rate_gold": metrics.citation_available_rate_gold,
         "citation_available_rate": metrics.citation_available_rate_gold,
+        "evidence_window_used_count": metrics.evidence_window_used_count,
+        "evidence_window_failed_count": metrics.evidence_window_failed_count,
+        "evidence_window_truncated_count": metrics.evidence_window_truncated_count,
+        "same_document_neighbor_count": metrics.same_document_neighbor_count,
     }
 
 
@@ -325,6 +351,7 @@ def classify_support_level(
     *,
     gold: GoldRegistryEntry,
     hits: list[dict[str, Any]],
+    evidence_text_by_chunk_id: dict[str, str] | None = None,
 ) -> tuple[str, dict[str, Any] | None, float | None, int | None]:
     if gold.corpus_only:
         return "corpus_only", None, None, None
@@ -336,10 +363,16 @@ def classify_support_level(
     if gold_hit is None:
         return "gap", None, None, None
 
-    snippet = str(gold_hit.get("text_snippet") or "")
+    chunk_id = str(gold_hit.get("chunk_id") or "").strip()
+    using_evidence_window = bool(evidence_text_by_chunk_id and chunk_id in evidence_text_by_chunk_id)
+    snippet = (
+        evidence_text_by_chunk_id[chunk_id]
+        if using_evidence_window
+        else str(gold_hit.get("text_snippet") or "")
+    )
     rank = int(gold_hit.get("rank") or 9999)
     coverage = _keyword_coverage_in_text(gold.expected_keywords, snippet)
-    if is_boilerplate_snippet(snippet):
+    if is_boilerplate_snippet(snippet) and not (using_evidence_window and coverage > 0.0):
         return "boilerplate_noise", gold_hit, coverage, rank
 
     if rank == 1 and coverage >= 0.67:
@@ -404,14 +437,57 @@ def map_support_to_status(support_level: str, *, citation_required: bool, citati
     return "gap"
 
 
+def _evidence_text_by_chunk_id(window: EvidenceWindow) -> dict[str, str]:
+    if not window.used:
+        return {}
+    return {
+        chunk_id: window.combined_text
+        for chunk_id in window.ordered_chunk_ids
+        if chunk_id == window.anchor_chunk_id
+    }
+
+
+def _evidence_window_result_fields(
+    *,
+    window_config: EvidenceWindowConfig,
+    evidence_window: EvidenceWindow | None,
+    gold_hit: dict[str, Any] | None,
+) -> dict[str, Any]:
+    original_snippet = str(gold_hit.get("text_snippet") or "") if gold_hit else ""
+    if not window_config.enabled or evidence_window is None:
+        return {
+            "evidence_window_enabled": window_config.enabled,
+            "original_snippet_length": len(original_snippet) if gold_hit else None,
+            "combined_evidence_length": len(original_snippet) if gold_hit else None,
+        }
+    return {
+        "evidence_window_enabled": True,
+        "evidence_window_anchor_chunk_id": evidence_window.anchor_chunk_id,
+        "evidence_window_chunk_ids": list(evidence_window.ordered_chunk_ids),
+        "evidence_window_chunk_indexes": list(evidence_window.ordered_chunk_indexes),
+        "evidence_window_document_id": evidence_window.document_id,
+        "evidence_window_source": evidence_window.source,
+        "evidence_window_truncated": evidence_window.truncated,
+        "evidence_window_provenance_valid": evidence_window.provenance_valid,
+        "evidence_window_failure_reason": evidence_window.failure_reason,
+        "evidence_window_construction_reason": evidence_window.construction_reason,
+        "evidence_window_missing_neighbors": list(evidence_window.missing_neighbors),
+        "original_snippet_length": len(original_snippet) if gold_hit else None,
+        "combined_evidence_length": len(evidence_window.combined_text),
+    }
+
+
 def evaluate_answer_item(
     *,
     item: LegalQaItem,
     gold: GoldRegistryEntry,
     retrieval: dict[str, Any],
     citation_required: bool,
+    evidence_window_config: EvidenceWindowConfig | None = None,
+    evidence_sidecar_path: Path | None = None,
 ) -> AnswerEvalResult:
     hits = list(retrieval.get("hits") or [])
+    window_config = evidence_window_config or EvidenceWindowConfig(enabled=False)
 
     if gold.source_pending or not gold.gold_available:
         return AnswerEvalResult(
@@ -434,6 +510,8 @@ def evaluate_answer_item(
                 if gold.invalid_gold_annotation
                 else "source_pending or no gold annotation"
             ),
+            evidence_window_enabled=window_config.enabled,
+            evidence_window_provenance_valid=None if window_config.enabled else None,
         )
 
     if gold.corpus_only:
@@ -449,9 +527,18 @@ def evaluate_answer_item(
         hit_at_1 = gold_source_hit_at_k(hits, gold.expected_ecli, 1)
         hit_at_3 = gold_source_hit_at_k(hits, gold.expected_ecli, 3)
         hit_at_5 = gold_source_hit_at_k(hits, gold.expected_ecli, 5)
+        gold_hit = _best_gold_hit(hits, gold.expected_ecli)
+        evidence_window = build_evidence_window(
+            anchor_hit=gold_hit,
+            hits=hits,
+            config=window_config,
+            sidecar_path=evidence_sidecar_path,
+        )
+        evidence_text_by_chunk_id = _evidence_text_by_chunk_id(evidence_window)
         support_level, gold_hit, support_keyword_coverage, gold_hit_rank = classify_support_level(
             gold=gold,
             hits=hits,
+            evidence_text_by_chunk_id=evidence_text_by_chunk_id,
         )
 
     answer_skeleton, citation_available = build_answer_skeleton(
@@ -499,6 +586,11 @@ def evaluate_answer_item(
         gold_hit_rank=gold_hit_rank,
         support_keyword_coverage=support_keyword_coverage,
         unsupported_answer_risk=unsupported_risk,
+        **_evidence_window_result_fields(
+            window_config=window_config,
+            evidence_window=evidence_window if not gold.corpus_only else None,
+            gold_hit=gold_hit,
+        ),
     )
 
 
@@ -509,6 +601,8 @@ def run_answer_eval(
     retrieval_by_id: dict[str, dict[str, Any]],
     citation_required: bool,
     limit: int | None = None,
+    evidence_window_config: EvidenceWindowConfig | None = None,
+    evidence_sidecar_path: Path | None = None,
 ) -> list[AnswerEvalResult]:
     results: list[AnswerEvalResult] = []
     selected = items[:limit] if limit is not None else items
@@ -522,6 +616,8 @@ def run_answer_eval(
                 gold=gold,
                 retrieval=retrieval_by_id[item.id],
                 citation_required=citation_required,
+                evidence_window_config=evidence_window_config,
+                evidence_sidecar_path=evidence_sidecar_path,
             )
         )
     return results
@@ -558,6 +654,23 @@ def aggregate_answer_metrics(results: list[AnswerEvalResult]) -> AnswerEvalMetri
         1
         for result in gold_results
         if result.support_level in {"direct", "partial", "corpus_only"}
+    )
+    evidence_window_results = [
+        result for result in gold_results if result.evidence_window_enabled
+    ]
+    evidence_window_used_count = sum(
+        1 for result in evidence_window_results if result.evidence_window_provenance_valid is True
+    )
+    evidence_window_failed_count = sum(
+        1 for result in evidence_window_results if result.evidence_window_provenance_valid is not True
+    )
+    evidence_window_truncated_count = sum(
+        1 for result in evidence_window_results if result.evidence_window_truncated
+    )
+    same_document_neighbor_count = sum(
+        max(0, len(result.evidence_window_chunk_ids) - 1)
+        for result in evidence_window_results
+        if result.evidence_window_provenance_valid is True
     )
 
     strict_direct_pass_rate_all = direct_support_count / total
@@ -598,6 +711,10 @@ def aggregate_answer_metrics(results: list[AnswerEvalResult]) -> AnswerEvalMetri
         unsupported_answer_risk_count=unsupported_answer_risk_count,
         skipped_count=_count_status("skipped"),
         needs_review_count=_count_status("needs_review"),
+        evidence_window_used_count=evidence_window_used_count,
+        evidence_window_failed_count=evidence_window_failed_count,
+        evidence_window_truncated_count=evidence_window_truncated_count,
+        same_document_neighbor_count=same_document_neighbor_count,
     )
 
 
@@ -1104,6 +1221,8 @@ def write_answer_eval_outputs(
     no_llm: bool,
     citation_required: bool,
     corpus: str | None = None,
+    evidence_window_config: EvidenceWindowConfig | None = None,
+    evidence_sidecar_path: Path | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -1120,6 +1239,11 @@ def write_answer_eval_outputs(
         "gold_review": str(gold_review_path),
         "no_llm": no_llm,
         "citation_required": citation_required,
+        "corpus": corpus,
+        "evidence_window": asdict(evidence_window_config)
+        if evidence_window_config is not None
+        else asdict(EvidenceWindowConfig(enabled=False)),
+        "evidence_sidecar": str(evidence_sidecar_path) if evidence_sidecar_path else None,
         **asdict(metrics),
     }
     (output_dir / "metrics.json").write_text(
@@ -1161,6 +1285,7 @@ def write_answer_eval_outputs(
         f"- Gold review: `{gold_review_path}`",
         f"- Mode: deterministic no-LLM",
         f"- Citation required: {citation_required}",
+        f"- Evidence window enabled: {bool(evidence_window_config and evidence_window_config.enabled)}",
         "",
         "## Interpretation",
         "",
@@ -1202,6 +1327,10 @@ def write_answer_eval_outputs(
         f"- gold_retrieval_miss_count: {metrics.gold_retrieval_miss_count}",
         f"- skipped: {metrics.skipped_count}",
         f"- needs review: {metrics.needs_review_count}",
+        f"- evidence_window_used_count: {metrics.evidence_window_used_count}",
+        f"- evidence_window_failed_count: {metrics.evidence_window_failed_count}",
+        f"- evidence_window_truncated_count: {metrics.evidence_window_truncated_count}",
+        f"- same_document_neighbor_count: {metrics.same_document_neighbor_count}",
         "",
     ]
     (output_dir / "summary.md").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")

@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.rag.eval.legal_answer_eval import (  # noqa: E402
+    EvidenceWindowConfig,
     aggregate_answer_metrics,
     load_gold_registry_from_dataset,
     load_retrieval_results,
@@ -64,6 +65,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--no-llm", action="store_true", required=True)
     parser.add_argument("--require-citations", action="store_true")
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--evidence-window", action="store_true")
+    parser.add_argument("--evidence-neighbors-before", type=int, default=1)
+    parser.add_argument("--evidence-neighbors-after", type=int, default=1)
+    parser.add_argument("--evidence-max-chunks", type=int, default=3)
+    parser.add_argument("--evidence-max-characters", type=int, default=6000)
+    parser.add_argument("--evidence-sidecar", type=Path, default=None)
     return parser.parse_args(argv)
 
 
@@ -101,12 +108,26 @@ def main(argv: list[str] | None = None) -> int:
     items = load_dataset(dataset_path, limit=args.limit)
     registry = load_gold_registry_from_dataset(items)
     retrieval_by_id = load_retrieval_results(retrieval_path)
+    evidence_window_config = EvidenceWindowConfig(
+        enabled=args.evidence_window,
+        neighbor_chunks_before=args.evidence_neighbors_before,
+        neighbor_chunks_after=args.evidence_neighbors_after,
+        max_chunks=args.evidence_max_chunks,
+        max_characters=args.evidence_max_characters,
+        require_same_document=True,
+    )
+    evidence_window_config.validate()
+    evidence_sidecar_path = args.evidence_sidecar.resolve() if args.evidence_sidecar else None
+    if evidence_sidecar_path is not None and not evidence_sidecar_path.exists():
+        raise RetrievalConfigurationError(f"Evidence sidecar not found: {evidence_sidecar_path}")
     results = run_answer_eval(
         items=items,
         registry=registry,
         retrieval_by_id=retrieval_by_id,
         citation_required=args.require_citations,
         limit=args.limit,
+        evidence_window_config=evidence_window_config,
+        evidence_sidecar_path=evidence_sidecar_path,
     )
     metrics = aggregate_answer_metrics(results)
     output_dir = args.output_dir.resolve()
@@ -123,6 +144,8 @@ def main(argv: list[str] | None = None) -> int:
         no_llm=True,
         citation_required=args.require_citations,
         corpus=corpus_key,
+        evidence_window_config=evidence_window_config,
+        evidence_sidecar_path=evidence_sidecar_path,
     )
 
     print(
@@ -133,6 +156,7 @@ def main(argv: list[str] | None = None) -> int:
         f"usable_support_rate_gold={metrics.usable_support_rate_gold:.3f} "
         f"citation_rate={metrics.citation_available_rate:.3f} "
         f"unsupported_risk={metrics.unsupported_answer_risk_count} "
+        f"evidence_window_used={metrics.evidence_window_used_count} "
         f"retrieval={retrieval_path} output={output_dir}",
         file=sys.stderr,
     )

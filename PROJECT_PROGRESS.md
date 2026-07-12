@@ -322,3 +322,46 @@
   Shared Grafana currently remains owned by the NALUS Compose stack; a dedicated observability repository is deferred until more projects require integration.
 - Next recommended task:
   Move shared Grafana into a dedicated observability-stack repository only when more projects need to be added.
+
+## 2026-07-12 17:59 Europe/Moscow — Task: Deterministic same-document evidence windows for legal answer evaluation
+
+- Goal:
+  Allow deterministic no-LLM legal answer evaluation to inspect a bounded same-document evidence window for a verified gold hit, without changing retrieval ranking, evaluator thresholds, model behavior, Qdrant state, or LLM behavior.
+- Architecture:
+  Added `app/rag/eval/evidence_window.py` as the typed evidence-window layer. The evaluator validates `source_document_id`, `document_id`, `ecli`, and `chunk_index`, loads same-document adjacent chunks, orders by `chunk_index`, enforces chunk and character bounds, preserves provenance diagnostics, and reports failures explicitly. The existing evaluator behavior remains the default unless `--evidence-window` is passed.
+- What changed:
+  Updated `app/rag/eval/legal_answer_eval.py` so enabled evidence windows evaluate keyword support against combined evidence text while source/citation matching still depends on verified document provenance.
+  Updated `scripts/run_legal_answer_eval.py` with explicit evidence-window CLI options and an explicit local sidecar path option.
+  Updated `scripts/generate_legal_answer_eval_diagnostics.py` so diagnostics replay the evidence-window configuration recorded in `metrics.json`.
+  Added `tests/rag/test_legal_evidence_window.py` with focused unit/integration coverage for ordering, bounds, same-document enforcement, diagnostics, summary counters, and NSoud-style cases.
+  Created candidate answer-eval artifacts under `artifacts/rag_eval/legal_qa/answer_eval/nsoud_evidence_window_candidate/`.
+  Added `artifacts/evaluation_quality/nsoud_evidence_window_evaluation_20260712.md` and `.json`.
+- Configuration:
+  `--evidence-window --evidence-neighbors-before 1 --evidence-neighbors-after 1 --evidence-max-chunks 3 --evidence-max-characters 6000 --evidence-sidecar storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.provenance_repaired.sqlite`.
+- Evidence source:
+  The candidate used the repaired local NSoud BM25 sidecar in read-only SQLite mode. Qdrant lookup was not needed and Qdrant was not contacted for this candidate evaluation.
+- Candidate metrics:
+  Before (`nsoud_dataset_repaired`): `gold=4`, `direct=0`, `partial=3`, `gap=1`, `boilerplate_noise=0`, `usable_support_rate_gold=0.75`, `citation_available_rate=0.75`, `unsupported_answer_risk_count=1`, `strict_direct_pass_rate_gold=0.0`.
+  After (`nsoud_evidence_window_candidate`): `gold=4`, `direct=3`, `partial=1`, `gap=0`, `boilerplate_noise=0`, `usable_support_rate_gold=1.0`, `citation_available_rate=1.0`, `unsupported_answer_risk_count=0`, `strict_direct_pass_rate_gold=0.75`, `evidence_window_used_count=4`, `evidence_window_failed_count=0`, `evidence_window_truncated_count=1`, `same_document_neighbor_count=8`.
+- `nsoud-qa-010` result:
+  Anchor chunk `1644` remained rank `4`; chunks `1643`, `1644`, and `1645` were included from the same document. Combined evidence length was `3952`. The relevant doctrine became visible, support changed from `gap` to `partial`, citation became available, and unsupported risk cleared. This confirms exported snippet truncation rather than retrieval ranking as the issue.
+- `nsoud-qa-003` result:
+  Original keyword coverage was `2/3 = 0.6667`; evidence-window coverage became `3/3 = 1.0`, and the item became `direct`. The strict threshold and morphology rules were not changed. The evidence window for this item was truncated at the configured `6000` characters and reports that truncation explicitly.
+- Tests run:
+  `python -m pytest tests/rag/test_legal_evidence_window.py -q` -> `20 passed`.
+  `python -m pytest tests/rag/test_legal_answer_eval.py -q` -> `22 passed`.
+  `python -m pytest tests/rag/test_legal_answer_eval_diagnostics.py -q` -> `2 passed`.
+  `python -m pytest tests/observability/test_eval_metrics_exporter.py -q` -> `10 passed`.
+  `python -m pytest tests/test_nalus_task_validator.py -q` -> `11 passed`.
+  `python -m pytest tests/rag/test_legal_evidence_window.py tests/rag/test_legal_answer_eval.py tests/rag/test_legal_answer_eval_diagnostics.py tests/observability/test_eval_metrics_exporter.py tests/test_nalus_task_validator.py -q` -> `65 passed`.
+  Repeated `pytest-asyncio` loop-scope deprecation warning is non-blocking and unrelated to this task.
+- Monitoring verification:
+  Restarted `nalus-eval-metrics-exporter`. `curl.exe -s http://localhost:9108/metrics | Select-String 'run_name="nsoud_evidence_window_candidate"'` exposed the expected existing bounded metrics for the new run: `gold=4`, `direct=3`, `partial=1`, `gap=0`, `unsupported=0`, `strict_direct_pass_rate_gold=0.75`, `usable_support_rate_gold=1.0`, and `citation_available_rate=1.0`.
+- Validator:
+  Exact validator command without allowlist returned `WARN` for two intentional `bm25_change` findings because the evidence-window evaluator reads the local BM25 sidecar as an evidence source. The follow-up validator run with `--allow-risk bm25_change` returned `PASS` with zero findings. No BM25 scoring changed.
+- Behavior preserved:
+  Retrieval ranking, retrieved hit order, global `top_k`, dense scoring, BM25 scoring, RRF, BGE-M3, embedding dimensions, Qdrant collections/aliases/data, Redis/cache behavior, Grafana queries, strict-direct threshold, and LLM/DeepSeek behavior were not changed.
+- Known limitations:
+  Evidence windows improve evaluator visibility only and do not change retrieval ranking. `nsoud-qa-010` remains `partial` because the verified gold hit is rank `4`, and the strict-direct definition still requires rank `1`.
+- Next recommended task:
+  Validate evidence-window mode across ÚS and Mixed before deciding whether it should become the default no-LLM answer-eval behavior.

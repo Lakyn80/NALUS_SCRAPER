@@ -1,0 +1,144 @@
+{
+  "generated_at": "2026-07-12T17:59:12+03:00",
+  "task": "Deterministic same-document evidence windows for legal answer evaluation",
+  "baseline_run": "nsoud_dataset_repaired",
+  "candidate_run": "nsoud_evidence_window_candidate",
+  "dataset": "artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl",
+  "retrieval_results": "artifacts/rag_eval/legal_qa/runs/nsoud_dataset_repaired/retrieval_results.jsonl",
+  "evidence_source": {
+    "type": "bm25_sidecar",
+    "path": "storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.provenance_repaired.sqlite",
+    "qdrant_access": "not_used"
+  },
+  "configuration": {
+    "enabled": true,
+    "neighbor_chunks_before": 1,
+    "neighbor_chunks_after": 1,
+    "max_chunks": 3,
+    "max_characters": 6000,
+    "require_same_document": true
+  },
+  "deterministic_rules": {
+    "document_identity_fields": [
+      "source_document_id",
+      "document_id",
+      "ecli"
+    ],
+    "ordering": [
+      "chunk_index",
+      "chunk_id retained as stable diagnostic id"
+    ],
+    "fuzzy_matching": false,
+    "cross_document_windows_allowed": false,
+    "truncation_reported": true
+  },
+  "metrics_before": {
+    "gold": 4,
+    "direct_support_count": 0,
+    "partial_support_count": 3,
+    "gap_count": 1,
+    "boilerplate_noise_count": 0,
+    "usable_support_rate_gold": 0.75,
+    "citation_available_rate": 0.75,
+    "unsupported_answer_risk_count": 1,
+    "strict_direct_pass_rate_gold": 0.0
+  },
+  "metrics_after": {
+    "gold": 4,
+    "direct_support_count": 3,
+    "partial_support_count": 1,
+    "gap_count": 0,
+    "boilerplate_noise_count": 0,
+    "usable_support_rate_gold": 1.0,
+    "citation_available_rate": 1.0,
+    "unsupported_answer_risk_count": 0,
+    "strict_direct_pass_rate_gold": 0.75,
+    "evidence_window_used_count": 4,
+    "evidence_window_failed_count": 0,
+    "evidence_window_truncated_count": 1,
+    "same_document_neighbor_count": 8
+  },
+  "case_analysis": {
+    "nsoud-qa-010": {
+      "anchor_chunk_id": "1644",
+      "anchor_rank": 4,
+      "original_snippet_length": 240,
+      "included_chunk_ids": [
+        "1643",
+        "1644",
+        "1645"
+      ],
+      "included_chunk_indexes": [
+        1,
+        2,
+        3
+      ],
+      "combined_evidence_length": 3952,
+      "relevant_doctrine_visible": true,
+      "support_before": "gap",
+      "support_after": "partial",
+      "keyword_coverage_before": 0.0,
+      "keyword_coverage_after": 1.0,
+      "unsupported_risk_before": true,
+      "unsupported_risk_after": false,
+      "issue_type": "exported_snippet_truncation",
+      "retrieval_implicated": false
+    },
+    "nsoud-qa-003": {
+      "anchor_chunk_id": "1214",
+      "anchor_rank": 1,
+      "support_keywords": [
+        "přípustnost",
+        "dovolání",
+        "občanský"
+      ],
+      "original_matching_keywords": [
+        "přípustnost",
+        "dovolání"
+      ],
+      "evidence_window_matching_keywords": [
+        "přípustnost",
+        "dovolání",
+        "občanský"
+      ],
+      "coverage_before": 0.6666666666666666,
+      "coverage_after": 1.0,
+      "support_before": "partial",
+      "support_after": "direct",
+      "threshold_changed": false,
+      "evidence_window_truncated": true
+    },
+    "other_gold_items": {
+      "nsoud-qa-004": {
+        "support_before": "partial",
+        "support_after": "direct",
+        "keyword_coverage_before": 0.0,
+        "keyword_coverage_after": 1.0
+      },
+      "nsoud-qa-007": {
+        "support_before": "partial",
+        "support_after": "direct",
+        "keyword_coverage_before": 0.3333333333333333,
+        "keyword_coverage_after": 1.0
+      }
+    }
+  },
+  "regressions": [],
+  "limitations": [
+    "Evidence windows do not change retrieval ranking or select a different gold hit.",
+    "nsoud-qa-010 remains partial because strict direct support still requires rank 1.",
+    "nsoud-qa-003 is truncated at the configured 6000-character bound and reports that truncation explicitly."
+  ],
+  "safety": {
+    "retrieval_changed": false,
+    "threshold_changed": false,
+    "qdrant_modified": false,
+    "redis_used": false,
+    "llm_called": false,
+    "model_downloaded": false,
+    "cross_document_evidence_leakage": false,
+    "raw_legal_text_in_metric_labels": false,
+    "invented_legal_metadata": false
+  },
+  "next_recommended_task": "Validate evidence-window mode across ÚS and Mixed before deciding whether to make it the default no-LLM answer-eval behavior."
+}
