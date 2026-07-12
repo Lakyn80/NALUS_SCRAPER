@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: Eternal World Dashboards
+    orgId: 1
+    folder: Eternal World
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards/eternal-world

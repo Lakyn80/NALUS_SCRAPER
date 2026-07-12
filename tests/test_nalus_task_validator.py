@@ -74,7 +74,19 @@ def test_classify_candidate_and_baseline_artifacts() -> None:
 def test_classify_local_noise_and_unknown() -> None:
     assert classify_path(".pytest_cache/state") == "local_noise"
     assert classify_path("models/bge-m3/model.bin") == "model_cache"
+    assert classify_path(".env.local") == "model_cache"
+    assert classify_path(".env.production") == "model_cache"
     assert classify_path("random/file.txt") == "unknown"
+
+
+def test_classify_shared_observability_files_as_infrastructure_config() -> None:
+    assert classify_path(".env.example") == "infra_config"
+    assert classify_path("docker-compose.yml") == "infra_config"
+    assert classify_path("requirements-ci.txt") == "infra_config"
+    assert (
+        classify_path("monitoring/grafana/provisioning/datasources/eternal-world.yml")
+        == "infra_config"
+    )
 
 
 def test_risky_diff_detection_for_qdrant_write() -> None:
@@ -94,6 +106,15 @@ def test_risky_diff_detection_for_alias_change() -> None:
     rule_ids = {finding.rule_id for finding in findings}
     assert "qdrant_update_alias" in rule_ids
     assert "protected_alias_live" in rule_ids
+
+
+def test_authorized_infrastructure_change_can_be_explicitly_allowed() -> None:
+    findings = scan_diff_text(
+        "docker-compose.yml",
+        "+ services:\n+  grafana:\n+    image: grafana/grafana:11.4.0",
+        allow_risks={"infra_or_dependency_change"},
+    )
+    assert not any(finding.rule_id == "infra_or_dependency_change" for finding in findings)
 
 
 def test_safe_docs_only_task() -> None:

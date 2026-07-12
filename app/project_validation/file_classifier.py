@@ -26,7 +26,23 @@ def _is_local_noise(path: str) -> bool:
 
 
 def _is_model_cache(path: str) -> bool:
-    return path.startswith(("models/", ".cache/")) or path in {".env"} or path.startswith(".env.")
+    return path.startswith(("models/", ".cache/")) or path == ".env" or path.startswith(".env.")
+
+
+def _is_infrastructure_config(path: str) -> bool:
+    return (
+        path
+        in {
+            ".env.example",
+            "docker-compose.yml",
+            "docker-compose.yaml",
+            "pyproject.toml",
+            "requirements.txt",
+            "requirements-ci.txt",
+            "requirements-local.txt",
+        }
+        or path.startswith("monitoring/")
+    )
 
 
 def _is_candidate_eval_artifact(path: str, candidate_runs: set[str]) -> bool:
@@ -49,6 +65,8 @@ def classify_path(path: str, *, candidate_runs: set[str] | None = None) -> FileC
         return "project_progress"
     if _is_local_noise(normalized):
         return "local_noise"
+    if _is_infrastructure_config(normalized):
+        return "infra_config"
     if _is_model_cache(normalized):
         return "model_cache"
     if normalized.startswith("artifacts/evaluation_quality/") and normalized.endswith((".md", ".json", ".jsonl")):

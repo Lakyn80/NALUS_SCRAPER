@@ -83,7 +83,10 @@ def scan_diff_text(path: str, diff_text: str, *, allow_risks: set[str] | None = 
             )
         )
 
-    if path.endswith(("docker-compose.yml", "docker-compose.yaml", "requirements.txt", "pyproject.toml")):
+    if (
+        path.endswith(("docker-compose.yml", "docker-compose.yaml", "requirements.txt", "pyproject.toml"))
+        and "infra_or_dependency_change" not in allowed
+    ):
         findings.append(
             RiskFinding(
                 severity="warning",

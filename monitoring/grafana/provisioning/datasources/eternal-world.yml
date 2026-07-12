@@ -1,0 +1,10 @@
+apiVersion: 1
+
+datasources:
+  - name: Eternal World Prometheus
+    type: prometheus
+    uid: eternal-world-prometheus
+    access: proxy
+    url: $ETERNAL_WORLD_PROMETHEUS_URL
+    isDefault: false
+    editable: false

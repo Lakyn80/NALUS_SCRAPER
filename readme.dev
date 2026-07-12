@@ -2455,3 +2455,73 @@ Očekávané hodnoty v exporteru / Grafana:
 
 - diagnostika potvrzuje, že hlavní současné problémy jsou malý / nekompletní gold coverage, mnoho `partial` gold hitů bez strict pass a 1 potvrzený retrieval miss (`nsoud-qa-007`)
 - žádný důkaz pro potřebu production write, alias switch nebo full re-ingest nebyl nalezen v rámci tohoto tasku
+
+---
+
+## 2026-07-12 — Shared Grafana for NALUS and Eternal World
+
+Grafana na `http://localhost:3002` je společné lokální UI pro oba projekty. Prometheus
+storage zůstává striktně oddělený:
+
+| Projekt | Grafana folder | Datasource UID | Prometheus |
+|---------|----------------|----------------|------------|
+| NALUS | `NALUS` | `prometheus` | `http://localhost:9091` |
+| Eternal World | `Eternal World` | `eternal-world-prometheus` | `http://localhost:9090` |
+
+NALUS Prometheus nescrapuje ani neukládá Eternal World metriky. Shared Grafana používá
+druhý server-side datasource, který čte samostatný Eternal World Prometheus.
+
+### Source-of-truth dashboard mounts
+
+- NALUS dashboardy: `monitoring/grafana/dashboards` →
+  `/var/lib/grafana/dashboards/nalus` (read-only)
+- Eternal World dashboardy: sibling checkout `../eternal-world/monitoring/grafana/dashboards` →
+  `/var/lib/grafana/dashboards/eternal-world` (read-only)
+- Eternal World JSON se nekopíruje do NALUS; jeho source of truth zůstává v Eternal World repozitáři.
+
+### Konfigurace a override
+
+Lokální Docker Desktop defaulty jsou v `.env.example`:
+
+```text
+ETERNAL_WORLD_PROMETHEUS_URL=http://host.docker.internal:9090
+ETERNAL_WORLD_DASHBOARD_DIR=../eternal-world/monitoring/grafana/dashboards
+```
+
+Pro Linux/server nastav `ETERNAL_WORLD_PROMETHEUS_URL` na URL dosažitelnou zevnitř
+Grafana kontejneru. Container DNS jméno lze použít jen tehdy, když operátor oba projekty
+explicitně připojí ke sdílené síti s odpovídajícím aliasem. Pro jinou strukturu checkoutů
+nastav `ETERNAL_WORLD_DASHBOARD_DIR` na existující dashboard adresář. Bind mount
+má `create_host_path: false`, takže chybná cesta selže explicitně místo vytvoření prázdné složky.
+
+### Start a ověření
+
+```powershell
+docker compose config --quiet
+docker compose up -d --force-recreate grafana
+docker compose logs --tail=300 grafana
+docker compose exec grafana sh -c "find /etc/grafana/provisioning -maxdepth 4 -type f -print"
+docker compose exec grafana sh -c "find /var/lib/grafana/dashboards -maxdepth 4 -type f -print"
+Invoke-RestMethod "http://localhost:9091/-/ready"
+Invoke-RestMethod "http://localhost:9090/-/ready"
+```
+
+Dashboardy:
+
+- NALUS: `http://localhost:3002/d/nalus-legal-answer-eval`
+- Eternal World: `http://localhost:3002/d/eternal-world-fa-chat`
+
+### Troubleshooting a isolation rules
+
+- Z kontejneru ověř `http://prometheus:9090/-/ready` pro NALUS a hodnotu
+  `ETERNAL_WORLD_PROMETHEUS_URL` pro Eternal World.
+- Grafana datasource health musí projít samostatně pro UID `prometheus` a
+  `eternal-world-prometheus`.
+- Panel NALUS nesmí používat Eternal World UID a Eternal World panel nesmí používat
+  NALUS UID ani generický string `Prometheus`.
+- Neměň NALUS Prometheus scrape config kvůli Eternal World dashboardu.
+- Nespouštěj `docker compose down -v`; monitoring data ani volumes se při tomto workflow nemažou.
+
+Ověřený stav 2026-07-12: oba datasourcy mají health `OK`, oba dashboardy jsou ve správných
+složkách, datasource-proxy dotazy potvrzují projektovou izolaci a relevantní monitoring/
+validator test suite skončila `25 passed`.

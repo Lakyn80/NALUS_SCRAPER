@@ -96,10 +96,24 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+      - ETERNAL_WORLD_PROMETHEUS_URL=${ETERNAL_WORLD_PROMETHEUS_URL:-http://host.docker.internal:9090}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
       - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - type: bind
+        source: ./monitoring/grafana/dashboards
+        target: /var/lib/grafana/dashboards/nalus
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ETERNAL_WORLD_DASHBOARD_DIR:-../eternal-world/monitoring/grafana/dashboards}
+        target: /var/lib/grafana/dashboards/eternal-world
+        read_only: true
+        bind:
+          create_host_path: false
     depends_on:
       - prometheus
     restart: unless-stopped

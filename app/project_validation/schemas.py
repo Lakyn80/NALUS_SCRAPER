@@ -9,6 +9,7 @@ TriState = Literal["yes", "no", "unknown"]
 FindingSeverity = Literal["warning", "fail"]
 FileClassification = Literal[
     "source_code",
+    "infra_config",
     "tests",
     "docs",
     "project_progress",

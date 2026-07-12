@@ -155,7 +155,7 @@ def validate_task(
     for entry in entries:
         normalized_path = entry.path.replace("\\", "/")
         classification = classification_by_path.get(normalized_path, "unknown")
-        if classification not in {"source_code", "tests"}:
+        if classification not in {"source_code", "infra_config", "tests"}:
             continue
         if normalized_path in _SELF_VALIDATOR_SCAN_EXCLUDES:
             continue

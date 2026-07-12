@@ -282,3 +282,43 @@
   `nsoud-qa-003` remains at exported-snippet coverage `2/3 = 0.6667`, below the unchanged `>= 0.67` strict gate.
 - Next recommended task:
   Add and test deterministic evidence-window handling for gold chunks whose relevant doctrine lies beyond the exported snippet, without lowering the strict threshold or changing global retrieval scoring.
+
+## 2026-07-12 — Task: Shared Grafana — Add Eternal World to NALUS Grafana
+
+- Goal:
+  Use the existing Grafana on `http://localhost:3002` as one UI for NALUS and Eternal World while retaining two independent Prometheus instances and TSDBs.
+- Architecture:
+  Preserved NALUS datasource `Prometheus` / UID `prometheus` / internal URL `http://prometheus:9090` as the only default datasource.
+  Added `Eternal World Prometheus` / UID `eternal-world-prometheus`, with URL supplied through `ETERNAL_WORLD_PROMETHEUS_URL` and local Docker default `http://host.docker.internal:9090`.
+  NALUS Prometheus remains on host port `9091`; Eternal World Prometheus remains on `9090`.
+  Separated dashboard provider paths into `/var/lib/grafana/dashboards/nalus` and `/var/lib/grafana/dashboards/eternal-world` to prevent overlapping scans and duplicate UIDs.
+- Dashboard source-of-truth:
+  Eternal World dashboard files are mounted read-only from the sibling Eternal World repository. No dashboard JSON copy is maintained in NALUS.
+  Provider folders are `NALUS` and `Eternal World`.
+- Configuration:
+  Added environment overrides for the Eternal World Prometheus URL and dashboard directory.
+  Added `host.docker.internal:host-gateway` for portable local host routing where Docker supports `host-gateway`.
+  Bind mounts use `create_host_path: false`, so a missing sibling checkout fails explicitly.
+- Validator support:
+  Added an explicit `infra_config` classification for Compose, monitoring provisioning, and `.env.example` files.
+  Fixed `--allow-risk infra_or_dependency_change` so an explicitly authorized infrastructure task can pass without weakening Qdrant/model/retrieval safety rules.
+- Tests and validation:
+  `docker compose config --quiet` passed.
+  `python -m json.tool monitoring/grafana/dashboards/legal_answer_eval_dashboard.json` passed.
+  `python -m pytest tests/test_nalus_task_validator.py tests/observability/test_shared_grafana_provisioning.py tests/observability/test_eval_metrics_exporter.py -q` -> `25 passed` with the existing non-blocking `pytest-asyncio` warning.
+  Task validator in implementation mode returned `PASS` with zero findings after explicitly authorizing the requested Compose infrastructure change and the unchanged Redis context line in `.env.example`.
+  Shared provisioning tests verify datasource preservation, unique datasource UIDs/default, non-overlapping provider paths, read-only mounts, and the unchanged NALUS dashboard UID bindings.
+- Runtime smoke:
+  Recreated only `grafana`; Grafana `11.4.0` became healthy on `3002`.
+  Datasource health returned `OK` for both `prometheus` and `eternal-world-prometheus`.
+  NALUS dashboard loaded in folder `NALUS`; Eternal World dashboard loaded in folder `Eternal World` with UID `eternal-world-fa-chat`.
+  Grafana proxy isolation check returned NALUS `legal_answer_eval_gold` only through UID `prometheus`, and Eternal World `fa_chat_requests_total` only through UID `eternal-world-prometheus`.
+  Shared Grafana provisioning logs contained no blocking datasource, dashboard, duplicate UID, or permission error.
+- Behavior preserved:
+  NALUS application metrics, Prometheus scrape config, exporter, retrieval, BGE-M3, BM25, RRF, Qdrant, Redis, API behavior, and production aliases were not changed.
+  Eternal World application metrics and Prometheus storage were not changed.
+- Known limitations:
+  The local default relies on the host gateway. Linux/server deployments must override `ETERNAL_WORLD_PROMETHEUS_URL` with an address reachable from the Grafana container.
+  Shared Grafana currently remains owned by the NALUS Compose stack; a dedicated observability repository is deferred until more projects require integration.
+- Next recommended task:
+  Move shared Grafana into a dedicated observability-stack repository only when more projects need to be added.
