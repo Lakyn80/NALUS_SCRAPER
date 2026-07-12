@@ -1,0 +1,87 @@
+{
+  "task": "Document-gold evidence-window default policy",
+  "generated_date": "2026-07-12",
+  "policy": {
+    "configured_policy": "document_gold",
+    "scope": "offline no-LLM legal answer evaluation only",
+    "activates_when": [
+      "no_llm is true",
+      "gold is available",
+      "gold is document-level, not corpus-only",
+      "the retrieval anchor has valid same-document provenance and chunk_index"
+    ],
+    "skips_when": [
+      "policy is off",
+      "gold is corpus-only",
+      "gold is missing or source-pending",
+      "document gold id is missing",
+      "LLM mode is used without explicit evidence-window request",
+      "anchor provenance is missing or invalid"
+    ],
+    "runtime_scope_changed": false,
+    "retrieval_changed": false,
+    "threshold_changed": false,
+    "qdrant_modified": false,
+    "redis_used": false,
+    "llm_or_deepseek_called": false,
+    "grafana_queries_changed": false
+  },
+  "runs": {
+    "usoud_document_gold_default": {
+      "dataset": "artifacts/rag_eval/legal_qa/datasets/usoud_qa_v1.jsonl",
+      "retrieval_results": "artifacts/rag_eval/legal_qa/runs/usoud_gold_eval/retrieval_results.jsonl",
+      "evidence_sidecar": "storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite",
+      "gold": 10,
+      "direct_support_count": 7,
+      "partial_support_count": 3,
+      "corpus_only_count": 0,
+      "usable_support_rate_gold": 1.0,
+      "citation_available_rate_gold": 1.0,
+      "unsupported_answer_risk_count": 0,
+      "strict_direct_pass_rate_gold": 0.7,
+      "evidence_window_used_count": 10,
+      "evidence_window_failed_count": 0,
+      "evidence_window_default_activated_count": 10,
+      "evidence_window_corpus_only_skipped_count": 0,
+      "evidence_window_provenance_skipped_count": 0
+    },
+    "nsoud_document_gold_default": {
+      "dataset": "artifacts/rag_eval/legal_qa/datasets/nsoud_qa_v1.jsonl",
+      "retrieval_results": "artifacts/rag_eval/legal_qa/runs/nsoud_dataset_repaired/retrieval_results.jsonl",
+      "evidence_sidecar": "storage/rag/bm25/nalus_client_lf__bge_m3__rag_eval__nalus_client_longform_v1__63119240e1.provenance_repaired.sqlite",
+      "gold": 4,
+      "direct_support_count": 3,
+      "partial_support_count": 1,
+      "corpus_only_count": 0,
+      "usable_support_rate_gold": 1.0,
+      "citation_available_rate_gold": 1.0,
+      "unsupported_answer_risk_count": 0,
+      "strict_direct_pass_rate_gold": 0.75,
+      "evidence_window_used_count": 4,
+      "evidence_window_failed_count": 0,
+      "evidence_window_default_activated_count": 4,
+      "evidence_window_corpus_only_skipped_count": 0,
+      "evidence_window_provenance_skipped_count": 0
+    },
+    "mixed_document_gold_default": {
+      "dataset": "artifacts/rag_eval/legal_qa/datasets/mixed_qa_v1.jsonl",
+      "retrieval_results": "artifacts/rag_eval/legal_qa/runs/mixed_two_pass_baseline/retrieval_results.jsonl",
+      "evidence_sidecar": null,
+      "gold": 8,
+      "direct_support_count": 0,
+      "partial_support_count": 0,
+      "corpus_only_count": 8,
+      "usable_support_rate_gold": 1.0,
+      "citation_available_rate_gold": 0.0,
+      "corpus_routing_support_rate": 1.0,
+      "unsupported_answer_risk_count": 0,
+      "strict_direct_pass_rate_gold": 0.0,
+      "evidence_window_used_count": 0,
+      "evidence_window_failed_count": 0,
+      "evidence_window_default_activated_count": 0,
+      "evidence_window_corpus_only_skipped_count": 8,
+      "evidence_window_provenance_skipped_count": 0
+    }
+  },
+  "conclusion": "The scoped document_gold policy safely makes deterministic same-document evidence windows the default for offline no-LLM document-gold answer evaluation while preserving Mixed corpus-only routing and avoiding live runtime, retrieval, model, Redis, Qdrant, and LLM changes."
+}

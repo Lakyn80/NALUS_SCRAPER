@@ -5,7 +5,11 @@ import json
 import sqlite3
 from pathlib import Path
 
-from app.rag.eval.evidence_window import EvidenceWindowConfig, build_evidence_window
+from app.rag.eval.evidence_window import (
+    EvidenceWindowConfig,
+    EvidenceWindowPolicyConfig,
+    build_evidence_window,
+)
 from app.rag.eval.legal_answer_eval import (
     aggregate_answer_metrics,
     evaluate_answer_item,
@@ -313,6 +317,159 @@ def test_evidence_window_disabled_preserves_historical_evaluator_behavior(tmp_pa
     assert disabled.support_level == baseline.support_level
     assert disabled.support_keyword_coverage == baseline.support_keyword_coverage
     assert disabled.evidence_window_enabled is False
+
+
+def test_document_gold_no_llm_policy_activates_without_explicit_flag(tmp_path: Path) -> None:
+    sidecar = _sidecar_with_document(tmp_path / "sidecar.sqlite")
+    item = _item()
+    registry = load_gold_registry_from_dataset([item])
+    results = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id={item.id: {"hits": [_hit(snippet="alpha")]}},
+        citation_required=True,
+        evidence_window_config=EvidenceWindowConfig(enabled=False),
+        evidence_window_policy=EvidenceWindowPolicyConfig(policy="document_gold", no_llm=True),
+        evidence_sidecar_path=sidecar,
+    )
+    metrics = aggregate_answer_metrics(results)
+    result = results[0]
+    assert result.evidence_window_enabled is True
+    assert result.evidence_window_configured_policy == "document_gold"
+    assert result.evidence_window_effective_policy == "document_gold"
+    assert result.evidence_window_activation_reason == "no_llm_document_gold_default"
+    assert result.evidence_window_no_llm_default_activation is True
+    assert result.evidence_window_document_gold_present is True
+    assert result.evidence_window_chunk_ids == ["10", "11", "12"]
+    assert metrics.evidence_window_used_count == 1
+    assert metrics.evidence_window_default_activated_count == 1
+    assert metrics.evidence_window_explicit_activated_count == 0
+
+
+def test_document_gold_policy_skips_corpus_only_without_failure(tmp_path: Path) -> None:
+    item = LegalQaItem(
+        id="mixed-qa-policy",
+        corpus="mixed",
+        question="Porovnání korpusů?",
+        expected_answer_points=["Smíšená otázka ověřuje jen směrování mezi korpusy."],
+        expected_source_constraints=SourceConstraints(),
+        expected_keywords=["ústavní", "nejvyšší"],
+        forbidden_answer_patterns=[],
+        difficulty="medium",
+        legal_topic="mixed",
+        evaluation_type="retrieval",
+        source_pending=False,
+        expected_target_corpus="both",
+    )
+    registry = load_gold_registry_from_dataset([item])
+    results = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id={
+            item.id: {
+                "hits": [_hit(snippet="document text must not become a mixed citation")],
+                "corpus_hit_at_3": True,
+                "corpus_hit_at_5": True,
+            }
+        },
+        citation_required=True,
+        evidence_window_config=EvidenceWindowConfig(enabled=False),
+        evidence_window_policy=EvidenceWindowPolicyConfig(policy="document_gold", no_llm=True),
+        evidence_sidecar_path=tmp_path / "unused.sqlite",
+    )
+    metrics = aggregate_answer_metrics(results)
+    result = results[0]
+    assert result.support_level == "corpus_only"
+    assert result.citation_available is False
+    assert result.evidence_window_enabled is False
+    assert result.evidence_window_skip_reason == "corpus_only_gold"
+    assert metrics.corpus_only_count == 1
+    assert metrics.corpus_routing_support_rate == 1.0
+    assert metrics.citation_available_rate_gold == 0.0
+    assert metrics.evidence_window_used_count == 0
+    assert metrics.evidence_window_failed_count == 0
+    assert metrics.evidence_window_corpus_only_skipped_count == 1
+
+
+def test_document_gold_policy_explicit_off_disables_evidence_windows(tmp_path: Path) -> None:
+    sidecar = _sidecar_with_document(tmp_path / "sidecar.sqlite")
+    item = _item()
+    registry = load_gold_registry_from_dataset([item])
+    result = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id={item.id: {"hits": [_hit(snippet="alpha")]}},
+        citation_required=True,
+        evidence_window_config=EvidenceWindowConfig(enabled=False),
+        evidence_window_policy=EvidenceWindowPolicyConfig(policy="off", no_llm=True),
+        evidence_sidecar_path=sidecar,
+    )[0]
+    assert result.evidence_window_enabled is False
+    assert result.evidence_window_skip_reason == "policy_off"
+    assert result.evidence_window_chunk_ids == []
+
+
+def test_explicit_all_policy_works_outside_no_llm_default(tmp_path: Path) -> None:
+    sidecar = _sidecar_with_document(tmp_path / "sidecar.sqlite")
+    item = _item()
+    registry = load_gold_registry_from_dataset([item])
+    result = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id={item.id: {"hits": [_hit(snippet="alpha")]}},
+        citation_required=True,
+        evidence_window_config=EvidenceWindowConfig(enabled=False),
+        evidence_window_policy=EvidenceWindowPolicyConfig(
+            policy="explicit_all",
+            no_llm=False,
+            explicit_request=True,
+        ),
+        evidence_sidecar_path=sidecar,
+    )[0]
+    assert result.evidence_window_enabled is True
+    assert result.evidence_window_effective_policy == "explicit_all"
+    assert result.evidence_window_explicit_activation is True
+
+
+def test_document_gold_policy_does_not_activate_in_llm_mode(tmp_path: Path) -> None:
+    sidecar = _sidecar_with_document(tmp_path / "sidecar.sqlite")
+    item = _item()
+    registry = load_gold_registry_from_dataset([item])
+    result = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id={item.id: {"hits": [_hit(snippet="alpha")]}},
+        citation_required=True,
+        evidence_window_config=EvidenceWindowConfig(enabled=False),
+        evidence_window_policy=EvidenceWindowPolicyConfig(policy="document_gold", no_llm=False),
+        evidence_sidecar_path=sidecar,
+    )[0]
+    assert result.evidence_window_enabled is False
+    assert result.evidence_window_skip_reason == "llm_mode"
+    assert result.evidence_window_no_llm_default_activation is False
+
+
+def test_document_gold_policy_missing_provenance_fails_safely(tmp_path: Path) -> None:
+    item = _item()
+    registry = load_gold_registry_from_dataset([item])
+    invalid_hit = _hit(snippet="alpha beta gamma")
+    invalid_hit["metadata"].pop("chunk_index")
+    results = run_answer_eval(
+        items=[item],
+        registry=registry,
+        retrieval_by_id={item.id: {"hits": [invalid_hit]}},
+        citation_required=True,
+        evidence_window_config=EvidenceWindowConfig(enabled=False),
+        evidence_window_policy=EvidenceWindowPolicyConfig(policy="document_gold", no_llm=True),
+    )
+    metrics = aggregate_answer_metrics(results)
+    result = results[0]
+    assert result.evidence_window_enabled is True
+    assert result.evidence_window_provenance_valid is False
+    assert result.evidence_window_skip_reason == "missing_or_invalid_provenance"
+    assert result.evidence_window_chunk_ids == []
+    assert metrics.evidence_window_failed_count == 1
+    assert metrics.evidence_window_provenance_skipped_count == 1
 
 
 def test_keyword_coverage_can_use_combined_evidence_text(tmp_path: Path) -> None:

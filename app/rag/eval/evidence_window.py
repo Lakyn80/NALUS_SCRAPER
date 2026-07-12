@@ -11,6 +11,17 @@ from typing import Any, Protocol
 from app.rag.eval.legal_qa_benchmark import normalize_for_match
 from app.rag.retrieval.errors import RetrievalConfigurationError
 
+EVIDENCE_WINDOW_POLICY_OFF = "off"
+EVIDENCE_WINDOW_POLICY_DOCUMENT_GOLD = "document_gold"
+EVIDENCE_WINDOW_POLICY_EXPLICIT_ALL = "explicit_all"
+EVIDENCE_WINDOW_POLICY_VALUES = frozenset(
+    {
+        EVIDENCE_WINDOW_POLICY_OFF,
+        EVIDENCE_WINDOW_POLICY_DOCUMENT_GOLD,
+        EVIDENCE_WINDOW_POLICY_EXPLICIT_ALL,
+    }
+)
+
 
 @dataclass(frozen=True)
 class EvidenceWindowConfig:
@@ -30,6 +41,111 @@ class EvidenceWindowConfig:
             raise RetrievalConfigurationError("Evidence window max_chunks must be >= 1.")
         if self.max_characters < 1:
             raise RetrievalConfigurationError("Evidence window max_characters must be >= 1.")
+
+
+@dataclass(frozen=True)
+class EvidenceWindowPolicyConfig:
+    policy: str = EVIDENCE_WINDOW_POLICY_OFF
+    no_llm: bool = False
+    explicit_request: bool = False
+
+    def validate(self) -> None:
+        if self.policy not in EVIDENCE_WINDOW_POLICY_VALUES:
+            allowed = ", ".join(sorted(EVIDENCE_WINDOW_POLICY_VALUES))
+            raise RetrievalConfigurationError(
+                f"Unknown evidence-window policy {self.policy!r}; expected one of: {allowed}."
+            )
+
+
+@dataclass(frozen=True)
+class EvidenceWindowPolicyDecision:
+    configured_policy: str
+    effective_policy: str
+    enabled: bool
+    activation_reason: str | None = None
+    skip_reason: str | None = None
+    document_gold_present: bool = False
+    no_llm_default_activation: bool = False
+    explicit_activation: bool = False
+
+
+def resolve_evidence_window_policy(
+    *,
+    policy_config: EvidenceWindowPolicyConfig,
+    gold_available: bool,
+    corpus_only: bool,
+    expected_document_id: str | None,
+) -> EvidenceWindowPolicyDecision:
+    policy_config.validate()
+    document_gold_present = gold_available and not corpus_only and bool(expected_document_id)
+
+    if policy_config.policy == EVIDENCE_WINDOW_POLICY_OFF:
+        return EvidenceWindowPolicyDecision(
+            configured_policy=policy_config.policy,
+            effective_policy=EVIDENCE_WINDOW_POLICY_OFF,
+            enabled=False,
+            skip_reason="policy_off",
+            document_gold_present=document_gold_present,
+        )
+
+    if corpus_only:
+        return EvidenceWindowPolicyDecision(
+            configured_policy=policy_config.policy,
+            effective_policy=EVIDENCE_WINDOW_POLICY_OFF,
+            enabled=False,
+            skip_reason="corpus_only_gold",
+            document_gold_present=False,
+            explicit_activation=policy_config.policy == EVIDENCE_WINDOW_POLICY_EXPLICIT_ALL,
+        )
+
+    if not gold_available:
+        return EvidenceWindowPolicyDecision(
+            configured_policy=policy_config.policy,
+            effective_policy=EVIDENCE_WINDOW_POLICY_OFF,
+            enabled=False,
+            skip_reason="missing_gold",
+            document_gold_present=False,
+            explicit_activation=policy_config.policy == EVIDENCE_WINDOW_POLICY_EXPLICIT_ALL,
+        )
+
+    if not expected_document_id:
+        return EvidenceWindowPolicyDecision(
+            configured_policy=policy_config.policy,
+            effective_policy=EVIDENCE_WINDOW_POLICY_OFF,
+            enabled=False,
+            skip_reason="missing_document_gold",
+            document_gold_present=False,
+            explicit_activation=policy_config.policy == EVIDENCE_WINDOW_POLICY_EXPLICIT_ALL,
+        )
+
+    if policy_config.policy == EVIDENCE_WINDOW_POLICY_EXPLICIT_ALL:
+        return EvidenceWindowPolicyDecision(
+            configured_policy=policy_config.policy,
+            effective_policy=EVIDENCE_WINDOW_POLICY_EXPLICIT_ALL,
+            enabled=True,
+            activation_reason="explicit_evidence_window",
+            document_gold_present=True,
+            explicit_activation=True,
+        )
+
+    if not policy_config.no_llm:
+        return EvidenceWindowPolicyDecision(
+            configured_policy=policy_config.policy,
+            effective_policy=EVIDENCE_WINDOW_POLICY_OFF,
+            enabled=False,
+            skip_reason="llm_mode",
+            document_gold_present=True,
+        )
+
+    return EvidenceWindowPolicyDecision(
+        configured_policy=policy_config.policy,
+        effective_policy=EVIDENCE_WINDOW_POLICY_DOCUMENT_GOLD,
+        enabled=True,
+        activation_reason="no_llm_document_gold_default",
+        document_gold_present=True,
+        no_llm_default_activation=not policy_config.explicit_request,
+        explicit_activation=policy_config.explicit_request,
+    )
 
 
 @dataclass(frozen=True)

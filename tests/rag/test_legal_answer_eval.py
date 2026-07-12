@@ -298,6 +298,46 @@ def test_runner_main_no_llm(tmp_path: Path) -> None:
     assert (output / "metric_failure_categories.json").exists()
 
 
+def test_run_legal_answer_eval_rejects_conflicting_evidence_window_flags() -> None:
+    from scripts.run_legal_answer_eval import build_evidence_window_policy, parse_args
+
+    args = parse_args(
+        [
+            "--dataset",
+            "dataset.jsonl",
+            "--retrieval-results",
+            "retrieval.jsonl",
+            "--output-dir",
+            "out",
+            "--no-llm",
+            "--evidence-window",
+            "--no-evidence-window",
+        ]
+    )
+    with pytest.raises(RetrievalConfigurationError, match="Conflicting flags"):
+        build_evidence_window_policy(args)
+
+
+def test_run_legal_answer_eval_default_policy_is_document_gold_no_llm() -> None:
+    from scripts.run_legal_answer_eval import build_evidence_window_policy, parse_args
+
+    args = parse_args(
+        [
+            "--dataset",
+            "dataset.jsonl",
+            "--retrieval-results",
+            "retrieval.jsonl",
+            "--output-dir",
+            "out",
+            "--no-llm",
+        ]
+    )
+    policy = build_evidence_window_policy(args)
+    assert policy.policy == "document_gold"
+    assert policy.no_llm is True
+    assert policy.explicit_request is False
+
+
 def test_validate_gold_review_path(tmp_path: Path) -> None:
     path = tmp_path / "review.md"
     path.write_text("# Gold Source Review\n", encoding="utf-8")

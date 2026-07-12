@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.rag.eval.legal_answer_eval import (  # noqa: E402
     EvidenceWindowConfig,
+    EvidenceWindowPolicyConfig,
     aggregate_answer_metrics,
     build_nsoud_qa_007_diagnostic,
     build_failed_case_report_entries,
@@ -74,6 +75,13 @@ def _load_run_context(run_dir: Path) -> dict[str, Any]:
         require_same_document=bool(evidence_window_payload.get("require_same_document", True)),
     )
     evidence_window_config.validate()
+    evidence_window_policy_payload = payload.get("evidence_window_policy") or {}
+    evidence_window_policy = EvidenceWindowPolicyConfig(
+        policy=str(evidence_window_policy_payload.get("policy") or "off"),
+        no_llm=bool(evidence_window_policy_payload.get("no_llm", payload.get("no_llm", False))),
+        explicit_request=bool(evidence_window_policy_payload.get("explicit_request", False)),
+    )
+    evidence_window_policy.validate()
     evidence_sidecar_value = payload.get("evidence_sidecar")
     evidence_sidecar_path = (
         Path(str(evidence_sidecar_value)).resolve()
@@ -101,6 +109,7 @@ def _load_run_context(run_dir: Path) -> dict[str, Any]:
         "gold_review_path": gold_review_path,
         "citation_required": citation_required,
         "evidence_window_config": evidence_window_config,
+        "evidence_window_policy": evidence_window_policy,
         "evidence_sidecar_path": evidence_sidecar_path,
     }
 
@@ -136,6 +145,7 @@ def _build_run_diagnostic(run_dir: Path) -> dict[str, Any]:
         retrieval_by_id=retrieval_by_id,
         citation_required=context["citation_required"],
         evidence_window_config=context["evidence_window_config"],
+        evidence_window_policy=context["evidence_window_policy"],
         evidence_sidecar_path=context["evidence_sidecar_path"],
     )
     metrics = aggregate_answer_metrics(results)
@@ -186,6 +196,7 @@ def _build_run_diagnostic(run_dir: Path) -> dict[str, Any]:
         "gold_review_path": str(context["gold_review_path"]),
         "citation_required": context["citation_required"],
         "evidence_window": context["evidence_window_config"].__dict__,
+        "evidence_window_policy": context["evidence_window_policy"].__dict__,
         "evidence_sidecar_path": str(context["evidence_sidecar_path"])
         if context["evidence_sidecar_path"]
         else None,

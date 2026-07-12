@@ -6,15 +6,20 @@ import json
 import re
 import unicodedata
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from app.rag.eval.evidence_window import (
+    EVIDENCE_WINDOW_POLICY_EXPLICIT_ALL,
+    EVIDENCE_WINDOW_POLICY_OFF,
     EvidenceWindow,
     EvidenceWindowConfig,
+    EvidenceWindowPolicyConfig,
+    EvidenceWindowPolicyDecision,
     build_evidence_window,
+    resolve_evidence_window_policy,
 )
 from app.rag.eval.legal_qa_benchmark import (
     LegalQaItem,
@@ -85,6 +90,13 @@ class AnswerEvalResult:
     evidence_window_failure_reason: str | None = None
     evidence_window_construction_reason: str | None = None
     evidence_window_missing_neighbors: list[int] = field(default_factory=list)
+    evidence_window_configured_policy: str | None = None
+    evidence_window_effective_policy: str | None = None
+    evidence_window_activation_reason: str | None = None
+    evidence_window_skip_reason: str | None = None
+    evidence_window_document_gold_present: bool | None = None
+    evidence_window_no_llm_default_activation: bool = False
+    evidence_window_explicit_activation: bool = False
     original_snippet_length: int | None = None
     combined_evidence_length: int | None = None
 
@@ -120,6 +132,10 @@ class AnswerEvalMetrics:
     evidence_window_failed_count: int = 0
     evidence_window_truncated_count: int = 0
     same_document_neighbor_count: int = 0
+    evidence_window_default_activated_count: int = 0
+    evidence_window_explicit_activated_count: int = 0
+    evidence_window_corpus_only_skipped_count: int = 0
+    evidence_window_provenance_skipped_count: int = 0
 
     @property
     def total_questions(self) -> int:
@@ -210,6 +226,18 @@ def build_summary_json_payload(
         "evidence_window_failed_count": metrics.evidence_window_failed_count,
         "evidence_window_truncated_count": metrics.evidence_window_truncated_count,
         "same_document_neighbor_count": metrics.same_document_neighbor_count,
+        "evidence_window_default_activated_count": (
+            metrics.evidence_window_default_activated_count
+        ),
+        "evidence_window_explicit_activated_count": (
+            metrics.evidence_window_explicit_activated_count
+        ),
+        "evidence_window_corpus_only_skipped_count": (
+            metrics.evidence_window_corpus_only_skipped_count
+        ),
+        "evidence_window_provenance_skipped_count": (
+            metrics.evidence_window_provenance_skipped_count
+        ),
     }
 
 
@@ -447,18 +475,77 @@ def _evidence_text_by_chunk_id(window: EvidenceWindow) -> dict[str, str]:
     }
 
 
+def _manual_evidence_window_policy_decision(
+    *,
+    window_config: EvidenceWindowConfig,
+    gold: GoldRegistryEntry,
+) -> EvidenceWindowPolicyDecision:
+    enabled = window_config.enabled
+    configured_policy = (
+        EVIDENCE_WINDOW_POLICY_EXPLICIT_ALL if enabled else EVIDENCE_WINDOW_POLICY_OFF
+    )
+    return EvidenceWindowPolicyDecision(
+        configured_policy=configured_policy,
+        effective_policy=configured_policy,
+        enabled=enabled,
+        activation_reason="explicit_evidence_window" if enabled else None,
+        skip_reason=None if enabled else "policy_off",
+        document_gold_present=gold.gold_available
+        and not gold.corpus_only
+        and bool(gold.expected_ecli),
+        explicit_activation=enabled,
+    )
+
+
+def _default_output_evidence_window_policy(
+    *,
+    no_llm: bool,
+    evidence_window_config: EvidenceWindowConfig | None,
+    evidence_window_policy: EvidenceWindowPolicyConfig | None,
+) -> EvidenceWindowPolicyConfig:
+    if evidence_window_policy is not None:
+        evidence_window_policy.validate()
+        return evidence_window_policy
+    enabled = bool(evidence_window_config and evidence_window_config.enabled)
+    return EvidenceWindowPolicyConfig(
+        policy=EVIDENCE_WINDOW_POLICY_EXPLICIT_ALL if enabled else EVIDENCE_WINDOW_POLICY_OFF,
+        no_llm=no_llm,
+        explicit_request=enabled,
+    )
+
+
 def _evidence_window_result_fields(
     *,
     window_config: EvidenceWindowConfig,
     evidence_window: EvidenceWindow | None,
     gold_hit: dict[str, Any] | None,
+    policy_decision: EvidenceWindowPolicyDecision,
 ) -> dict[str, Any]:
     original_snippet = str(gold_hit.get("text_snippet") or "") if gold_hit else ""
+    skip_reason = policy_decision.skip_reason
+    if (
+        skip_reason is None
+        and evidence_window is not None
+        and evidence_window.provenance_valid is False
+    ):
+        skip_reason = "missing_or_invalid_provenance"
+    policy_fields = {
+        "evidence_window_configured_policy": policy_decision.configured_policy,
+        "evidence_window_effective_policy": policy_decision.effective_policy,
+        "evidence_window_activation_reason": policy_decision.activation_reason,
+        "evidence_window_skip_reason": skip_reason,
+        "evidence_window_document_gold_present": policy_decision.document_gold_present,
+        "evidence_window_no_llm_default_activation": (
+            policy_decision.no_llm_default_activation
+        ),
+        "evidence_window_explicit_activation": policy_decision.explicit_activation,
+    }
     if not window_config.enabled or evidence_window is None:
         return {
             "evidence_window_enabled": window_config.enabled,
             "original_snippet_length": len(original_snippet) if gold_hit else None,
             "combined_evidence_length": len(original_snippet) if gold_hit else None,
+            **policy_fields,
         }
     return {
         "evidence_window_enabled": True,
@@ -474,6 +561,7 @@ def _evidence_window_result_fields(
         "evidence_window_missing_neighbors": list(evidence_window.missing_neighbors),
         "original_snippet_length": len(original_snippet) if gold_hit else None,
         "combined_evidence_length": len(evidence_window.combined_text),
+        **policy_fields,
     }
 
 
@@ -484,10 +572,23 @@ def evaluate_answer_item(
     retrieval: dict[str, Any],
     citation_required: bool,
     evidence_window_config: EvidenceWindowConfig | None = None,
+    evidence_window_policy: EvidenceWindowPolicyConfig | None = None,
     evidence_sidecar_path: Path | None = None,
 ) -> AnswerEvalResult:
     hits = list(retrieval.get("hits") or [])
     window_config = evidence_window_config or EvidenceWindowConfig(enabled=False)
+    policy_decision = _manual_evidence_window_policy_decision(
+        window_config=window_config,
+        gold=gold,
+    )
+    if evidence_window_policy is not None:
+        policy_decision = resolve_evidence_window_policy(
+            policy_config=evidence_window_policy,
+            gold_available=gold.gold_available and not gold.source_pending,
+            corpus_only=gold.corpus_only,
+            expected_document_id=gold.expected_ecli,
+        )
+        window_config = replace(window_config, enabled=policy_decision.enabled)
 
     if gold.source_pending or not gold.gold_available:
         return AnswerEvalResult(
@@ -510,8 +611,12 @@ def evaluate_answer_item(
                 if gold.invalid_gold_annotation
                 else "source_pending or no gold annotation"
             ),
-            evidence_window_enabled=window_config.enabled,
-            evidence_window_provenance_valid=None if window_config.enabled else None,
+            **_evidence_window_result_fields(
+                window_config=window_config,
+                evidence_window=None,
+                gold_hit=None,
+                policy_decision=policy_decision,
+            ),
         )
 
     if gold.corpus_only:
@@ -590,6 +695,7 @@ def evaluate_answer_item(
             window_config=window_config,
             evidence_window=evidence_window if not gold.corpus_only else None,
             gold_hit=gold_hit,
+            policy_decision=policy_decision,
         ),
     )
 
@@ -602,6 +708,7 @@ def run_answer_eval(
     citation_required: bool,
     limit: int | None = None,
     evidence_window_config: EvidenceWindowConfig | None = None,
+    evidence_window_policy: EvidenceWindowPolicyConfig | None = None,
     evidence_sidecar_path: Path | None = None,
 ) -> list[AnswerEvalResult]:
     results: list[AnswerEvalResult] = []
@@ -617,6 +724,7 @@ def run_answer_eval(
                 retrieval=retrieval_by_id[item.id],
                 citation_required=citation_required,
                 evidence_window_config=evidence_window_config,
+                evidence_window_policy=evidence_window_policy,
                 evidence_sidecar_path=evidence_sidecar_path,
             )
         )
@@ -672,6 +780,28 @@ def aggregate_answer_metrics(results: list[AnswerEvalResult]) -> AnswerEvalMetri
         for result in evidence_window_results
         if result.evidence_window_provenance_valid is True
     )
+    evidence_window_default_activated_count = sum(
+        1
+        for result in gold_results
+        if result.evidence_window_no_llm_default_activation
+        and result.evidence_window_enabled
+    )
+    evidence_window_explicit_activated_count = sum(
+        1
+        for result in gold_results
+        if result.evidence_window_explicit_activation and result.evidence_window_enabled
+    )
+    evidence_window_corpus_only_skipped_count = sum(
+        1
+        for result in gold_results
+        if result.evidence_window_skip_reason == "corpus_only_gold"
+    )
+    evidence_window_provenance_skipped_count = sum(
+        1
+        for result in gold_results
+        if result.evidence_window_skip_reason == "missing_or_invalid_provenance"
+        or result.evidence_window_provenance_valid is False
+    )
 
     strict_direct_pass_rate_all = direct_support_count / total
     strict_direct_pass_rate_gold = direct_support_count / gold_count if gold_count else 0.0
@@ -715,6 +845,10 @@ def aggregate_answer_metrics(results: list[AnswerEvalResult]) -> AnswerEvalMetri
         evidence_window_failed_count=evidence_window_failed_count,
         evidence_window_truncated_count=evidence_window_truncated_count,
         same_document_neighbor_count=same_document_neighbor_count,
+        evidence_window_default_activated_count=evidence_window_default_activated_count,
+        evidence_window_explicit_activated_count=evidence_window_explicit_activated_count,
+        evidence_window_corpus_only_skipped_count=evidence_window_corpus_only_skipped_count,
+        evidence_window_provenance_skipped_count=evidence_window_provenance_skipped_count,
     )
 
 
@@ -1222,10 +1356,16 @@ def write_answer_eval_outputs(
     citation_required: bool,
     corpus: str | None = None,
     evidence_window_config: EvidenceWindowConfig | None = None,
+    evidence_window_policy: EvidenceWindowPolicyConfig | None = None,
     evidence_sidecar_path: Path | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    output_policy = _default_output_evidence_window_policy(
+        no_llm=no_llm,
+        evidence_window_config=evidence_window_config,
+        evidence_window_policy=evidence_window_policy,
+    )
 
     results_path = output_dir / "answer_eval_results.jsonl"
     with results_path.open("w", encoding="utf-8") as handle:
@@ -1243,6 +1383,7 @@ def write_answer_eval_outputs(
         "evidence_window": asdict(evidence_window_config)
         if evidence_window_config is not None
         else asdict(EvidenceWindowConfig(enabled=False)),
+        "evidence_window_policy": asdict(output_policy),
         "evidence_sidecar": str(evidence_sidecar_path) if evidence_sidecar_path else None,
         **asdict(metrics),
     }
@@ -1256,6 +1397,7 @@ def write_answer_eval_outputs(
         for result in results
         if result.answer_eval_status in {"gap", "needs_review"}
     ]
+    evidence_window_active = any(result.evidence_window_enabled for result in results)
     failure_lines = [
         "# Answer eval failures",
         "",
@@ -1285,7 +1427,8 @@ def write_answer_eval_outputs(
         f"- Gold review: `{gold_review_path}`",
         f"- Mode: deterministic no-LLM",
         f"- Citation required: {citation_required}",
-        f"- Evidence window enabled: {bool(evidence_window_config and evidence_window_config.enabled)}",
+        f"- Evidence window active in results: {evidence_window_active}",
+        f"- Evidence window policy: {output_policy.policy}",
         "",
         "## Interpretation",
         "",
@@ -1331,6 +1474,10 @@ def write_answer_eval_outputs(
         f"- evidence_window_failed_count: {metrics.evidence_window_failed_count}",
         f"- evidence_window_truncated_count: {metrics.evidence_window_truncated_count}",
         f"- same_document_neighbor_count: {metrics.same_document_neighbor_count}",
+        f"- evidence_window_default_activated_count: {metrics.evidence_window_default_activated_count}",
+        f"- evidence_window_explicit_activated_count: {metrics.evidence_window_explicit_activated_count}",
+        f"- evidence_window_corpus_only_skipped_count: {metrics.evidence_window_corpus_only_skipped_count}",
+        f"- evidence_window_provenance_skipped_count: {metrics.evidence_window_provenance_skipped_count}",
         "",
     ]
     (output_dir / "summary.md").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")

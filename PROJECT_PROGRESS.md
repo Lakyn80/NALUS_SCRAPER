@@ -411,3 +411,43 @@
   This validates offline no-LLM answer-eval artifacts only. It does not change or validate live generation behavior.
 - Next recommended task:
   Prepare a separate default-policy task that enables evidence windows only for document-gold no-LLM evaluation, with corpus-only skip behavior explicitly documented and tested.
+
+## 2026-07-12 23:32 Europe/Moscow — Task: Document-gold evidence-window default policy
+
+- Goal:
+  Make deterministic same-document evidence windows the default only for offline no-LLM document-gold legal answer evaluation, while keeping corpus-only routing, live runtime retrieval, LLM generation, retrieval benchmarks, model behavior, Qdrant, Redis, scoring, thresholds, and Grafana queries unchanged.
+- What changed:
+  Added an explicit typed evidence-window policy layer in `app/rag/eval/evidence_window.py` with `off`, `document_gold`, and `explicit_all` behavior.
+  Updated `app/rag/eval/legal_answer_eval.py` so policy decisions are recorded per result with configured/effective policy, activation reason, skip reason, document-gold presence, default activation, explicit activation, and aggregate counters.
+  Updated `scripts/run_legal_answer_eval.py` so the no-LLM CLI defaults to `document_gold`, preserves existing `--evidence-window`, adds `--evidence-window-policy off|document-gold|all`, adds `--no-evidence-window`, and rejects conflicting combinations.
+  Updated `scripts/generate_legal_answer_eval_diagnostics.py` so diagnostics replay the recorded evidence-window policy.
+  Added regression coverage for default activation, corpus-only skip, explicit off, explicit enable, LLM-mode skip, missing provenance safety, CLI conflicts, default policy mapping, counters, threshold preservation, and retrieval immutability.
+  Created local candidate output directories `usoud_document_gold_default`, `nsoud_document_gold_default`, and `mixed_document_gold_default`.
+  Added `artifacts/evaluation_quality/document_gold_evidence_window_policy_20260712.md` and `.json`.
+- Policy behavior:
+  `document_gold` activates only when `no_llm=true`, gold is available, the item is not corpus-only, and a document gold id is present. Invalid provenance still fails safely at construction time as `missing_or_invalid_provenance`; no neighboring chunks are guessed.
+  Corpus-only gold is skipped with `corpus_only_gold`, citation remains unavailable by design, and the skip is not counted as an evidence-window failure.
+  LLM-mode evaluation does not silently activate the document-gold default; explicit policy is required.
+- Candidate runs:
+  ÚS `usoud_document_gold_default`: `gold=10`, `direct=7`, `partial=3`, `usable_support_rate_gold=1.0`, `citation_available_rate_gold=1.0`, `unsupported_answer_risk_count=0`, `strict_direct_pass_rate_gold=0.7`, `evidence_window_used_count=10`, `evidence_window_failed_count=0`, `evidence_window_default_activated_count=10`.
+  NSoud `nsoud_document_gold_default`: `gold=4`, `direct=3`, `partial=1`, `usable_support_rate_gold=1.0`, `citation_available_rate_gold=1.0`, `unsupported_answer_risk_count=0`, `strict_direct_pass_rate_gold=0.75`, `evidence_window_used_count=4`, `evidence_window_failed_count=0`, `evidence_window_default_activated_count=4`.
+  Mixed `mixed_document_gold_default`: `gold=8`, `corpus_only_count=8`, `usable_support_rate_gold=1.0`, `citation_available_rate_gold=0.0`, `corpus_routing_support_rate=1.0`, `unsupported_answer_risk_count=0`, `evidence_window_used_count=0`, `evidence_window_failed_count=0`, `evidence_window_corpus_only_skipped_count=8`.
+- Tests run:
+  `python -m pytest tests/rag/test_legal_evidence_window.py -q` -> `28 passed`.
+  `python -m pytest tests/rag/test_legal_answer_eval.py -q` -> `24 passed`.
+  `python -m pytest tests/rag/test_legal_answer_eval_diagnostics.py -q` -> `2 passed`.
+  `python -m pytest tests/observability/test_eval_metrics_exporter.py -q` -> `10 passed`.
+  `python -m pytest tests/test_nalus_task_validator.py -q` -> `11 passed`.
+  `python -m pytest tests/rag/test_legal_evidence_window.py tests/rag/test_legal_answer_eval.py tests/rag/test_legal_answer_eval_diagnostics.py tests/observability/test_eval_metrics_exporter.py tests/test_nalus_task_validator.py -q` -> `75 passed`.
+  Repeated `pytest-asyncio` loop-scope deprecation warning is non-blocking and unrelated.
+- Monitoring verification:
+  Recreated only `nalus-eval-metrics-exporter`. `http://localhost:9108/metrics` exposed all three new run names through the existing `legal_answer_eval_*` bounded metrics: `usoud_document_gold_default`, `nsoud_document_gold_default`, and `mixed_document_gold_default`.
+- Validator:
+  Initial exact validator run returned `WARN` only because the three requested candidate run output directories were new unknown dirty files.
+  Follow-up validator run with explicit `--allow-candidate-run usoud_document_gold_default --allow-candidate-run nsoud_document_gold_default --allow-candidate-run mixed_document_gold_default` returned `PASS` with zero findings.
+- Behavior preserved:
+  Retrieval rank/order/scores, top_k, strict thresholds, dense scoring, BM25 scoring, RRF, BGE-M3, embedding dimensions, Qdrant collections/aliases/data, Redis/cache behavior, Grafana queries, and LLM/DeepSeek behavior were not changed.
+- Known limitations:
+  The new policy affects offline deterministic no-LLM answer evaluation only. Candidate run directories are generated artifacts for local review and are not part of the application runtime.
+- Next recommended task:
+  Use the new `document_gold` policy for future offline no-LLM legal answer-eval runs, and keep live generation unchanged until a separate runtime evidence policy is explicitly designed and reviewed.

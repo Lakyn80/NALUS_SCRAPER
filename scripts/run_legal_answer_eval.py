@@ -12,6 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.rag.eval.legal_answer_eval import (  # noqa: E402
     EvidenceWindowConfig,
+    EvidenceWindowPolicyConfig,
     aggregate_answer_metrics,
     load_gold_registry_from_dataset,
     load_retrieval_results,
@@ -66,6 +67,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--require-citations", action="store_true")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--evidence-window", action="store_true")
+    parser.add_argument(
+        "--evidence-window-policy",
+        choices=("off", "document-gold", "all"),
+        default="document-gold",
+        help=(
+            "Evidence-window activation policy. The default enables windows only for "
+            "document-gold no-LLM eval items."
+        ),
+    )
+    parser.add_argument("--no-evidence-window", action="store_true")
     parser.add_argument("--evidence-neighbors-before", type=int, default=1)
     parser.add_argument("--evidence-neighbors-after", type=int, default=1)
     parser.add_argument("--evidence-max-chunks", type=int, default=3)
@@ -83,6 +94,40 @@ def infer_corpus_key(dataset_path: Path) -> str:
     if "mixed" in name:
         return "mixed"
     raise RetrievalConfigurationError(f"Cannot infer corpus from dataset name: {dataset_path}")
+
+
+def build_evidence_window_policy(args: argparse.Namespace) -> EvidenceWindowPolicyConfig:
+    if args.evidence_window and args.no_evidence_window:
+        raise RetrievalConfigurationError(
+            "Conflicting flags: use either --evidence-window or --no-evidence-window, not both."
+        )
+    if args.evidence_window and args.evidence_window_policy == "off":
+        raise RetrievalConfigurationError(
+            "Conflicting flags: --evidence-window cannot be combined with "
+            "--evidence-window-policy off."
+        )
+    if args.no_evidence_window and args.evidence_window_policy == "all":
+        raise RetrievalConfigurationError(
+            "Conflicting flags: --no-evidence-window cannot be combined with "
+            "--evidence-window-policy all."
+        )
+    if args.no_evidence_window:
+        return EvidenceWindowPolicyConfig(policy="off", no_llm=bool(args.no_llm))
+    if args.evidence_window:
+        return EvidenceWindowPolicyConfig(
+            policy="explicit_all",
+            no_llm=bool(args.no_llm),
+            explicit_request=True,
+        )
+    if args.evidence_window_policy == "off":
+        return EvidenceWindowPolicyConfig(policy="off", no_llm=bool(args.no_llm))
+    if args.evidence_window_policy == "all":
+        return EvidenceWindowPolicyConfig(
+            policy="explicit_all",
+            no_llm=bool(args.no_llm),
+            explicit_request=True,
+        )
+    return EvidenceWindowPolicyConfig(policy="document_gold", no_llm=bool(args.no_llm))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -109,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     registry = load_gold_registry_from_dataset(items)
     retrieval_by_id = load_retrieval_results(retrieval_path)
     evidence_window_config = EvidenceWindowConfig(
-        enabled=args.evidence_window,
+        enabled=False,
         neighbor_chunks_before=args.evidence_neighbors_before,
         neighbor_chunks_after=args.evidence_neighbors_after,
         max_chunks=args.evidence_max_chunks,
@@ -117,6 +162,8 @@ def main(argv: list[str] | None = None) -> int:
         require_same_document=True,
     )
     evidence_window_config.validate()
+    evidence_window_policy = build_evidence_window_policy(args)
+    evidence_window_policy.validate()
     evidence_sidecar_path = args.evidence_sidecar.resolve() if args.evidence_sidecar else None
     if evidence_sidecar_path is not None and not evidence_sidecar_path.exists():
         raise RetrievalConfigurationError(f"Evidence sidecar not found: {evidence_sidecar_path}")
@@ -127,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         citation_required=args.require_citations,
         limit=args.limit,
         evidence_window_config=evidence_window_config,
+        evidence_window_policy=evidence_window_policy,
         evidence_sidecar_path=evidence_sidecar_path,
     )
     metrics = aggregate_answer_metrics(results)
@@ -145,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
         citation_required=args.require_citations,
         corpus=corpus_key,
         evidence_window_config=evidence_window_config,
+        evidence_window_policy=evidence_window_policy,
         evidence_sidecar_path=evidence_sidecar_path,
     )
 
