@@ -1,0 +1,127 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.13.6
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  api:
+    image: docker.io/${DOCKERHUB_NAMESPACE}/nalus-scraper-api:${IMAGE_TAG:-latest}
+    pull_policy: always
+    env_file:
+      - .env
+    ports:
+      - "8029:8000"
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-nalus_bge_m3_chunks_v1}
+      - RAG_QUERY_CACHE_BACKEND=${RAG_QUERY_CACHE_BACKEND:-none}
+      - RAG_QUERY_CACHE_URL=${RAG_QUERY_CACHE_URL:-redis://redis:6379/0}
+      - RAG_QUERY_CACHE_TTL_SECONDS=${RAG_QUERY_CACHE_TTL_SECONDS:-604800}
+      - RAG_QUERY_CACHE_PROMPT_VERSION=${RAG_QUERY_CACHE_PROMPT_VERSION:-v1}
+      - LLM_PROVIDER=deepseek
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL_DEEPSEEK=deepseek-chat
+      - LLM_TIMEOUT=30
+      - LLM_MAX_TOKENS=800
+      - RAG_STRICT_REAL_MODE=1
+      - NALUS_BATCHES_DIR=/app/batches
+      - EMBEDDING_PROVIDER=sentence_transformer
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-/app/models/BAAI/bge-m3}
+      - EMBEDDING_DIMENSION=1024
+      - EMBEDDING_LOCAL_FILES_ONLY=1
+      - EMBEDDING_TRUST_REMOTE_CODE=0
+      - EMBEDDING_DEVICE=cpu
+      - HF_HUB_OFFLINE=1
+      - TRANSFORMERS_OFFLINE=1
+      - HF_DATASETS_OFFLINE=1
+      - RETRIEVAL_PROFILE=nalus_bge_m3_dense_bm25_rrf_v1
+      - RETRIEVAL_MODE=dense_plus_bm25
+      - BM25_SIDECAR_PATH=${BM25_SIDECAR_PATH:-/app/storage/rag/bm25/nalus_bge_m3_dense_bm25_rrf_v1.sqlite}
+      - BM25_INDEX_ID=${BM25_INDEX_ID:-nalus_bge_m3_dense_bm25_rrf_v1}
+      - NALUS_DOCUMENT_RETRIEVAL_ENABLED=${NALUS_DOCUMENT_RETRIEVAL_ENABLED:-0}
+      - NALUS_DOCUMENT_MAX_CANDIDATE_CHUNKS=${NALUS_DOCUMENT_MAX_CANDIDATE_CHUNKS:-200}
+      - NALUS_DOCUMENT_MAX_RETURNED_DOCUMENTS=${NALUS_DOCUMENT_MAX_RETURNED_DOCUMENTS:-50}
+      - NALUS_DOCUMENT_MAX_SUPPORTING_CHUNKS_PER_DOCUMENT=${NALUS_DOCUMENT_MAX_SUPPORTING_CHUNKS_PER_DOCUMENT:-3}
+      - NALUS_DOCUMENT_RELEVANCE_THRESHOLD=${NALUS_DOCUMENT_RELEVANCE_THRESHOLD:-0.0}
+      - NALUS_DOCUMENT_SCORING_STRATEGY=${NALUS_DOCUMENT_SCORING_STRATEGY:-best_plus_average_top_chunks}
+      - NALUS_DOCUMENT_LATENCY_BUDGET_MS=${NALUS_DOCUMENT_LATENCY_BUDGET_MS:-1500}
+      - NALUS_CONSTRAINT_RETRIEVAL_ENABLED=${NALUS_CONSTRAINT_RETRIEVAL_ENABLED:-0}
+      - NALUS_CONSTRAINT_RETRIEVAL_STRICT_MODE=${NALUS_CONSTRAINT_RETRIEVAL_STRICT_MODE:-1}
+      - NALUS_CONSTRAINT_MAX_CANDIDATE_CHUNKS=${NALUS_CONSTRAINT_MAX_CANDIDATE_CHUNKS:-200}
+      - NALUS_CONSTRAINT_MAX_CANDIDATE_DOCUMENTS=${NALUS_CONSTRAINT_MAX_CANDIDATE_DOCUMENTS:-50}
+      - NALUS_CONSTRAINT_MAX_RETURNED_DOCUMENTS=${NALUS_CONSTRAINT_MAX_RETURNED_DOCUMENTS:-20}
+      - NALUS_CONSTRAINT_MAX_SUPPORTING_CHUNKS=${NALUS_CONSTRAINT_MAX_SUPPORTING_CHUNKS:-3}
+      - NALUS_CONSTRAINT_MAX_CHUNKS_PER_DOCUMENT_FOR_VERIFICATION=${NALUS_CONSTRAINT_MAX_CHUNKS_PER_DOCUMENT_FOR_VERIFICATION:-24}
+      - NALUS_CONSTRAINT_MAX_DOCUMENT_CHARACTERS_FOR_VERIFICATION=${NALUS_CONSTRAINT_MAX_DOCUMENT_CHARACTERS_FOR_VERIFICATION:-40000}
+      - NALUS_CONSTRAINT_TOTAL_LATENCY_BUDGET_MS=${NALUS_CONSTRAINT_TOTAL_LATENCY_BUDGET_MS:-10000}
+      - NALUS_CONSTRAINT_DOCUMENT_VERIFICATION_TIMEOUT_MS=${NALUS_CONSTRAINT_DOCUMENT_VERIFICATION_TIMEOUT_MS:-1500}
+      - NALUS_CONSTRAINT_STRUCTURED_QUERY_STRATEGY=${NALUS_CONSTRAINT_STRUCTURED_QUERY_STRATEGY:-deterministic_v1}
+      - NALUS_CONSTRAINT_VERIFICATION_STRATEGY=${NALUS_CONSTRAINT_VERIFICATION_STRATEGY:-deterministic_v1}
+      - NALUS_CONSTRAINT_RANKING_STRATEGY=${NALUS_CONSTRAINT_RANKING_STRATEGY:-retrieval_plus_constraint_coverage_v1}
+      - NALUS_CONSTRAINT_INCLUDE_REJECTED_DOCUMENTS=${NALUS_CONSTRAINT_INCLUDE_REJECTED_DOCUMENTS:-0}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+      - EMBEDDING_CACHE_ENABLED=${EMBEDDING_CACHE_ENABLED:-0}
+      - EMBEDDING_CACHE_KEY_PREFIX=${EMBEDDING_CACHE_KEY_PREFIX:-nalus:embedding}
+      - QUERY_EMBEDDING_CACHE_TTL_SECONDS=${QUERY_EMBEDDING_CACHE_TTL_SECONDS:-604800}
+      - CHUNK_EMBEDDING_CACHE_TTL_SECONDS=${CHUNK_EMBEDDING_CACHE_TTL_SECONDS:-0}
+      - EMBEDDING_CACHE_FAIL_OPEN_ON_REDIS_ERROR=${EMBEDDING_CACHE_FAIL_OPEN_ON_REDIS_ERROR:-0}
+    depends_on:
+      - qdrant
+      - redis
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+      - ${NALUS_BATCHES_HOST_DIR:-./batches}:/app/batches:ro
+      - ${NALUS_STORAGE_HOST_DIR:-./storage}:/app/storage
+      - ${NALUS_MODELS_HOST_DIR:-./models}:/app/models:ro
+      - ${NALUS_ARTIFACTS_HOST_DIR:-./artifacts}:/app/artifacts
+      - ${NALUS_APP_ARTIFACTS_HOST_DIR:-./app/artifacts}:/app/app/artifacts
+    restart: unless-stopped
+
+  nalus-eval-metrics-exporter:
+    image: docker.io/${DOCKERHUB_NAMESPACE}/nalus-scraper-eval-exporter:${IMAGE_TAG:-latest}
+    pull_policy: always
+    ports:
+      - "9108:9108"
+    volumes:
+      - ${NALUS_ARTIFACTS_HOST_DIR:-./artifacts}/rag_eval/legal_qa/answer_eval:/artifacts/rag_eval/legal_qa/answer_eval:ro
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    depends_on:
+      - nalus-eval-metrics-exporter
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards/nalus:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  qdrant_storage:
+  huggingface_cache:
