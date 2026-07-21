@@ -1,5 +1,270 @@
 # Project Progress
 
+## 2026-07-22 Europe/Moscow - Task: Set production observability and reliability guardrails
+
+- Goal:
+  Adapt the supplied universal production observability, reliability, audit, and failure-detection prompt into durable repository rules before continuing with implementation work.
+- Scope:
+  Documentation and agent guardrails only. No runtime code, API behavior, retrieval ranking, Qdrant data, Docker topology, Prometheus scrape config, Grafana dashboards, generated reports, or feature flags were changed.
+- What changed:
+  Added root `AGENTS.md` with project variables, critical workflows, critical invariants, mandatory pre-task audit steps, observability implementation policy, validation expectations, and git policy.
+  Added `docs/OBSERVABILITY_CONTRACT.md` with the project-specific observability contract, current stack inventory, correlation/logging/tracing/metrics/reporting/audit/failure-injection requirements, and a phased implementation backlog.
+  Added `.cursor/rules/observability-reliability.mdc` so Cursor also picks up the same guardrails without duplicating the full contract.
+  Added `docs/runbooks/observability-incidents.md` with initial operator guidance for duplicate side effects, reconciliation, verification failures, audit integrity failures, authentication/authorization spikes, provider-cost spikes, queue backlog, trace exporter outage, and log backend outage.
+- Starting state:
+  Branch `main`, HEAD `aa63a3a05b81e8555a3c84da351d6f1ac2faa8e3`.
+  The worktree already had pre-existing modified and untracked files before this setup.
+  Existing stack inspection found classic text logging in `app/core/logging.py`, lightweight trace events in `app/core/tracing.py`, Prometheus/Grafana under `monitoring/`, and existing observability tests/exporters under `app/observability/` and `tests/observability/`.
+- Tests run:
+  Documentation-only setup; no application tests were run.
+  `git diff --check` should be run before committing this together with any future implementation phase.
+- Known limitations:
+  This setup does not implement structured JSON logging, OpenTelemetry, audit hash chains, report validators, alert rules, controlled failure injection, or live observability runners. Those remain phased implementation work and must be added with focused tests.
+- Next recommended task:
+  Start Phase A: canonical correlation context, structured logging, and centralized redaction, reusing `app/core/logging.py` and existing API boundaries.
+
+## 2026-07-13 11:20 Europe/Moscow — Task: Add disabled constraint-aware verified document retrieval
+
+- Goal:
+  Add an additive backend retrieval path that can interpret structured legal query constraints, verify candidate documents against bounded full-document evidence, and reject partial/contradictory matches without changing the stable MVP chunk-level retrieval flow.
+- Scope:
+  Backend retrieval/config/API/observability/tests/docs only. The frontend, BGE-M3 embeddings, BM25, RRF, Qdrant collection/data, ingestion, Redis/cache behavior, query rewrite, answer generation, and existing `/api/rag/retrieve` and `/api/rag/query` response contracts were not changed.
+- What changed:
+  Added typed constraint models, validated config, deterministic structured-query interpretation, deterministic constraint verification, and an additive pipeline in `app/rag/retrieval/`.
+  Added `POST /api/rag/retrieve-verified`, disabled by default through `NALUS_CONSTRAINT_RETRIEVAL_ENABLED=0`.
+  The new endpoint groups candidate chunks by canonical document id, reconstructs bounded full-document text using the existing read-only full-document store, verifies hard constraints, and returns only verified unique documents.
+  Added strict behavior for hard constraints: mismatch or not-proven excludes a document in strict mode, and no hidden threshold lowering or unrelated fallback is applied.
+  Added Prometheus metrics through the existing metrics stack with bounded labels only: endpoint, status, decision status, constraint category, verification status, and method.
+  Added config examples to `.env.example` and Docker environment defaults to keep the feature disabled unless explicitly enabled.
+  Added `docs/CONSTRAINT_AWARE_RETRIEVAL.md` and a manually reviewable seed dataset fixture for future evaluation work.
+- Why it changed:
+  Previous failures showed that lexical/chunk retrieval can return partial matches such as citizenship mentions without the requested nationality relation, or child-abduction country mentions without the requested destination/actor relation. The new module verifies material constraints at document level before returning results.
+- Files changed:
+  `app/rag/retrieval/constraint_models.py`
+  `app/rag/retrieval/constraint_config.py`
+  `app/rag/retrieval/structured_query.py`
+  `app/rag/retrieval/constraint_verification.py`
+  `app/rag/retrieval/constraint_pipeline.py`
+  `app/observability/constraint_retrieval_metrics.py`
+  `app/api/rag_router.py`
+  `.env.example`
+  `docker-compose.yml`
+  `docs/CONSTRAINT_AWARE_RETRIEVAL.md`
+  `tests/rag/test_structured_query.py`
+  `tests/rag/test_constraint_verification.py`
+  `tests/rag/test_constraint_pipeline.py`
+  `tests/observability/test_constraint_retrieval_metrics.py`
+  `tests/api/test_rag_api.py`
+  `tests/fixtures/constraint_retrieval_seed_dataset.jsonl`
+- Tests run:
+  `python -m pytest tests/rag/test_structured_query.py tests/rag/test_constraint_verification.py tests/rag/test_constraint_pipeline.py tests/observability/test_constraint_retrieval_metrics.py -q` -> initial `1 failed, 11 passed`; fixed parent-role detection for forms such as `matkou`.
+  `python -m pytest tests/rag/test_structured_query.py tests/rag/test_constraint_verification.py tests/rag/test_constraint_pipeline.py tests/observability/test_constraint_retrieval_metrics.py -q` -> `12 passed`.
+  `python -m pytest tests/api/test_rag_api.py -q` -> `44 passed`.
+  `python -m pytest tests/rag/test_document_retrieval.py tests/rag/test_full_document_retrieval.py -q` -> `19 passed`.
+  `python -m pytest tests/api/test_rag_api.py tests/rag/test_structured_query.py tests/rag/test_constraint_verification.py tests/rag/test_constraint_pipeline.py tests/rag/test_document_retrieval.py tests/rag/test_full_document_retrieval.py tests/observability/test_constraint_retrieval_metrics.py -q` -> `75 passed`.
+  `python -m compileall app\rag\retrieval\constraint_config.py app\rag\retrieval\constraint_models.py app\rag\retrieval\structured_query.py app\rag\retrieval\constraint_verification.py app\rag\retrieval\constraint_pipeline.py app\observability\constraint_retrieval_metrics.py app\api\rag_router.py` -> passed.
+- Smoke result:
+  Runtime Docker smoke was not run in this task. The endpoint is disabled by default, and focused API tests verify disabled behavior, successful verified retrieval when explicitly enabled, empty verified result without fallback, and provider failure as 503.
+- Behavior preserved:
+  Existing `/api/rag/retrieve` remains chunk-level and backward compatible. Existing `/api/rag/query` remains unchanged. Document-level ranking endpoint `/api/rag/retrieve-documents` remains separately gated. No embedding, ranking, Qdrant, BM25, RRF, Redis/cache, model-provider, or frontend behavior was changed.
+- Known limitations:
+  The first rollout is deterministic and conservative. It does not use an LLM verifier and does not claim absolute legal relevance. The seed dataset is for manual review and is not a gold benchmark. Full-document verification depends on reconstructable same-document chunks.
+- Next recommended task:
+  Run the disabled endpoint in an isolated environment on manually reviewed citizenship and child-abduction queries, then build a curated gold dataset before considering frontend exposure or production activation.
+
+## 2026-07-13 09:45 Europe/Moscow — Task: Fix court filters and full-judgment result presentation for MVP search
+
+- Goal:
+  Fix broken Ústavní soud / Nejvyšší soud filters, stop presenting repeated chunk hits as separate decisions, and make full judgments accessible directly from each frontend result card while keeping MVP search on the original stable chunk-level retrieval path.
+- Scope:
+  Backend metadata/source filter recognition, frontend chunk-result grouping by document id, frontend inline full-judgment loading, focused tests, runtime smoke, and documentation only. Retrieval ranking, embeddings, BM25/RRF scoring, Qdrant data, Redis/cache behavior, and the disabled additive document-level ranking endpoint were not changed.
+- What changed:
+  Updated `app/api/rag_router.py` so court/source filtering recognizes `source`, `court`, `court_name`, `document_id`, `source_document_id`, `case_reference`, `reference`, and ECLI prefixes such as `ECLI:CZ:US` / `ECLI:CZ:NS`.
+  Updated retrieved chunk response projection to infer `court_name` from metadata/ECLI when explicit court metadata is missing.
+  Added endpoint regression tests for `usoud / nalus`, ECLI-only ÚS results, `nsoud`, and ECLI-only NS results.
+  Updated NalusFE chunk mapping to group chunk-level results by canonical `documentId`, merge supporting passages, preserve best score, and fill court/ECLI from document identity when metadata is incomplete.
+  Added inline full-judgment loading in each result card through the existing read-only `GET /api/retrieval/documents/{document_id}` proxy.
+  Changed the results heading from "Nalezená relevantní rozhodnutí" to "Nalezená rozhodnutí" and clarified that ordering is technical relevance, not a legal-relevance guarantee.
+  Updated NalusFE README.
+- Why it changed:
+  The attached frontend output showed repeated chunk hits from the same decisions, missing court/ECLI labels, broken court filters returning zero results, and result cards showing only passages while full judgment text required opening a separate detail page.
+- Tests run:
+  Backend: `python -m pytest tests/api/test_rag_api.py tests/rag/test_full_document_retrieval.py tests/rag/test_document_retrieval.py -q` -> `59 passed`.
+  Frontend: `npm run typecheck` -> passed.
+  Frontend: `npm run lint` -> passed.
+  Frontend Docker build during `docker compose up -d --build frontend` -> passed.
+- Smoke result:
+  Backend direct `POST /api/rag/retrieve` for `udělení českého občanstvi ruskému občanu`: no source filter -> 50 chunks; `sources=["constitutional"]` -> 50 chunks; `sources=["supreme"]` -> 0 chunks in the current ÚS/NALUS collection.
+  Frontend proxy `POST /api/retrieval/documents`: `court=all` -> 19 unique documents; `court=usoud` -> 22 unique documents; `court=nsoud` -> 0 results.
+  Frontend `/vyhledavani?q=udělení českého občanstvi ruskému občanu` returned HTTP 200, rendered `Nalezená rozhodnutí`, included `Zobrazit celý rozsudek zde`, and included the known document `ECLI:CZ:US:2023:3.US.3469.22.1`.
+  Frontend full-document proxy `GET /api/retrieval/documents/ECLI%3ACZ%3AUS%3A2023%3A3.US.3469.22.1` returned HTTP 200, `full_text_availability_status=available`, `chunk_count=12`, and full text length `15734`.
+  Backend `POST /api/rag/retrieve-documents` returned HTTP 404, confirming the unfinished document-level ranking endpoint remains disabled.
+- Behavior preserved:
+  Search still uses the original MVP `/api/rag/retrieve` flow. BGE-M3 embeddings, BM25, RRF, top-k request size, Qdrant collection/data, Redis/cache behavior, query rewrite behavior, answer generation, and document-level ranking feature flag default were not changed.
+- Known limitations:
+  The remaining irrelevant/weak results are a retrieval-quality issue in the original chunk-level ranking, not a frontend rendering bug. This task reduces duplicate clutter and fixes filters/metadata but does not add calibrated legal relevance filtering.
+  Current runtime collection appears to be ÚS/NALUS-focused for this query; `court=nsoud` correctly returns no results under the current source filter.
+- Next recommended task:
+  Add a separate relevance-calibration task for the citizenship/Russian-citizen query: reviewed gold set, query expansion/synonyms, safe thresholding, duplicate-aware document ranking, and explicit rollout criteria before changing production ranking.
+
+## 2026-07-13 03:40 Europe/Moscow — Task: Show full judgments in frontend while keeping MVP chunk-level search stable
+
+- Goal:
+  Keep the unfinished additive document-level ranking module disabled for MVP search, but allow the frontend to display full judgments instead of only citations/passages when a user opens a result detail.
+- Scope:
+  Added a read-only document-by-id reconstruction endpoint, frontend full-document proxy/detail rendering, focused tests, and documentation. Search ranking remains the stable chunk-level `/api/rag/retrieve` path.
+- What changed:
+  Added `app/rag/retrieval/full_document.py` with typed read-only Qdrant full-document reconstruction from same-document chunks ordered by `chunk_index`, document id validation, bounded chunk count, metadata normalization, explicit availability status, and diagnostics.
+  Added `GET /api/rag/documents/{document_id}` to `app/api/rag_router.py`.
+  Kept `POST /api/rag/retrieve-documents` disabled by default; smoke verified it returns HTTP 404 with `NALUS_DOCUMENT_RETRIEVAL_ENABLED=0`.
+  Updated API logging for `/search`, `/retrieve`, and `/query` to log query length instead of raw query text.
+  Added backend tests for full-document reconstruction and endpoint success/error paths.
+  Updated NalusFE types/parsing and added `GET /api/retrieval/documents/{id}` as a Next.js proxy to the backend full-document endpoint.
+  Updated NalusFE search mapping so result detail links use the canonical `documentId`, not `documentId#chunkId`.
+  Updated the result detail tab and `/rozhodnuti/[id]` page to render full judgment text from the backend full-document endpoint.
+  Increased NalusFE search proxy timeout to 60 seconds to tolerate cold start of the existing backend retrieval stack.
+  Updated `docs/DOCUMENT_LEVEL_RETRIEVAL.md` and NalusFE `frontend/README.md`.
+- Why it changed:
+  Stable MVP search must not switch to the unfinished document-level ranking module, but the UI still needs to show complete judgments. The safe boundary is chunk-level retrieval for search plus read-only full-document reconstruction by already-known document id.
+- Files changed:
+  `app/rag/retrieval/full_document.py`
+  `app/api/rag_router.py`
+  `tests/rag/test_full_document_retrieval.py`
+  `tests/api/test_rag_api.py`
+  `docs/DOCUMENT_LEVEL_RETRIEVAL.md`
+  NalusFE `frontend/src/types/retrieval.ts`
+  NalusFE `frontend/src/lib/api/responseValidation.ts`
+  NalusFE `frontend/src/lib/api/fullDocumentServer.ts`
+  NalusFE `frontend/src/app/api/retrieval/documents/[id]/route.ts`
+  NalusFE `frontend/src/lib/api/documentSearchServer.ts`
+  NalusFE `frontend/src/lib/api/judgmentMapping.ts`
+  NalusFE `frontend/src/components/ResultDetailTabs.tsx`
+  NalusFE `frontend/src/app/rozhodnuti/[id]/page.tsx`
+  NalusFE `frontend/README.md`
+- Tests run:
+  Backend: `python -m pytest tests/rag/test_full_document_retrieval.py tests/api/test_rag_api.py tests/rag/test_document_retrieval.py -q` -> `57 passed`.
+  Frontend: `npm run typecheck` -> passed.
+  Frontend: `npm run lint` -> passed.
+  Frontend Docker build during `docker compose up -d --build frontend` -> passed.
+- Smoke result:
+  Backend `/health` returned `status=ok` and `orchestrator_ready=true`.
+  Backend `GET /api/rag/documents/ECLI%3ACZ%3AUS%3A2026%3A3.US.446.26.1` returned HTTP 200, `full_text_availability_status=available`, `chunk_count=16`, and `full_text` length `21768`.
+  Frontend proxy `GET /api/retrieval/documents/ECLI%3ACZ%3AUS%3A2026%3A3.US.446.26.1` returned the same full text length and chunk count.
+  Frontend detail page `/rozhodnuti/ECLI%3ACZ%3AUS%3A2026%3A3.US.446.26.1` returned HTTP 200 and rendered full judgment content.
+  Frontend search proxy `POST /api/retrieval/documents` returned HTTP 200 with 50 stable chunk-level results after backend restart.
+- Behavior preserved:
+  Search retrieval ranking, top-k, BGE-M3 embeddings, BM25 scoring, RRF, Qdrant collection/data, Redis/cache behavior, query rewrite behavior, answer generation, and the disabled document-level ranking endpoint default were not changed.
+- Known limitations:
+  Full-document reconstruction depends on same-document chunks having reliable document identifiers and preferably contiguous `chunk_index` values. If indexes are missing or duplicated, the endpoint returns `partial` with diagnostics instead of hiding the issue.
+  Uvicorn access logs include the request path, so document ids in the URL can appear in access logs. No full document text is logged and the updated application search logs do not include raw queries.
+- Next recommended task:
+  Add a small frontend component test or Playwright smoke for opening "Celý dokument" from a search result once the frontend test harness is introduced.
+
+## 2026-07-13 03:35 Europe/Moscow — Task: Restore stable MVP chunk-level retrieval flow
+
+- Goal:
+  Disable runtime use of the unfinished additive document-level retrieval module and return the NALUS MVP/frontend path to the stable chunk-level retrieval endpoint while keeping the new module available for separate tuning.
+- Scope:
+  Runtime/configuration and frontend proxy routing only. The document-level module code, BGE-M3 embeddings, Qdrant collections/data, BM25 scoring, RRF fusion, Redis/cache behavior, ingestion, thresholds, and retrieval algorithms were not changed.
+- What changed:
+  Set the Docker default `NALUS_DOCUMENT_RETRIEVAL_ENABLED` back to `0`.
+  Kept document-level limit variables documented/configured as disabled-by-default knobs, so the module can be enabled later through an explicit rollout task.
+  Updated `docs/DOCUMENT_LEVEL_RETRIEVAL.md` to state that MVP runtime should use the stable chunk-level flow while document-level retrieval is tuned separately.
+  Updated NalusFE server-side proxy to call `POST /api/rag/retrieve` with `top_k=50` instead of `POST /api/rag/retrieve-documents`.
+  Added frontend parsing/mapping for the stable chunk-level backend response `{ "results": [...] }`.
+  Updated NalusFE README to document the stable MVP backend flow.
+- Why it changed:
+  The forensic audit showed that the document-level endpoint was already active in MVP runtime although the module still lacks calibrated relevance policy, metadata normalization, and full-document endpoint support. With threshold `0.0`, unrelated documents could appear in the top 50 aggregated results.
+- Tests run:
+  Backend: `python -m pytest tests/rag/test_document_retrieval.py tests/api/test_rag_api.py -q` -> `44 passed`.
+  Frontend: `npm run typecheck` -> passed.
+  Frontend: `npm run lint` -> passed.
+  Frontend Docker build during `docker compose up -d --build frontend` -> passed.
+- Smoke result:
+  Recreated backend API container and verified `NALUS_DOCUMENT_RETRIEVAL_ENABLED=0`.
+  Direct backend `POST /api/rag/retrieve-documents` returned HTTP 404 as expected.
+  Direct backend `POST /api/rag/retrieve` returned 50 stable chunk-level results for the citizenship query.
+  Rebuilt/recreated the NalusFE Docker container and verified `POST /api/retrieval/documents` returned 50 frontend results mapped from chunk-level backend results, with no document-level diagnostics payload.
+- Known limitations:
+  The first backend request after container restart can exceed the current frontend timeout because the existing retrieval path may cold-load BGE-M3 and attempt the configured query rewrite provider. A warm request succeeded. This task did not change model loading, query rewrite, or timeout policy.
+  The frontend route name remains `/api/retrieval/documents` for UI compatibility, but its backend source is now chunk-level MVP retrieval.
+- Next recommended task:
+  Continue tuning document-level retrieval behind the disabled feature flag: relevance policy, metadata normalization, full-document endpoint, benchmark calibration, and explicit rollout criteria.
+
+## 2026-07-13 03:10 Europe/Moscow — Task: Citizenship query retrieval forensic audit
+
+- Goal:
+  Perform a read-only forensic audit of the current NALUS document retrieval quality, metadata normalization, query rewrite behavior, ranking diagnostics, and full-document availability for the query `najdi rozsudek ústavního soudu o udělování českého občanství ruským občanům`.
+- Scope:
+  Audit only. Retrieval algorithms, BGE-M3 embeddings, BM25, RRF, Qdrant collections/data, aliases, ingestion, Redis, thresholds, backend API behavior, and frontend files were not changed.
+- What changed:
+  Created `artifacts/evaluation_quality/citizenship_query_retrieval_audit_20260712.md`.
+  Created `artifacts/evaluation_quality/citizenship_query_retrieval_audit_20260712.json`.
+  Updated this progress file with the audit result.
+- Findings:
+  Direct backend reproduction returned 50 final document-level results from 200 RRF candidate chunks and 142 unique documents before the final `max_returned_documents=50` cap.
+  Query rewrite is wired in runtime through `QueryRewriteService`, but the configured DeepSeek provider returned 401/empty output during reproduction, so the effective retrieval query remained the original query.
+  The configured document relevance threshold is `0.0`; therefore unrelated documents are not filtered by relevance threshold and can remain in the top 50 if their RRF/document score is high enough.
+  Deterministic content classification found 7 potentially relevant citizenship-related results and 43 clearly irrelevant results; no result was classified as clearly relevant to the narrower Russian-citizen citizenship query.
+  `ECLI:CZ:US:2026:3.US.446.26.1` was returned because BM25 ranked same-document chunks at rank 21; the matching text is about municipal referendum/spatial planning and contains weak lexical overlap such as `občanům`, not citizenship granting.
+  `ECLI:CZ:US:2026:4.US.893.26.1` was returned because dense retrieval ranked the opening chunk at rank 27; the document concerns parental responsibility/care of a minor child, not citizenship granting.
+  Final document IDs were unique and no evidence of cross-judgment chunk mixing was found in final aggregation.
+- Metadata audit:
+  The observed `Neuvedený soud` / `ECLI: neuvedeno` defect for `ECLI:CZ:US:2026:3.US.446.26.1` originates in backend response metadata availability/projection: the best returned chunks expose `document_id`, `source_document_id`, and `decision_date`, but not `court`, `ecli`, or `case_reference`.
+  The Next.js proxy did not corrupt the data. The frontend mapper deterministically falls back to `Neuvedený soud`, undefined ECLI, and `document_id` as case reference when backend metadata is missing.
+- Full-text availability:
+  For both unrelated examples and inspected final documents, complete judgment text is available as same-document Qdrant chunks mirrored in the BM25 sidecar when chunk indexes are contiguous.
+  `ECLI:CZ:US:2026:3.US.446.26.1` has 16 Qdrant/BM25 chunks, indexes 0-15, no missing/duplicate indexes, and deterministic reconstruction is possible.
+  `ECLI:CZ:US:2026:4.US.893.26.1` has 10 Qdrant/BM25 chunks, indexes 0-9, no missing/duplicate indexes, and deterministic reconstruction is possible.
+- Tests run:
+  `python -m pytest tests/rag/test_document_retrieval.py tests/api/test_rag_api.py -q` -> `44 passed`.
+  Repeated `pytest-asyncio` loop-scope deprecation warning is non-blocking and unrelated.
+- Smoke result:
+  `docker compose ps` showed backend, Qdrant, Redis, Prometheus, Grafana, and the eval metrics exporter running.
+  Direct backend `POST /api/rag/retrieve-documents` reproduced 50 results.
+  Read-only frontend proxy `POST /api/retrieval/documents` confirmed the metadata fallback behavior for the two known unrelated examples.
+- Behavior preserved:
+  No retrieval/ranking change, no threshold change, no Qdrant write, no Redis/cache behavior change, no embedding change, no model download, no frontend file modification, and no new fallback was introduced.
+- Known limitations:
+  The classification is deterministic and human-auditable but conservative. It does not use an LLM and does not assert absolute legal relevance beyond observable document content and query-term/topic evidence.
+  The audit generated runtime artifacts and intentionally did not commit them unless a later repository policy task requests that.
+- Next recommended task:
+  Implement a separate read-only full-document endpoint with canonical metadata normalization, ordered same-document chunk reconstruction, explicit full-text availability status, and regression tests before exposing document detail deep links.
+
+## 2026-07-13 02:04 Europe/Moscow — Task: NalusFE document retrieval frontend integration
+
+- Goal:
+  Connect the existing NalusFE Next.js search interface to the additive document-level FastAPI retrieval endpoint without changing retrieval ranking, embeddings, Qdrant data, BM25, RRF, Redis, ingestion, or answer generation.
+- What changed:
+  Added Docker environment wiring so the existing `POST /api/rag/retrieve-documents` endpoint is enabled for the local integrated runtime.
+  Updated `.env.example` to show `NALUS_DOCUMENT_RETRIEVAL_ENABLED=1` for the frontend integration path.
+  Clarified `docs/DOCUMENT_LEVEL_RETRIEVAL.md` so the code default remains disabled while the integrated Docker runtime can explicitly enable the endpoint.
+- Why it changed:
+  The frontend integration uses a server-side Next.js proxy and must call the real document-level endpoint. The running backend container needs the existing feature flag enabled for end-to-end smoke tests and local presentation use.
+- Files changed:
+  `docker-compose.yml`
+  `.env.example`
+  `docs/DOCUMENT_LEVEL_RETRIEVAL.md`
+  `PROJECT_PROGRESS.md`
+- Tests run:
+  NalusFE frontend: `npm run lint`, `npm run typecheck`, `npm run build`, and `npm audit --audit-level=moderate` all passed after adding a safe PostCSS override for the latest Next.js transitive dependency tree.
+  Backend: `python -m pytest tests/rag/test_document_retrieval.py tests/api/test_rag_api.py -q` -> `44 passed`.
+  Compose config validation passed for both NalusFE and nalus-scraper.
+- Smoke result:
+  Backend `/health` returned `status=ok` with `orchestrator_ready=true`.
+  Backend `POST /api/rag/retrieve-documents` returned 50 real unique document-level results for a Czech legal query.
+  NalusFE dev server and Docker-served frontend `POST /api/retrieval/documents` both returned 50 real backend-backed results with first document `ECLI:CZ:US:2026:2.US.98.26.1`.
+  Docker-served `GET /vyhledavani?q=...` returned HTTP 200 and rendered backend-backed search content, not mock data.
+  Invalid frontend API input checks returned controlled HTTP 400 errors for empty query and invalid filter values.
+  The smoke run showed the existing backend query-rewrite path attempted the configured text LLM and fell back to the original query after a provider 401; the frontend did not call answer-generation or chat endpoints.
+- Behavior preserved:
+  Retrieval ranking, document scoring, BGE-M3 embeddings, BM25, RRF, Qdrant collections/data, Redis/cache behavior, ingestion, LLM/DeepSeek calls, and existing `/api/rag/retrieve` and `/api/rag/query` behavior were not changed.
+- Known limitations:
+  The backend still does not expose a separate document-detail-by-id endpoint; the frontend can render document details only from search results returned by `retrieve-documents`.
+  The document aggregation module is no-LLM, but the endpoint obtains candidate chunks through the existing orchestrator retrieval path, including optional query rewrite when the backend is configured with a real text LLM provider.
+- Next recommended task:
+  Add a dedicated read-only document detail endpoint if the product needs stable deep links to individual judgments independent of a search response.
+
 ## 2026-07-10 15:25 Europe/Moscow — Task: NSoud provenance checker + conservative single gold annotation
 
 - Goal:

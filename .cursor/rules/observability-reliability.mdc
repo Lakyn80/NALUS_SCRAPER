@@ -1,0 +1,26 @@
+---
+description: NALUS production observability, reliability, audit, and failure-detection guardrails
+alwaysApply: true
+---
+
+# NALUS Observability And Reliability Rules
+
+Follow the repository contract in `AGENTS.md` and `docs/OBSERVABILITY_CONTRACT.md` before non-trivial implementation work.
+
+Before editing, inspect the project rules, current docs, relevant source files, and git state. Report pre-existing changes and do not overwrite unrelated work.
+
+Reuse the existing logging, tracing, observability, Prometheus, Grafana, Docker, and test conventions before adding new infrastructure.
+
+Do not weaken authentication, authorization, validation, feature flags, data integrity, or safety controls to make a task pass.
+
+Keep metric labels low-cardinality. Never use raw query text, document IDs, ECLIs, tenant IDs, user IDs, actor IDs, request IDs, correlation IDs, trace IDs, job IDs, task IDs, customer names, or error messages as labels.
+
+Never log, trace, report, or export secrets, tokens, authorization headers, raw environment values, full idempotency keys, unbounded request/response bodies, full private prompts by default, or unnecessary personal data.
+
+Treat unknown external side-effect outcomes as reconciliation or manual-review states, not success.
+
+Keep experimental retrieval and observability paths disabled by default unless an explicit task changes the rollout policy.
+
+Generated reports must validate their own chronology, counts, verification status, audit/security/data-quality invariants, provider usage, and cost totals before they can be marked pass.
+
+Failure injection must be typed, deterministic, disabled by default, local/test/demo-only, and blocked in production.
