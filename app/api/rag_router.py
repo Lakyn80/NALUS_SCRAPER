@@ -25,18 +25,35 @@ from pydantic import BaseModel, Field
 from app.api.query_cache import CachedQueryResponse, build_cache_key, query_cache_ttl_seconds
 from app.core.logging import get_logger
 from app.core.tracing import trace_event
+from app.observability.constraint_retrieval_metrics import (
+    record_constraint_retrieval_error,
+    record_constraint_retrieval_metrics,
+)
 from app.rag.answer.answer_service import AnswerService
 from app.rag.clarification.orchestrator import ClarifyingOrchestratorService
 from app.rag.execution.execution_service import ExecutionService
 from app.rag.orchestration.pipeline import RetrievalPipeline
 from app.rag.orchestrator.orchestrator_service import OrchestratorResult, OrchestratorService
 from app.rag.planner.planner_service import MockPlannerLLM, PlannerService
+from app.rag.retrieval.constraint_config import (
+    ConstraintRetrievalConfig,
+    constraint_retrieval_config_from_env,
+)
+from app.rag.retrieval.constraint_models import ConstraintRetrievalResult
+from app.rag.retrieval.constraint_pipeline import retrieve_verified_documents
 from app.rag.retrieval.document_retrieval import (
     DocumentRetrievalConfig,
     build_document_level_results,
     document_retrieval_config_from_env,
 )
 from app.rag.retrieval.errors import RetrievalConfigurationError
+from app.rag.retrieval.full_document import (
+    FullDocumentLookupError,
+    FullDocumentResult,
+    FullDocumentStore,
+    QdrantFullDocumentStore,
+    validate_document_id,
+)
 from app.rag.retrieval.production_profile import DEFAULT_QDRANT_COLLECTION
 from app.rag.synthesis.synthesis_service import MockSynthesisLLM, SynthesisService
 
@@ -143,6 +160,130 @@ class DocumentRetrieveResponse(BaseModel):
     diagnostics: DocumentRetrievalDiagnosticsResult
 
 
+class FullDocumentChunkResult(BaseModel):
+    chunk_id: str
+    chunk_index: int | None = None
+    text: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class FullDocumentDiagnosticsResult(BaseModel):
+    collection_name: str
+    chunk_count: int
+    missing_chunk_indexes: list[int]
+    duplicate_chunk_indexes: list[int]
+    all_chunks_have_index: bool
+    reconstruction_method: str
+    truncated: bool = False
+    max_chunks: int
+
+
+class FullDocumentResponse(BaseModel):
+    document_id: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    full_text: str
+    chunks: list[FullDocumentChunkResult]
+    source_url: str | None = None
+    provenance_status: str
+    full_text_availability_status: str
+    diagnostics: FullDocumentDiagnosticsResult
+
+
+class VerifiedRetrieveRequest(BaseModel):
+    query: str
+    sources: list[str] | None = None
+    debug: bool = False
+
+
+class StructuredEntityResult(BaseModel):
+    id: str
+    entity_type: str
+    role: str | None = None
+    attributes: dict[str, Any] = Field(default_factory=dict)
+
+
+class StructuredRelationResult(BaseModel):
+    subject: str
+    predicate: str
+    object: str
+    requirement: str
+
+
+class StructuredConstraintResult(BaseModel):
+    id: str
+    category: str
+    value: str
+    requirement: str
+    relation: StructuredRelationResult | None = None
+    description: str
+
+
+class StructuredQueryResult(BaseModel):
+    intent: str
+    status: str
+    constraints: list[StructuredConstraintResult]
+    entities: list[StructuredEntityResult]
+    relations: list[StructuredRelationResult]
+    ambiguities: list[str]
+    retrieval_expansions: list[str]
+    interpreter: str
+
+
+class ConstraintEvidenceResult(BaseModel):
+    document_id: str
+    chunk_id: str | None = None
+    quote: str
+    source_field: str | None = None
+
+
+class ConstraintVerificationResultModel(BaseModel):
+    constraint_id: str
+    category: str
+    status: str
+    required_value: str
+    detected_value: str | None = None
+    evidence: list[ConstraintEvidenceResult]
+    verification_method: str
+    confidence: float
+    reason: str
+
+
+class VerifiedDocumentResult(BaseModel):
+    document_id: str
+    score: float
+    decision_status: str
+    constraint_results: list[ConstraintVerificationResultModel]
+    supporting_passages: list[ConstraintEvidenceResult]
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    candidate_chunk_count: int
+
+
+class ConstraintRetrievalDiagnosticsResult(BaseModel):
+    query_interpretation_status: str
+    hard_constraint_count: int
+    soft_constraint_count: int
+    candidate_chunks_retrieved: int
+    candidate_documents_produced: int
+    documents_verified: int
+    verified_document_count: int
+    excluded_hard_mismatch_count: int
+    excluded_not_proven_count: int
+    verification_error_count: int
+    final_document_count: int
+    retrieval_latency_ms: float | None
+    verification_latency_ms: float | None
+    total_latency_ms: float | None
+    latency_budget_ms: int | None
+    latency_budget_exceeded: bool
+
+
+class VerifiedRetrieveResponse(BaseModel):
+    structured_query: StructuredQueryResult
+    documents: list[VerifiedDocumentResult]
+    rejected_documents: list[VerifiedDocumentResult] = Field(default_factory=list)
+    diagnostics: ConstraintRetrievalDiagnosticsResult
+
+
 # ---------------------------------------------------------------------------
 # Live orchestrator — set by startup lifespan, None until Qdrant is ready
 # ---------------------------------------------------------------------------
@@ -222,6 +363,13 @@ def get_orchestrator() -> OrchestratorService:
     )
 
 
+def get_full_document_store() -> FullDocumentStore:
+    return QdrantFullDocumentStore(
+        qdrant_url=os.getenv("QDRANT_URL", "http://qdrant:6333"),
+        collection_name=_collection_name(),
+    )
+
+
 class _EmptyPipeline:
     def run(self, query: str, top_k: int = 5):
         del top_k
@@ -260,11 +408,21 @@ def _chunk_source_tags(chunk) -> set[str]:
 
     raw_source = _normalize_text(metadata.get("source"))
     if raw_source:
-        tags.add(raw_source.lower())
-        if raw_source.lower() == "nalus":
+        normalized_source = raw_source.lower()
+        tags.add(normalized_source)
+        if (
+            normalized_source == "nalus"
+            or "nalus" in normalized_source
+            or "usoud" in normalized_source
+            or "ústav" in normalized_source
+            or "ustav" in normalized_source
+            or "constitutional" in normalized_source
+        ):
             tags.add("constitutional")
+        if "supreme" in normalized_source or "nsoud" in normalized_source:
+            tags.add("supreme")
 
-    court_name = _normalize_text(metadata.get("court_name"))
+    court_name = _normalize_text(metadata.get("court_name") or metadata.get("court"))
     if court_name:
         normalized_court = court_name.lower()
         tags.add(normalized_court)
@@ -274,6 +432,22 @@ def _chunk_source_tags(chunk) -> set[str]:
             tags.add("administrative")
         elif "nejvyšší" in normalized_court or "nejvyssi" in normalized_court:
             tags.add("supreme")
+
+    document_identity = " ".join(
+        value
+        for value in (
+            _normalize_text(metadata.get("ecli")),
+            _normalize_text(metadata.get("document_id")),
+            _normalize_text(metadata.get("source_document_id")),
+            _normalize_text(metadata.get("case_reference")),
+            _normalize_text(metadata.get("reference")),
+        )
+        if value
+    ).lower()
+    if "ecli:cz:us" in document_identity:
+        tags.add("constitutional")
+    if "ecli:cz:ns" in document_identity:
+        tags.add("supreme")
 
     return tags
 
@@ -304,10 +478,15 @@ def _to_retrieved_result(chunk) -> RetrievedResult:
     reference = _normalize_text(
         metadata.get("case_reference")
         or metadata.get("reference")
+        or metadata.get("spisova_znacka")
+        or metadata.get("case_number")
         or metadata.get("sp_zn")
     )
     source = _normalize_text(metadata.get("source"))
-    court_name = _normalize_text(metadata.get("court_name"))
+    court_name = (
+        _normalize_text(metadata.get("court_name") or metadata.get("court"))
+        or _infer_court_name_from_metadata(metadata)
+    )
     date = _normalize_text(metadata.get("decision_date") or metadata.get("date"))
     chunk_index = metadata.get("chunk_index")
     if chunk_index is not None:
@@ -331,9 +510,41 @@ def _to_retrieved_result(chunk) -> RetrievedResult:
     )
 
 
+def _infer_court_name_from_metadata(metadata: dict[str, Any]) -> str | None:
+    identity = " ".join(
+        value
+        for value in (
+            _normalize_text(metadata.get("source")),
+            _normalize_text(metadata.get("ecli")),
+            _normalize_text(metadata.get("document_id")),
+            _normalize_text(metadata.get("source_document_id")),
+        )
+        if value
+    ).lower()
+    if (
+        "ecli:cz:us" in identity
+        or "nalus" in identity
+        or "usoud" in identity
+        or "ústav" in identity
+        or "ustav" in identity
+        or "constitutional" in identity
+    ):
+        return "Ústavní soud"
+    if "ecli:cz:ns" in identity or "nsoud" in identity or "supreme" in identity:
+        return "Nejvyšší soud"
+    return None
+
+
 def _document_retrieval_config() -> DocumentRetrievalConfig:
     try:
         return document_retrieval_config_from_env()
+    except RetrievalConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def _constraint_retrieval_config() -> ConstraintRetrievalConfig:
+    try:
+        return constraint_retrieval_config_from_env()
     except RetrievalConfigurationError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -358,6 +569,149 @@ def _to_document_retrieve_response(result) -> DocumentRetrieveResponse:
     )
 
 
+def _to_verified_retrieve_response(
+    result: ConstraintRetrievalResult,
+    *,
+    include_rejected_documents: bool,
+) -> VerifiedRetrieveResponse:
+    return VerifiedRetrieveResponse(
+        structured_query=_structured_query_result(result.structured_query),
+        documents=[_verified_document_result(document) for document in result.verified_documents],
+        rejected_documents=(
+            [_verified_document_result(document) for document in result.rejected_documents]
+            if include_rejected_documents
+            else []
+        ),
+        diagnostics=ConstraintRetrievalDiagnosticsResult(
+            query_interpretation_status=result.diagnostics.query_interpretation_status.value,
+            hard_constraint_count=result.diagnostics.hard_constraint_count,
+            soft_constraint_count=result.diagnostics.soft_constraint_count,
+            candidate_chunks_retrieved=result.diagnostics.candidate_chunks_retrieved,
+            candidate_documents_produced=result.diagnostics.candidate_documents_produced,
+            documents_verified=result.diagnostics.documents_verified,
+            verified_document_count=result.diagnostics.verified_document_count,
+            excluded_hard_mismatch_count=result.diagnostics.excluded_hard_mismatch_count,
+            excluded_not_proven_count=result.diagnostics.excluded_not_proven_count,
+            verification_error_count=result.diagnostics.verification_error_count,
+            final_document_count=result.diagnostics.final_document_count,
+            retrieval_latency_ms=result.diagnostics.retrieval_latency_ms,
+            verification_latency_ms=result.diagnostics.verification_latency_ms,
+            total_latency_ms=result.diagnostics.total_latency_ms,
+            latency_budget_ms=result.diagnostics.latency_budget_ms,
+            latency_budget_exceeded=result.diagnostics.latency_budget_exceeded,
+        ),
+    )
+
+
+def _structured_query_result(structured_query) -> StructuredQueryResult:
+    return StructuredQueryResult(
+        intent=structured_query.intent,
+        status=structured_query.status.value,
+        constraints=[
+            StructuredConstraintResult(
+                id=constraint.id,
+                category=constraint.category.value,
+                value=constraint.value,
+                requirement=constraint.requirement.value,
+                relation=(
+                    _structured_relation_result(constraint.relation)
+                    if constraint.relation is not None
+                    else None
+                ),
+                description=constraint.description,
+            )
+            for constraint in structured_query.constraints
+        ],
+        entities=[
+            StructuredEntityResult(
+                id=entity.id,
+                entity_type=entity.entity_type,
+                role=entity.role,
+                attributes=entity.attributes,
+            )
+            for entity in structured_query.entities
+        ],
+        relations=[
+            _structured_relation_result(relation)
+            for relation in structured_query.relations
+        ],
+        ambiguities=structured_query.ambiguities,
+        retrieval_expansions=structured_query.retrieval_expansions,
+        interpreter=structured_query.interpreter,
+    )
+
+
+def _structured_relation_result(relation) -> StructuredRelationResult:
+    return StructuredRelationResult(
+        subject=relation.subject,
+        predicate=relation.predicate.value,
+        object=relation.object,
+        requirement=relation.requirement.value,
+    )
+
+
+def _verified_document_result(document) -> VerifiedDocumentResult:
+    return VerifiedDocumentResult(
+        document_id=document.document_id,
+        score=document.score,
+        decision_status=document.decision_status.value,
+        constraint_results=[
+            ConstraintVerificationResultModel(
+                constraint_id=result.constraint_id,
+                category=result.category.value,
+                status=result.status.value,
+                required_value=result.required_value,
+                detected_value=result.detected_value,
+                evidence=[
+                    ConstraintEvidenceResult(
+                        document_id=evidence.document_id,
+                        chunk_id=evidence.chunk_id,
+                        quote=evidence.quote,
+                        source_field=evidence.source_field,
+                    )
+                    for evidence in result.evidence
+                ],
+                verification_method=result.verification_method.value,
+                confidence=result.confidence,
+                reason=result.reason,
+            )
+            for result in document.constraint_results
+        ],
+        supporting_passages=[
+            ConstraintEvidenceResult(
+                document_id=evidence.document_id,
+                chunk_id=evidence.chunk_id,
+                quote=evidence.quote,
+                source_field=evidence.source_field,
+            )
+            for evidence in document.supporting_passages
+        ],
+        metadata=document.metadata,
+        candidate_chunk_count=document.candidate_chunk_count,
+    )
+
+
+def _to_full_document_response(result: FullDocumentResult) -> FullDocumentResponse:
+    return FullDocumentResponse(
+        document_id=result.document_id,
+        metadata=result.metadata,
+        full_text=result.full_text,
+        chunks=[
+            FullDocumentChunkResult(
+                chunk_id=chunk.chunk_id,
+                chunk_index=chunk.chunk_index,
+                text=chunk.text,
+                metadata=chunk.metadata,
+            )
+            for chunk in result.chunks
+        ],
+        source_url=result.source_url,
+        provenance_status=result.provenance_status,
+        full_text_availability_status=result.full_text_availability_status,
+        diagnostics=FullDocumentDiagnosticsResult(**asdict(result.diagnostics)),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -369,7 +723,7 @@ def search(
     pipeline: RetrievalPipeline = Depends(get_pipeline),
     answer_service: AnswerService = Depends(get_answer_service),
 ) -> SearchResponse:
-    trace_event(logger, "api.rag.start", query=request.query, top_k=request.top_k)
+    trace_event(logger, "api.rag.start", query_length=len(request.query), top_k=request.top_k)
 
     result = pipeline.run(request.query, top_k=request.top_k)
     answer = answer_service.generate(request.query, result.results)
@@ -389,7 +743,7 @@ def retrieve(
     req: RetrieveRequest,
     orchestrator: OrchestratorService = Depends(get_orchestrator),
 ) -> RetrieveResponse:
-    logger.info("[api] retrieve received query=%s", req.query)
+    logger.info("[api] retrieve received query_length=%d", len(req.query))
 
     requested_sources = _normalize_filter_values(req.sources)
     fetch_limit = _raw_retrieve_limit(req.top_k, requested_sources)
@@ -397,7 +751,7 @@ def retrieve(
     trace_event(
         logger,
         "api.retrieve.start",
-        query=req.query,
+        query_length=len(req.query),
         top_k=req.top_k,
         fetch_limit=fetch_limit,
         sources=sorted(requested_sources),
@@ -478,13 +832,125 @@ def retrieve_documents(
     return _to_document_retrieve_response(document_result)
 
 
+@router.post("/retrieve-verified", response_model=VerifiedRetrieveResponse)
+def retrieve_verified(
+    req: VerifiedRetrieveRequest,
+    orchestrator: OrchestratorService = Depends(get_orchestrator),
+    store: FullDocumentStore = Depends(get_full_document_store),
+) -> VerifiedRetrieveResponse:
+    endpoint_label = "/api/rag/retrieve-verified"
+    config = _constraint_retrieval_config()
+    if not config.enabled:
+        record_constraint_retrieval_error(endpoint=endpoint_label, status="disabled")
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Constraint-aware document verification is disabled. Set "
+                "NALUS_CONSTRAINT_RETRIEVAL_ENABLED=1 to enable the additive endpoint."
+            ),
+        )
+
+    requested_sources = _normalize_filter_values(req.sources)
+    trace_event(
+        logger,
+        "api.retrieve_verified.start",
+        query_length=len(req.query),
+        max_candidate_chunks=config.max_candidate_chunks,
+        sources=sorted(requested_sources),
+    )
+
+    try:
+        result = retrieve_verified_documents(
+            query=req.query,
+            retriever=lambda query, top_k: orchestrator.retrieve(query, top_k=top_k),
+            full_document_store=store,
+            config=config,
+            candidate_filter=(
+                (lambda chunk: _matches_source_filters(chunk, requested_sources))
+                if requested_sources
+                else None
+            ),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[api] verified retrieve failed (%s)", exc)
+        record_constraint_retrieval_error(endpoint=endpoint_label, status="error")
+        raise HTTPException(
+            status_code=503,
+            detail="Constraint-aware retrieval is temporarily unavailable.",
+        ) from exc
+
+    record_constraint_retrieval_metrics(
+        result,
+        endpoint=endpoint_label,
+        status="success",
+    )
+    trace_event(
+        logger,
+        "api.retrieve_verified.done",
+        final_document_count=result.diagnostics.final_document_count,
+        verified_document_count=result.diagnostics.verified_document_count,
+        excluded_hard_mismatch_count=result.diagnostics.excluded_hard_mismatch_count,
+        excluded_not_proven_count=result.diagnostics.excluded_not_proven_count,
+    )
+    return _to_verified_retrieve_response(
+        result,
+        include_rejected_documents=req.debug or config.include_rejected_documents,
+    )
+
+
+@router.get("/documents/{document_id}", response_model=FullDocumentResponse)
+def get_full_document(
+    document_id: str,
+    store: FullDocumentStore = Depends(get_full_document_store),
+) -> FullDocumentResponse:
+    try:
+        normalized_id = validate_document_id(document_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    trace_event(
+        logger,
+        "api.full_document.start",
+        document_id_length=len(normalized_id),
+    )
+
+    try:
+        result = store.get(normalized_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FullDocumentLookupError as exc:
+        logger.warning("[api] full document lookup failed: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Full document lookup is temporarily unavailable.",
+        ) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[api] full document lookup raised unexpectedly: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Full document lookup is temporarily unavailable.",
+        ) from exc
+
+    if result is None:
+        trace_event(logger, "api.full_document.not_found")
+        raise HTTPException(status_code=404, detail="Document was not found.")
+
+    trace_event(
+        logger,
+        "api.full_document.done",
+        chunk_count=result.diagnostics.chunk_count,
+        full_text_availability_status=result.full_text_availability_status,
+    )
+    return _to_full_document_response(result)
+
+
 @router.post("/query", response_model=QueryResponse)
 def query(
     req: QueryRequest,
     orchestrator: OrchestratorService = Depends(get_orchestrator),
 ) -> QueryResponse:
-    logger.info("[api] query received query=%s", req.query)
-    trace_event(logger, "api.query.start", query=req.query)
+    logger.info("[api] query received query_length=%d", len(req.query))
+    trace_event(logger, "api.query.start", query_length=len(req.query))
 
     cache_key = None
     if _query_cache is not None:

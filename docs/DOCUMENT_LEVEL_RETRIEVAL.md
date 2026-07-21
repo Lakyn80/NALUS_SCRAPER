@@ -1,10 +1,10 @@
 # Document-level exhaustive retrieval
 
-Status: additive module, disabled by default.
+Status: additive module, disabled by default. The MVP runtime should continue to use the stable chunk-level retrieval flow unless a separate rollout task explicitly enables document-level retrieval.
 
 ## Goal
 
-NALUS document-level retrieval is a retrieval architecture feature. It does not generate legal advice, perform legal reasoning, summarize decisions, or call an LLM.
+NALUS document-level retrieval is a retrieval architecture feature. It does not generate legal advice, perform legal reasoning, or summarize decisions. The document aggregation module itself does not call an LLM; the runtime endpoint still obtains candidate chunks through the existing retrieval/orchestrator path, which may use the already-configured optional query-rewrite LLM before dense retrieval.
 
 The goal is to return relevant unique court decisions that can be identified within the indexed corpus under configured retrieval limits and relevance policy.
 
@@ -23,7 +23,7 @@ The additive document-level path is:
 
 ## Configuration
 
-The endpoint is disabled by default.
+The Python configuration default is disabled unless `NALUS_DOCUMENT_RETRIEVAL_ENABLED` is explicitly set to a truthy value. The local Docker runtime also defaults this flag to disabled so the NALUS MVP can keep using the stable chunk-level retrieval flow while this module is tuned separately.
 
 Environment variables:
 
@@ -86,13 +86,35 @@ Response shape:
   - threshold and configured limits
   - retrieval and aggregation latency
 
+Separate read-only document detail endpoint:
+
+`GET /api/rag/documents/{document_id}`
+
+This endpoint is not document-level ranking. It does not retrieve by query,
+score documents, lower thresholds, or use the additive document aggregation
+feature flag. It reconstructs one already identified document from same-document
+Qdrant chunks ordered by `chunk_index` and returns:
+
+- `document_id`
+- normalized `metadata`
+- `full_text`
+- ordered `chunks`
+- `source_url`
+- `provenance_status`
+- `full_text_availability_status`
+- reconstruction `diagnostics`
+
+The endpoint validates the document id, performs read-only Qdrant access, and
+fails explicitly with `400`, `404`, or `503` instead of fabricating fallback
+content.
+
 ## Safety properties
 
 - No ingest.
 - No Qdrant writes.
 - No embedding regeneration.
 - No model download.
-- No LLM call.
+- No LLM call inside the document aggregation module. Runtime candidate retrieval follows the existing orchestrator configuration, including optional query rewrite.
 - No BM25 scoring change.
 - No RRF change.
 - No existing API field removal or rename.

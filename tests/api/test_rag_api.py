@@ -22,11 +22,18 @@ from app.api.query_cache import CachedQueryResponse
 from app.api.rag_router import (
     QueryResponse,
     get_answer_service,
+    get_full_document_store,
     get_orchestrator,
     get_pipeline,
     router,
 )
 from app.rag.orchestrator.orchestrator_service import OrchestratorResult, OrchestratorService
+from app.rag.retrieval.full_document import (
+    FullDocumentChunk,
+    FullDocumentDiagnostics,
+    FullDocumentLookupError,
+    FullDocumentResult,
+)
 from app.rag.retrieval.models import RetrievedChunk
 
 
@@ -40,6 +47,7 @@ def _make_app(
     *,
     pipeline_override=None,
     answer_service_override=None,
+    full_document_store_override=None,
 ) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
@@ -49,6 +57,8 @@ def _make_app(
         app.dependency_overrides[get_pipeline] = lambda: pipeline_override
     if answer_service_override is not None:
         app.dependency_overrides[get_answer_service] = lambda: answer_service_override
+    if full_document_store_override is not None:
+        app.dependency_overrides[get_full_document_store] = lambda: full_document_store_override
     return app
 
 
@@ -131,6 +141,24 @@ class _FakeAnswerService:
         )
 
 
+class _FakeFullDocumentStore:
+    def __init__(
+        self,
+        *,
+        result: FullDocumentResult | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        self._result = result
+        self._error = error
+        self.calls: list[str] = []
+
+    def get(self, document_id: str) -> FullDocumentResult | None:
+        self.calls.append(document_id)
+        if self._error is not None:
+            raise self._error
+        return self._result
+
+
 class _MemoryCache:
     def __init__(self) -> None:
         self.store: dict[str, CachedQueryResponse] = {}
@@ -170,6 +198,79 @@ def _chunk(
         score=score,
         source=source,
         metadata=metadata or {},
+    )
+
+
+def _full_document_result(document_id: str = "ECLI:CZ:US:2026:3.US.446.26.1") -> FullDocumentResult:
+    chunks = [
+        FullDocumentChunk(
+            chunk_id="chunk-0",
+            chunk_index=0,
+            text="První část rozsudku.",
+            metadata={"document_id": document_id, "chunk_index": 0},
+        ),
+        FullDocumentChunk(
+            chunk_id="chunk-1",
+            chunk_index=1,
+            text="Druhá část rozsudku.",
+            metadata={"document_id": document_id, "chunk_index": 1},
+        ),
+    ]
+    return FullDocumentResult(
+        document_id=document_id,
+        metadata={
+            "document_id": document_id,
+            "ecli": document_id,
+            "case_reference": "III. ÚS 446/26",
+            "court_name": "Ústavní soud",
+            "decision_date": "2026-04-01",
+        },
+        full_text="\n\n".join(chunk.text for chunk in chunks),
+        chunks=chunks,
+        source_url=None,
+        provenance_status="overeno",
+        full_text_availability_status="available",
+        diagnostics=FullDocumentDiagnostics(
+            collection_name="test-collection",
+            chunk_count=2,
+            missing_chunk_indexes=[],
+            duplicate_chunk_indexes=[],
+            all_chunks_have_index=True,
+            reconstruction_method="qdrant_payload_chunk_index",
+            max_chunks=2000,
+        ),
+    )
+
+
+def _constraint_full_document(document_id: str, text: str) -> FullDocumentResult:
+    chunks = [
+        FullDocumentChunk(
+            chunk_id=f"{document_id}-chunk-0",
+            chunk_index=0,
+            text=text,
+            metadata={"document_id": document_id, "chunk_index": 0},
+        )
+    ]
+    return FullDocumentResult(
+        document_id=document_id,
+        metadata={
+            "document_id": document_id,
+            "court_name": "Ústavní soud",
+        },
+        full_text=text,
+        chunks=chunks,
+        source_url=None,
+        provenance_status="overeno",
+        full_text_availability_status="available",
+        diagnostics=FullDocumentDiagnostics(
+            collection_name="test-collection",
+            chunk_count=1,
+            missing_chunk_indexes=[],
+            duplicate_chunk_indexes=[],
+            all_chunks_have_index=True,
+            reconstruction_method="test",
+            max_chunks=2000,
+        ),
     )
 
 
@@ -320,6 +421,76 @@ class TestRawRetrieveEndpoint:
         assert resp.status_code == 200
         assert [item["chunk_id"] for item in resp.json()["results"]] == ["constitutional-hit"]
 
+    def test_constitutional_filter_matches_usoud_source_and_ecli_identity(self) -> None:
+        fake = _FakeOrchestrator(
+            retrieve_results=[
+                _chunk(
+                    chunk_id="usoud-source-hit",
+                    metadata={
+                        "source": "usoud / nalus",
+                        "court": "Ústavní soud",
+                        "document_id": "ECLI:CZ:US:2023:4.US.652.22.2",
+                    },
+                ),
+                _chunk(
+                    chunk_id="ecli-only-hit",
+                    metadata={"document_id": "ECLI:CZ:US:2023:3.US.3469.22.1"},
+                ),
+                _chunk(
+                    chunk_id="supreme-hit",
+                    metadata={"source": "supreme", "document_id": "ECLI:CZ:NS:2024:1.TDO.1.1"},
+                ),
+            ]
+        )
+        client = TestClient(_make_app(fake))
+
+        resp = client.post(
+            "/api/rag/retrieve",
+            json={"query": "dotaz", "top_k": 10, "sources": ["constitutional"]},
+        )
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert [item["chunk_id"] for item in payload["results"]] == [
+            "usoud-source-hit",
+            "ecli-only-hit",
+        ]
+        assert payload["results"][0]["court_name"] == "Ústavní soud"
+        assert payload["results"][1]["court_name"] == "Ústavní soud"
+
+    def test_supreme_filter_matches_nsoud_source_and_ecli_identity(self) -> None:
+        fake = _FakeOrchestrator(
+            retrieve_results=[
+                _chunk(
+                    chunk_id="constitutional-hit",
+                    metadata={"document_id": "ECLI:CZ:US:2023:3.US.3469.22.1"},
+                ),
+                _chunk(
+                    chunk_id="nsoud-source-hit",
+                    metadata={"source": "nsoud", "document_id": "ECLI:CZ:NS:2024:1.TDO.1.1"},
+                ),
+                _chunk(
+                    chunk_id="nsoud-ecli-hit",
+                    metadata={"document_id": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1"},
+                ),
+            ]
+        )
+        client = TestClient(_make_app(fake))
+
+        resp = client.post(
+            "/api/rag/retrieve",
+            json={"query": "dotaz", "top_k": 10, "sources": ["supreme"]},
+        )
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert [item["chunk_id"] for item in payload["results"]] == [
+            "nsoud-source-hit",
+            "nsoud-ecli-hit",
+        ]
+        assert payload["results"][0]["court_name"] == "Nejvyšší soud"
+        assert payload["results"][1]["court_name"] == "Nejvyšší soud"
+
     def test_retrieve_failure_returns_empty_results(self) -> None:
         client = TestClient(_make_app(_ExplodingOrchestrator()))
 
@@ -424,6 +595,169 @@ class TestRawRetrieveEndpoint:
 
         assert resp.status_code == 200
         assert set(resp.json().keys()) == {"results"}
+
+    def test_verified_retrieve_disabled_by_default(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("NALUS_CONSTRAINT_RETRIEVAL_ENABLED", raising=False)
+        client = TestClient(_make_app(_FakeOrchestrator()))
+
+        resp = client.post("/api/rag/retrieve-verified", json={"query": "dotaz"})
+
+        assert resp.status_code == 404
+        assert "Constraint-aware document verification is disabled" in resp.json()["detail"]
+
+    def test_verified_retrieve_returns_only_verified_documents(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_CONSTRAINT_RETRIEVAL_ENABLED", "1")
+        monkeypatch.setenv("NALUS_CONSTRAINT_MAX_CANDIDATE_CHUNKS", "10")
+        fake = _FakeOrchestrator(
+            retrieve_results=[
+                _chunk(
+                    chunk_id="doc-ok-0",
+                    score=0.9,
+                    metadata={"document_id": "DOC-OK", "court_name": "Ústavní soud"},
+                ),
+                _chunk(
+                    chunk_id="doc-bad-0",
+                    score=0.95,
+                    metadata={"document_id": "DOC-BAD", "court_name": "Ústavní soud"},
+                ),
+            ]
+        )
+        store = _FakeFullDocumentStore()
+
+        def get(document_id: str) -> FullDocumentResult | None:
+            store.calls.append(document_id)
+            if document_id == "DOC-OK":
+                return _constraint_full_document(
+                    document_id,
+                    "Stěžovatel je státní občan Ruské federace a podal žádost o udělení státního občanství České republiky.",
+                )
+            return _constraint_full_document(
+                document_id,
+                "Stěžovatel je občan Ukrajiny a žádal o udělení státního občanství České republiky.",
+            )
+
+        store.get = get  # type: ignore[method-assign]
+        client = TestClient(_make_app(fake, full_document_store_override=store))
+
+        resp = client.post(
+            "/api/rag/retrieve-verified",
+            json={"query": "udělení českého občanství ruskému občanu", "debug": True},
+        )
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert [item["document_id"] for item in payload["documents"]] == ["DOC-OK"]
+        assert payload["diagnostics"]["verified_document_count"] == 1
+        assert payload["diagnostics"]["excluded_hard_mismatch_count"] == 1
+        assert payload["rejected_documents"][0]["document_id"] == "DOC-BAD"
+        assert fake.retrieve_calls == [("udělení českého občanství ruskému občanu", 10)]
+
+    def test_verified_retrieve_empty_result_has_no_unrelated_fallback(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_CONSTRAINT_RETRIEVAL_ENABLED", "1")
+        fake = _FakeOrchestrator(
+            retrieve_results=[
+                _chunk(metadata={"document_id": "DOC-IRRELEVANT", "court_name": "Ústavní soud"})
+            ]
+        )
+        store = _FakeFullDocumentStore(
+            result=_constraint_full_document(
+                "DOC-IRRELEVANT",
+                "Rozhodnutí o místním referendu a územním plánování.",
+            )
+        )
+        client = TestClient(_make_app(fake, full_document_store_override=store))
+
+        resp = client.post(
+            "/api/rag/retrieve-verified",
+            json={"query": "udělení českého občanství ruskému občanu"},
+        )
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["documents"] == []
+        assert payload["rejected_documents"] == []
+        assert payload["diagnostics"]["final_document_count"] == 0
+        assert payload["diagnostics"]["excluded_not_proven_count"] == 1
+
+    def test_verified_retrieve_provider_failure_returns_503(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_CONSTRAINT_RETRIEVAL_ENABLED", "1")
+        client = TestClient(_make_app(_ExplodingOrchestrator()))
+
+        resp = client.post(
+            "/api/rag/retrieve-verified",
+            json={"query": "udělení českého občanství ruskému občanu"},
+        )
+
+        assert resp.status_code == 503
+        assert resp.json()["detail"] == "Constraint-aware retrieval is temporarily unavailable."
+
+
+class TestFullDocumentEndpoint:
+    def test_returns_reconstructed_full_document(self) -> None:
+        result = _full_document_result()
+        store = _FakeFullDocumentStore(result=result)
+        client = TestClient(
+            _make_app(_FakeOrchestrator(), full_document_store_override=store)
+        )
+
+        resp = client.get(f"/api/rag/documents/{result.document_id}")
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["document_id"] == result.document_id
+        assert payload["metadata"]["ecli"] == result.document_id
+        assert payload["full_text"] == "První část rozsudku.\n\nDruhá část rozsudku."
+        assert [chunk["chunk_index"] for chunk in payload["chunks"]] == [0, 1]
+        assert payload["full_text_availability_status"] == "available"
+        assert payload["diagnostics"]["chunk_count"] == 2
+        assert store.calls == [result.document_id]
+
+    def test_invalid_document_id_returns_400(self) -> None:
+        store = _FakeFullDocumentStore(result=_full_document_result())
+        client = TestClient(
+            _make_app(_FakeOrchestrator(), full_document_store_override=store)
+        )
+
+        resp = client.get(f"/api/rag/documents/{'A' * 257}")
+
+        assert resp.status_code == 400
+        assert store.calls == []
+
+    def test_missing_document_returns_404(self) -> None:
+        store = _FakeFullDocumentStore(result=None)
+        client = TestClient(
+            _make_app(_FakeOrchestrator(), full_document_store_override=store)
+        )
+
+        resp = client.get("/api/rag/documents/DOC-404")
+
+        assert resp.status_code == 404
+        assert store.calls == ["DOC-404"]
+
+    def test_lookup_failure_returns_503(self) -> None:
+        store = _FakeFullDocumentStore(
+            error=FullDocumentLookupError("qdrant unavailable")
+        )
+        client = TestClient(
+            _make_app(_FakeOrchestrator(), full_document_store_override=store)
+        )
+
+        resp = client.get("/api/rag/documents/DOC-1")
+
+        assert resp.status_code == 503
+        assert resp.json()["detail"] == "Full document lookup is temporarily unavailable."
 
 
 # ---------------------------------------------------------------------------
