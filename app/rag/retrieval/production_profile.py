@@ -30,6 +30,10 @@ class ProductionRetrievalConfig:
     local_files_only: bool
     trust_remote_code: bool
     device: str
+    candidate_multiplier: int
+    min_candidate_count: int
+    max_candidate_count: int
+    lexical_filter_enabled: bool
 
 
 BGE_M3_DENSE_BM25_RRF = RetrievalProfile(
@@ -77,6 +81,10 @@ def production_retrieval_config_from_env() -> ProductionRetrievalConfig:
         local_files_only=_read_bool_env("EMBEDDING_LOCAL_FILES_ONLY", default=True),
         trust_remote_code=_read_bool_env("EMBEDDING_TRUST_REMOTE_CODE", default=False),
         device=os.getenv("EMBEDDING_DEVICE", "cpu"),
+        candidate_multiplier=_read_int_env("NALUS_RETRIEVAL_CANDIDATE_MULTIPLIER", default=6),
+        min_candidate_count=_read_int_env("NALUS_RETRIEVAL_MIN_CANDIDATES", default=50),
+        max_candidate_count=_read_int_env("NALUS_RETRIEVAL_MAX_CANDIDATES", default=500),
+        lexical_filter_enabled=_read_bool_env("NALUS_RETRIEVAL_LEXICAL_FILTER_ENABLED", default=True),
     )
 
 
@@ -122,3 +130,16 @@ def _read_bool_env(name: str, default: bool) -> bool:
         return False
 
     raise RetrievalConfigurationError(f"{name} must be a boolean value.")
+
+
+def _read_int_env(name: str, default: int) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise RetrievalConfigurationError(f"{name} must be an integer value.") from exc
+    if value <= 0:
+        raise RetrievalConfigurationError(f"{name} must be greater than zero.")
+    return value

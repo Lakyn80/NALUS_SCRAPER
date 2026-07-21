@@ -131,6 +131,10 @@ def test_cache_disabled_preserves_embedder_behavior(monkeypatch: pytest.MonkeyPa
         local_files_only=True,
         trust_remote_code=False,
         device="cpu",
+        candidate_multiplier=6,
+        min_candidate_count=50,
+        max_candidate_count=500,
+        lexical_filter_enabled=True,
     )
     model = MagicMock()
     model.encode.return_value = [[0.5] * 1024]

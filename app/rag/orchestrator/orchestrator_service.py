@@ -74,22 +74,14 @@ class OrchestratorService:
         self._rewrite = rewrite
 
     def retrieve(self, query: str, top_k: int = 10) -> list[RetrievedChunk]:
-        """Return raw dense retrieval hits without planner or synthesis."""
+        """Return retrieval hits without planner, synthesis, or LLM rewrite."""
         trace_event(logger, "orchestrator.retrieve.start", query=query, top_k=top_k)
 
-        effective_query = query
-        if self._rewrite is not None:
-            try:
-                effective_query = self._rewrite.rewrite(query)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("[orchestrator] rewrite failed (%s); using original query", exc)
-                effective_query = query
-
-        results = self._execution.retrieve_dense(effective_query, top_k=top_k)
+        results = self._execution.retrieve_dense(query, top_k=top_k)
         trace_event(
             logger,
             "orchestrator.retrieve.done",
-            query=effective_query,
+            query=query,
             total_chunks=len(results),
         )
         return results

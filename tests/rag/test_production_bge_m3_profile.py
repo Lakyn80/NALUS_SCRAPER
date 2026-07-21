@@ -146,6 +146,170 @@ def test_hybrid_retriever_requires_dense_and_bm25_results() -> None:
         retriever.search("spravedlivý proces")
 
 
+def test_hybrid_retriever_expands_candidates_and_filters_weak_text_matches() -> None:
+    class _Dense:
+        def __init__(self) -> None:
+            self.top_k_calls: list[int] = []
+
+        def search(self, query: str, top_k: int):
+            del query
+            self.top_k_calls.append(top_k)
+            return [
+                RetrievedChunk(
+                    "irrelevant",
+                    "náhrada škody za zpoždění letecké dopravy a předběžná otázka",
+                    0.99,
+                    "dense",
+                    {"document_id": "irrelevant"},
+                ),
+                RetrievedChunk(
+                    "broad-family",
+                    "nejlepší zájem dítěte a střídavá péče rodičů",
+                    0.98,
+                    "dense",
+                    {"document_id": "broad-family"},
+                ),
+                RetrievedChunk(
+                    "abduction",
+                    "mezinárodní únos dítěte podle Haagské úmluvy a navrácení dítěte",
+                    0.70,
+                    "dense",
+                    {"document_id": "abduction"},
+                ),
+            ][:top_k]
+
+    dense = _Dense()
+    sidecar = Bm25Sidecar.from_records(
+        [
+            Bm25Record(
+                "abduction",
+                "mezinárodní únos dítěte podle Haagské úmluvy a navrácení dítěte",
+                {"document_id": "abduction"},
+            ),
+            Bm25Record(
+                "broad-family",
+                "nejlepší zájem dítěte a střídavá péče rodičů",
+                {"document_id": "broad-family"},
+            ),
+        ],
+        k1=1.5,
+        b=0.75,
+        index_id=BGE_M3_DENSE_BM25_RRF.name,
+    )
+    retriever = HybridBgeM3Retriever(
+        dense_store=dense,
+        bm25_sidecar=sidecar,
+        config=production_retrieval_config_from_env(),
+    )
+
+    results = retriever.search("mezinárodní únos dítěte", top_k=2)
+
+    assert dense.top_k_calls == [50]
+    assert [item.id for item in results] == ["abduction"]
+    assert results[0].metadata["lexical_support"]["matched_terms"] == [
+        "mezinarodni",
+        "unos",
+        "ditete",
+    ]
+
+
+def test_hybrid_retriever_filters_preliminary_measure_for_preliminary_question_query() -> None:
+    class _Dense:
+        def search(self, query: str, top_k: int):
+            del query
+            return [
+                RetrievedChunk(
+                    "measure",
+                    "soud nařídil předběžné opatření ve věci péče o dítě",
+                    0.95,
+                    "dense",
+                ),
+                RetrievedChunk(
+                    "question",
+                    "povinnost položit předběžnou otázku Soudnímu dvoru Evropské unie",
+                    0.80,
+                    "dense",
+                ),
+            ][:top_k]
+
+    sidecar = Bm25Sidecar.from_records(
+        [
+            Bm25Record(
+                "measure",
+                "soud nařídil předběžné opatření ve věci péče o dítě",
+                {"document_id": "measure"},
+            ),
+            Bm25Record(
+                "question",
+                "povinnost položit předběžnou otázku Soudnímu dvoru Evropské unie",
+                {"document_id": "question"},
+            ),
+        ],
+        k1=1.5,
+        b=0.75,
+        index_id=BGE_M3_DENSE_BM25_RRF.name,
+    )
+    retriever = HybridBgeM3Retriever(
+        dense_store=_Dense(),
+        bm25_sidecar=sidecar,
+        config=production_retrieval_config_from_env(),
+    )
+
+    results = retriever.search("položit předběžnou otázku Soudnímu dvoru", top_k=2)
+
+    assert [item.id for item in results] == ["question"]
+
+
+def test_hybrid_retriever_returns_one_chunk_per_document() -> None:
+    class _Dense:
+        def search(self, query: str, top_k: int):
+            del query
+            return [
+                RetrievedChunk(
+                    "doc-a-dense",
+                    "mezinárodní únos dítěte v odůvodnění rozhodnutí",
+                    0.99,
+                    "dense",
+                    {"document_id": "doc-a"},
+                ),
+                RetrievedChunk(
+                    "doc-b-dense",
+                    "mezinárodní únos dítěte podle Haagské úmluvy",
+                    0.80,
+                    "dense",
+                    {"document_id": "doc-b"},
+                ),
+            ][:top_k]
+
+    sidecar = Bm25Sidecar.from_records(
+        [
+            Bm25Record(
+                "doc-a-bm25",
+                "mezinárodní únos dítěte podle Haagské úmluvy a navrácení dítěte",
+                {"document_id": "doc-a"},
+            ),
+            Bm25Record(
+                "doc-b-bm25",
+                "mezinárodní únos dítěte podle Haagské úmluvy",
+                {"document_id": "doc-b"},
+            ),
+        ],
+        k1=1.5,
+        b=0.75,
+        index_id=BGE_M3_DENSE_BM25_RRF.name,
+    )
+    retriever = HybridBgeM3Retriever(
+        dense_store=_Dense(),
+        bm25_sidecar=sidecar,
+        config=production_retrieval_config_from_env(),
+    )
+
+    results = retriever.search("mezinárodní únos dítěte", top_k=5)
+
+    assert len({item.metadata["document_id"] for item in results}) == len(results)
+    assert {item.metadata["document_id"] for item in results} == {"doc-a", "doc-b"}
+
+
 def test_provenance_required_and_validated() -> None:
     payload = build_embedding_provenance(
         payload={"source": "nalus", "document_id": "doc-1", "chunk_index": 0, "text": "text"},
