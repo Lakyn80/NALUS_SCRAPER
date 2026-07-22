@@ -7,8 +7,10 @@ Run:
 
 from fastapi import FastAPI
 
+from app.api.middleware import install_observability_middleware
 from app.api.rag_router import router as rag_router
 
 app = FastAPI(title="NALUS RAG API", version="0.1.0")
 
+install_observability_middleware(app)
 app.include_router(rag_router)

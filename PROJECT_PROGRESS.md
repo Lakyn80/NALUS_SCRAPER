@@ -1,5 +1,38 @@
 # Project Progress
 
+## 2026-07-22 Europe/Moscow - Task: Implement Observability Phase A runtime foundation
+
+- Goal:
+  Implement executable Phase A observability primitives: canonical correlation context, request ID generation, structured JSON-compatible logging, centralized redaction, FastAPI middleware, context cleanup, and tests.
+- Scope:
+  Runtime observability only. No OpenTelemetry, Loki, Tempo, Grafana service, alerting, audit hash chain, failure injection, retrieval ranking, query rewriting, API response contract, or business logic changes were intended.
+- What changed:
+  Added `app/core/context.py` with contextvars-backed `correlation_id`, `request_id`, `operation_id`, `workflow_id`, `job_id`, and `task_id`, secure generated IDs, inbound ID validation, explicit binding/reset helpers for future workers, and cleanup.
+  Added `app/core/redaction.py` with recursive redaction for mappings, nested structures, lists, tuples, Pydantic models, dataclasses, headers, exceptions, structured extras, string secret patterns, and stable idempotency-key fingerprinting.
+  Extended `app/core/logging.py` with automatic context enrichment through a LogRecordFactory, JSON log formatting controlled by `LOG_FORMAT=json` or `LOG_JSON=1`, structured fields, redacted extras, and duplicate-handler protection.
+  Updated `app/core/tracing.py` so trace payloads are redacted while preserving existing trace formatting compatibility.
+  Added `app/api/middleware.py` and installed it in `app/api/main.py` and `app/api_app.py`. The middleware accepts valid `X-Correlation-ID`, replaces invalid or missing values, always generates `X-Request-ID`, returns both response headers, logs request start/completion/failure events, and clears context in `finally`.
+  Added deterministic Phase A tests for context validation/binding/cleanup, middleware response headers and leakage protection, concurrent request isolation, structured log enrichment, JSON log validity, redaction coverage, idempotency key safety, and duplicate handler protection.
+  Made `tests/api/test_main_startup.py` timing deterministic under the new middleware and annotated `app/api/rag_router.py` query-cache state for the touched `app/api/main.py` mypy check.
+  Updated `docs/OBSERVABILITY_CONTRACT.md` with concise Phase A runtime usage.
+- Tests and validation run:
+  `python -m pytest -q tests/test_observability_context.py tests/test_redaction.py tests/test_structured_logging.py tests/api/test_observability_middleware.py` -> `34 passed`, one Starlette/httpx deprecation warning.
+  `python -m pytest -q tests/test_core_tracing.py tests/api/test_main_startup.py tests/api/test_rag_api.py` -> `70 passed`, one Starlette/httpx deprecation warning.
+  `python -m compileall app tests` -> passed.
+  `ruff check app/core/context.py app/core/redaction.py app/core/logging.py app/core/tracing.py app/api/middleware.py app/api/main.py app/api_app.py tests/test_observability_context.py tests/test_redaction.py tests/test_structured_logging.py tests/api/test_observability_middleware.py tests/api/test_main_startup.py --no-cache` -> passed.
+  `mypy app/core/context.py app/core/redaction.py app/core/logging.py app/core/tracing.py app/api/middleware.py app/api_app.py` -> passed.
+  `mypy app/api/main.py` -> passed after annotating query-cache state.
+- Runtime smoke:
+  Inline `TestClient(app.api_app.app)` smoke hit `/docs` twice. First request used inbound `X-Correlation-ID=smoke-12345678` and authorization/cookie header secrets; response returned the same correlation ID and an `X-Request-ID`. Second request generated a different correlation ID and a fresh request ID. Captured middleware events were `http.request.started` and `http.request.completed` for both requests. Middleware logs did not contain the header secret, and `get_context()` was fully empty after both requests.
+- Blocked broader validation:
+  `ruff check app tests --no-cache` currently fails on unrelated pre-existing lint findings across older modules/tests.
+  `mypy app` currently fails on unrelated pre-existing missing stubs and type issues across older modules; the new Phase A modules pass narrow mypy.
+- Known limitations:
+  Phase A does not add distributed tracing, collector/exporter backends, central log aggregation, alert rules, audit chains, failure injection, or diagnostics endpoints.
+  Middleware logs safe path/route only and intentionally does not log request bodies, raw query strings, authorization headers, cookies, or request payloads.
+- Next recommended task:
+  Start Phase B by designing an OpenTelemetry-compatible tracing plan that maps the existing lightweight `trace_event` call sites to bounded spans without adding a duplicate monitoring stack.
+
 ## 2026-07-22 Europe/Moscow - Task: Set production observability and reliability guardrails
 
 - Goal:

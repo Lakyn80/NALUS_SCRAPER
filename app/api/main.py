@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
+from app.api.middleware import install_observability_middleware
 from app.api.rag_router import router
 from app.core.logging import get_logger
 
@@ -148,6 +149,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+install_observability_middleware(app)
 app.include_router(router)
 
 

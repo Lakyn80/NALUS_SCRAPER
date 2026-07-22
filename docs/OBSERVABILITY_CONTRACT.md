@@ -48,6 +48,37 @@ Future critical workflows should use one canonical context across participating 
 
 Context must be cleared after each request, task, job, or message. Tests must cover leakage between requests, users, tenants or ownership scopes, and jobs once those concepts are implemented.
 
+### Phase A Runtime Usage
+
+Implemented Phase A runtime primitives:
+
+- Correlation context: `app/core/context.py`
+- Sensitive-data redaction: `app/core/redaction.py`
+- Structured logging support: `app/core/logging.py`
+- Safe trace-event payload redaction: `app/core/tracing.py`
+- HTTP middleware: `app/api/middleware.py`
+
+FastAPI entrypoints install the middleware through `install_observability_middleware(app)`.
+
+Inbound correlation header:
+
+- `X-Correlation-ID`
+
+Outbound response headers:
+
+- `X-Correlation-ID`
+- `X-Request-ID`
+
+Generated identifiers are observability-only. They are not authentication, authorization, ownership, tenant, or trust signals.
+
+Production JSON logs can be enabled with:
+
+```powershell
+$env:LOG_FORMAT="json"
+```
+
+Development text logs remain the default. Existing `logger.info(...)`, `logger.warning(...)`, and `trace_event(...)` call sites remain compatible.
+
 ## Structured Logging Contract
 
 Production-compatible logs should use stable event names and bounded fields. Recommended fields:

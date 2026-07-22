@@ -100,13 +100,13 @@ def test_background_retry_recovers_after_startup_failure(monkeypatch) -> None:
 
     monkeypatch.setenv("RAG_STRICT_REAL_MODE", "1")
     monkeypatch.setattr(main, "_initialize_orchestrator", fake_initialize)
-    monkeypatch.setattr(main, "_STARTUP_RETRY_DELAY_SECONDS", 0.05)
+    monkeypatch.setattr(main, "_STARTUP_RETRY_DELAY_SECONDS", 0.2)
 
     with TestClient(main.app) as client:
         time.sleep(0.02)
         health_after_failure = client.get("/health")
 
-        time.sleep(0.08)
+        time.sleep(0.25)
         query_after_retry = client.post("/api/rag/query", json={"query": "dotaz"})
 
     assert health_after_failure.status_code == 200

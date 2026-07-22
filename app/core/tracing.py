@@ -23,6 +23,8 @@ import json
 import logging
 from typing import Any
 
+from app.core.redaction import redact_sensitive
+
 
 def trace_event(logger: logging.Logger, name: str, **payload: Any) -> None:
     """Log a structured trace event.
@@ -44,11 +46,15 @@ def _format_payload(payload: dict[str, Any]) -> str:
 
     Values that are not JSON-serializable fall back to repr().
     """
+    safe_payload = redact_sensitive(payload)
     parts: list[str] = []
     for key, value in payload.items():
+        safe_value = safe_payload[key]
         try:
-            serialized = json.dumps(value, ensure_ascii=False)
+            json.dumps(value, ensure_ascii=False)
         except (TypeError, ValueError):
-            serialized = str(value)
+            serialized = str(safe_value)
+        else:
+            serialized = json.dumps(safe_value, ensure_ascii=False)
         parts.append(f"{key}={serialized}")
     return " ".join(parts)

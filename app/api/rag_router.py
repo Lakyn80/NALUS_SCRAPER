@@ -22,7 +22,12 @@ from unittest.mock import MagicMock
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from app.api.query_cache import CachedQueryResponse, build_cache_key, query_cache_ttl_seconds
+from app.api.query_cache import (
+    BaseQueryCache,
+    CachedQueryResponse,
+    build_cache_key,
+    query_cache_ttl_seconds,
+)
 from app.core.logging import get_logger
 from app.core.tracing import trace_event
 from app.observability.constraint_retrieval_metrics import (
@@ -294,7 +299,7 @@ _live_orchestrator_error: str | None = None
 _background_ingest_status: str = "idle"
 _background_ingest_error: str | None = None
 _corpus_version: str = "unknown"
-_query_cache = None
+_query_cache: BaseQueryCache | None = None
 _query_cache_backend: str = "none"
 _query_cache_error: str | None = None
 _embedding_cache_enabled: bool = False
