@@ -1,5 +1,47 @@
 # Project Progress
 
+## 2026-07-23 Europe/Moscow - Task: Universal Verified Legal Retrieval v2 foundation
+
+- Goal:
+  Add disabled-by-default runtime and evaluation foundations for Universal Verified Legal Retrieval v2: paragraph-aware legal document structure, deterministic parsing, hierarchical child chunks, parent evidence windows, versioned indexing contract, universal QuerySpec v2, final semantic verifier interface, deterministic fail-closed gate, diagnostics, tests, hard-negative fixtures, and an offline comparison report writer.
+- Scope:
+  Additive backend/evaluation code only. No production frontend switch, no active production retrieval profile change, no current Qdrant collection or BM25 sidecar overwrite, no external or paid LLM provider calls, no commit, and no push.
+- Starting audit:
+  Branch `main`, HEAD `017c1957935cf1ab71a7eedaa479122a284ffcfb`.
+  Pre-existing untracked generated artifacts were present under `artifacts/evaluation_quality/citizenship_query_retrieval_audit_20260712.*` and `artifacts/rag_eval/legal_qa/answer_eval/{mixed_document_gold_default,nsoud_document_gold_default,usoud_document_gold_default}/`.
+  Recent HEAD history started with `017c195 feat(observability): add correlation context and structured logging`, followed by `333ce2f Add observability engineering guardrails`, `9b29ad5 Add Docker registry publishing support`, `2e45e98 Add verified and full document retrieval APIs`, `069d7ca Harden production retrieval candidate selection`, `aa63a3a Add offline document retrieval benchmark`, `33b1711 Add document-level retrieval pipeline`, and `71755ca Enable evidence windows for document-gold evaluation`.
+- What changed:
+  Added `app/rag/legal_v2/models.py` with stable paragraph/chunk IDs, section enum, paragraph metadata provenance, document reconstruction, and parsing diagnostics.
+  Added `app/rag/legal_v2/parser.py` with deterministic line-ending normalization, numbered-paragraph detection, heading and section transitions, damaged-format fallback segmentation, boilerplate/citation classification, source offsets, source order, and diagnostics.
+  Added `app/rag/legal_v2/chunking.py` with paragraph-aware child chunks, sentence-aware splitting for overlong paragraphs, complete paragraph/sentence overlap, no incompatible section crossing, parent evidence windows, deterministic IDs, source spans, paragraph text maps, and reconstruction.
+  Added `app/rag/legal_v2/indexing.py` with disabled v2 indexing contract and proposed collection/profile `nalus_legal_paragraph_chunks_v2` plus BM25 sidecar id `nalus_legal_paragraph_bm25_v2`.
+  Added `app/rag/legal_v2/query_spec.py` with a universal typed QuerySpec v2 contract preserving `original_query`, `normalized_query`, `structured_query`, and entity-preserving `retrieval_queries`.
+  Added `app/rag/legal_v2/verifier.py` with provider-agnostic structured verifier interface, deterministic fake verifier, strict output validation, evidence paragraph validation, and deterministic gate.
+  Added `app/rag/legal_v2/diagnostics.py` with bounded runtime diagnostic payloads and explicit Prometheus label-safety flags.
+  Added `app/rag/legal_v2/evaluation.py` with offline comparison metrics and JSON/Markdown report writer for pass/failure/blocked/exception states.
+  Added focused tests under `tests/rag/test_legal_v2_*.py` and hard-negative fixture `tests/fixtures/legal_v2_hard_negatives.jsonl`.
+  Generated seed offline comparison artifact under `artifacts/rag_eval/legal_v2_seed_comparison_20260723/`.
+- Tests and validation run:
+  `python -m compileall app tests` -> passed.
+  `python -m pytest -q tests\rag\test_legal_v2_parser_chunking.py tests\rag\test_legal_v2_query_spec.py tests\rag\test_legal_v2_verifier.py tests\rag\test_legal_v2_evaluation.py` -> `17 passed`.
+  `python -m pytest -q tests\rag\test_full_document_retrieval.py tests\rag\test_document_retrieval.py tests\rag\test_constraint_pipeline.py tests\rag\test_constraint_verification.py tests\rag\test_production_bge_m3_profile.py` -> `45 passed`.
+  `ruff check app\rag\legal_v2 tests\rag\test_legal_v2_parser_chunking.py tests\rag\test_legal_v2_query_spec.py tests\rag\test_legal_v2_verifier.py tests\rag\test_legal_v2_evaluation.py --no-cache` -> passed.
+  `mypy app\rag\legal_v2` -> passed with no issues in 9 source files.
+  `git diff --check` -> passed.
+- Offline seed comparison:
+  Tiny deterministic seed only; no production readiness claimed.
+  `current_production_chunks`: candidate_recall `1.0`, exact_precision `0.25`, hard_negative_false_positives `1`, verified_document_precision `0.333`.
+  `paragraph_child_chunks`: candidate_recall `1.0`, exact_precision `0.5`, hard_negative_false_positives `0`, verified_document_precision `0.0`.
+  `paragraph_child_parent_windows`: candidate_recall `1.0`, exact_precision `0.5`, hard_negative_false_positives `0`, verified_document_precision `1.0`.
+- Behavior preserved:
+  Existing production retrieval config remains on `nalus_bge_m3_dense_bm25_rrf_v1` / `nalus_bge_m3_chunks_v1`. No API route, frontend, active collection alias, embedding model, Qdrant data, BM25 scoring, RRF behavior, Redis/cache behavior, or provider configuration was changed.
+- Known limitations:
+  The parser and QuerySpec extraction are conservative deterministic first-pass helpers, not a complete legal NLP system.
+  The LLM verifier is an interface plus deterministic fake provider; no paid/external provider is enabled.
+  The seed comparison is intentionally small and synthetic, useful for contract validation only.
+- Next recommended task:
+  Add an offline v2 index builder that reads reviewed legal documents, writes only the new `nalus_legal_paragraph_chunks_v2` payload format, and runs the comparison runner on a curated gold dataset before any production activation discussion.
+
 ## 2026-07-22 Europe/Moscow - Task: Implement Observability Phase A runtime foundation
 
 - Goal:
