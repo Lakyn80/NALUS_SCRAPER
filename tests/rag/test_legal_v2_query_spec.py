@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from app.rag.legal_v2.interpreter import (
+    DeterministicQuerySpecProvider,
+    interpret_query_spec_v2,
+)
 from app.rag.legal_v2.query_spec import (
     ConstraintCategory,
     QuerySpecV2,
@@ -73,3 +77,31 @@ def test_query_spec_distinguishes_cited_case_from_current_case() -> None:
         constraint.category == ConstraintCategory.CURRENT_CASE
         for constraint in current.hard_constraints
     )
+
+
+def test_provider_schema_drift_is_repaired_to_local_contract() -> None:
+    provider = DeterministicQuerySpecProvider(
+        {
+            "original_query": "únos dítěte matkou z Česka do Ruska",
+            "normalized_query": "child abduction by mother from Czech Republic to Russia",
+            "retrieval_queries": ["child abduction Czech Republic Russia"],
+            "intent": "child abduction legal inquiry",
+            "entities": ["dítě", "matka", "Česko", "Rusko"],
+            "hard_constraints": ["child abduction by mother"],
+            "requires_verification": False,
+        }
+    )
+
+    result = interpret_query_spec_v2(
+        "únos dítěte matkou z Česka do Ruska",
+        provider=provider,
+        allow_deterministic_fallback=False,
+    )
+
+    assert result.status == "ok"
+    assert result.reason == "query_interpreter_schema_repaired:ValueError"
+    assert result.query_spec is not None
+    assert result.query_spec.retrieval_queries[0] == "únos dítěte matkou z Česka do Ruska"
+    assert result.query_spec.requires_verification is True
+    assert result.query_spec.hard_constraints
+    assert result.query_spec.structured_query["provider_schema_repaired"] is True

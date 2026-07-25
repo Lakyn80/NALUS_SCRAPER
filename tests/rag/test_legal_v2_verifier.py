@@ -10,6 +10,7 @@ from app.rag.legal_v2.verifier import (
     VerificationDecision,
     deterministic_verification_gate,
     run_semantic_verifier,
+    _normalize_verifier_payload,
 )
 
 
@@ -104,7 +105,15 @@ def test_invalid_llm_output_fails_closed() -> None:
         provider=provider,
         query_spec=spec,
         candidate_document=candidate,
-        evidence_windows=[],
+        evidence_windows=[
+            EvidenceWindowForConstraint(
+                constraint_id=constraint.constraint_id,
+                paragraph_ids=[candidate.paragraphs[0].paragraph_id],
+                text=candidate.paragraphs[0].normalized_text,
+                section_types=[candidate.paragraphs[0].section_type],
+            )
+            for constraint in spec.hard_constraints
+        ],
     )
 
     assert result.decision == VerificationDecision.VERIFIER_ERROR
@@ -131,7 +140,15 @@ def test_unknown_evidence_paragraph_id_fails_closed() -> None:
         provider=provider,
         query_spec=spec,
         candidate_document=candidate,
-        evidence_windows=[],
+        evidence_windows=[
+            EvidenceWindowForConstraint(
+                constraint_id=constraint.constraint_id,
+                paragraph_ids=[candidate.paragraphs[0].paragraph_id],
+                text=candidate.paragraphs[0].normalized_text,
+                section_types=[candidate.paragraphs[0].section_type],
+            )
+            for constraint in spec.hard_constraints
+        ],
     )
 
     assert result.decision == VerificationDecision.VERIFIER_ERROR
@@ -154,7 +171,15 @@ def test_missing_hard_constraint_fails_as_not_proven() -> None:
         provider=provider,
         query_spec=spec,
         candidate_document=candidate,
-        evidence_windows=_evidence(candidate, spec.hard_constraints[0].constraint_id),
+        evidence_windows=[
+            EvidenceWindowForConstraint(
+                constraint_id=constraint.constraint_id,
+                paragraph_ids=[candidate.paragraphs[0].paragraph_id],
+                text=candidate.paragraphs[0].normalized_text,
+                section_types=[candidate.paragraphs[0].section_type],
+            )
+            for constraint in spec.hard_constraints[:-1]
+        ],
     )
 
     assert (
@@ -179,7 +204,15 @@ def test_contradicted_hard_constraint_fails_as_hard_mismatch() -> None:
         provider=provider,
         query_spec=spec,
         candidate_document=candidate,
-        evidence_windows=[],
+        evidence_windows=[
+            EvidenceWindowForConstraint(
+                constraint_id=constraint.constraint_id,
+                paragraph_ids=[candidate.paragraphs[0].paragraph_id],
+                text=candidate.paragraphs[0].normalized_text,
+                section_types=[candidate.paragraphs[0].section_type],
+            )
+            for constraint in spec.hard_constraints
+        ],
     )
 
     assert (
@@ -204,7 +237,15 @@ def test_all_proven_hard_constraints_pass_without_external_calls() -> None:
         provider=provider,
         query_spec=spec,
         candidate_document=candidate,
-        evidence_windows=[],
+        evidence_windows=[
+            EvidenceWindowForConstraint(
+                constraint_id=constraint.constraint_id,
+                paragraph_ids=[candidate.paragraphs[0].paragraph_id],
+                text=candidate.paragraphs[0].normalized_text,
+                section_types=[candidate.paragraphs[0].section_type],
+            )
+            for constraint in spec.hard_constraints
+        ],
     )
 
     assert provider.calls == 1
@@ -228,3 +269,26 @@ def test_provider_error_fails_closed() -> None:
     )
 
     assert result.decision == VerificationDecision.VERIFIER_ERROR
+
+
+def test_verifier_provider_aliases_are_normalized_before_validation() -> None:
+    payload = _normalize_verifier_payload(
+        {
+            "document_id": "DOC-1",
+            "decision": "not_proven",
+            "constraint_results": [
+                {
+                    "constraint_id": "constraint-1",
+                    "proven": False,
+                    "proven_by_paragraph_ids": [],
+                    "confidence": "0.25",
+                }
+            ],
+        }
+    )
+
+    result = payload["constraint_results"][0]
+    assert result["status"] == ConstraintVerificationStatus.NOT_PROVEN.value
+    assert result["evidence_paragraph_ids"] == []
+    assert result["source_of_claim"] == "unknown"
+    assert result["confidence"] == 0.25

@@ -27,6 +27,8 @@ DEFAULT_TIMEOUT: float = float(os.getenv("LLM_TIMEOUT", "10"))
 DEFAULT_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "512"))
 DEFAULT_RETRY: int = int(os.getenv("LLM_RETRY", "2"))
 
+_MAX_PROVIDER_MESSAGE_CHARS = 500
+
 # ---------------------------------------------------------------------------
 # Prompt limits
 # ---------------------------------------------------------------------------
@@ -170,19 +172,28 @@ class HTTPClient:
         headers: dict[str, str],
         timeout: float = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_RETRY,
+        raise_on_error: bool = False,
     ) -> None:
         self.provider = provider
         self._max_retries = max_retries
+        self._raise_on_error = raise_on_error
         self._client = httpx.Client(
             headers=headers,
             timeout=httpx.Timeout(timeout),
         )
 
-    def post(self, url: str, payload: dict[str, Any]) -> httpx.Response | None:
+    def post(
+        self,
+        url: str,
+        payload: dict[str, Any],
+        *,
+        operation: str = "chat_completion",
+    ) -> httpx.Response | None:
         """POST with retry on 5xx / timeout / network error.
 
         Returns the response on the first successful (non-5xx) response.
         Returns None after all retries are exhausted.
+        Raises LLMProviderError instead when raise_on_error=True.
         """
         model = str(payload.get("model", ""))
         input_length = len(json.dumps(payload, ensure_ascii=False))
@@ -197,23 +208,50 @@ class HTTPClient:
                     retry_count += 1
                     time.sleep(_RETRY_DELAYS[min(attempt, len(_RETRY_DELAYS) - 1)])
                     continue
-                logger.warning("[llm] provider=%s error=timeout: %s", self.provider, exc)
-                return None
+                error = LLMProviderError(
+                    provider=self.provider,
+                    category="timeout",
+                    message=_bounded_text(str(exc)),
+                    model=model,
+                    operation=operation,
+                )
+                return self._handle_error(error)
             except httpx.RequestError as exc:
                 if attempt < self._max_retries:
                     retry_count += 1
                     time.sleep(_RETRY_DELAYS[min(attempt, len(_RETRY_DELAYS) - 1)])
                     continue
-                logger.warning("[llm] provider=%s error=network: %s", self.provider, exc)
-                return None
+                error = LLMProviderError(
+                    provider=self.provider,
+                    category="network_error",
+                    message=_bounded_text(str(exc)),
+                    model=model,
+                    operation=operation,
+                )
+                return self._handle_error(error)
 
             if resp.status_code >= 500:
                 if attempt < self._max_retries:
                     retry_count += 1
                     time.sleep(_RETRY_DELAYS[min(attempt, len(_RETRY_DELAYS) - 1)])
                     continue
-                logger.warning(
-                    "[llm] provider=%s error=HTTP %d", self.provider, resp.status_code
+                return self._handle_error(
+                    _provider_http_error(
+                        provider=self.provider,
+                        model=model,
+                        operation=operation,
+                        response=resp,
+                    )
+                )
+
+            if resp.status_code >= 400:
+                return self._handle_error(
+                    _provider_http_error(
+                        provider=self.provider,
+                        model=model,
+                        operation=operation,
+                        response=resp,
+                    )
                 )
                 return None
 
@@ -232,8 +270,82 @@ class HTTPClient:
 
         return None  # unreachable but satisfies type checker
 
+    def _handle_error(self, error: "LLMProviderError") -> None:
+        logger.warning(
+            "[llm] provider=%s model=%s operation=%s category=%s status_code=%s"
+            " error_code=%s error_type=%s request_id=%s message=%s",
+            error.provider,
+            error.model,
+            error.operation,
+            error.category,
+            error.status_code,
+            error.error_code,
+            error.error_type,
+            error.request_id,
+            error.message,
+        )
+        if self._raise_on_error:
+            raise error
+        return None
+
     def close(self) -> None:
         self._client.close()
+
+
+class LLMProviderError(RuntimeError):
+    def __init__(
+        self,
+        *,
+        provider: str,
+        category: str,
+        message: str = "",
+        status_code: int | None = None,
+        error_type: str | None = None,
+        error_code: str | None = None,
+        request_id: str | None = None,
+        model: str = "",
+        operation: str = "chat_completion",
+    ) -> None:
+        self.provider = provider
+        self.category = category
+        self.message = _bounded_text(message)
+        self.status_code = status_code
+        self.error_type = _bounded_text(error_type or "", 120) or None
+        self.error_code = _bounded_text(error_code or "", 120) or None
+        self.request_id = _bounded_text(request_id or "", 120) or None
+        self.model = model
+        self.operation = operation
+        super().__init__(self.safe_reason)
+
+    @property
+    def safe_reason(self) -> str:
+        status = str(self.status_code) if self.status_code is not None else "none"
+        detail = self.error_code or self.error_type or "unknown"
+        return f"{self.category}:{status}:{detail}"
+
+    def to_safe_dict(self) -> dict[str, Any]:
+        return {
+            "provider": self.provider,
+            "category": self.category,
+            "status_code": self.status_code,
+            "error_type": self.error_type,
+            "error_code": self.error_code,
+            "message": self.message,
+            "request_id": self.request_id,
+            "model": self.model,
+            "operation": self.operation,
+        }
+
+
+class LLMResponseStructureError(LLMProviderError):
+    def __init__(self, *, provider: str, model: str, operation: str) -> None:
+        super().__init__(
+            provider=provider,
+            category="invalid_success_response_structure",
+            message="Provider returned HTTP 2xx without the expected response structure.",
+            model=model,
+            operation=operation,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -244,3 +356,71 @@ class HTTPClient:
 def _escape(text: str) -> str:
     """Neutralise format-string markers to prevent prompt injection."""
     return text.replace("{", "(").replace("}", ")")
+
+
+def _provider_http_error(
+    *,
+    provider: str,
+    model: str,
+    operation: str,
+    response: httpx.Response,
+) -> LLMProviderError:
+    error_payload = _extract_provider_error(response)
+    return LLMProviderError(
+        provider=provider,
+        category=_category_for_status(response.status_code),
+        status_code=response.status_code,
+        error_type=error_payload.get("type"),
+        error_code=error_payload.get("code"),
+        message=error_payload.get("message", ""),
+        request_id=_extract_request_id(response),
+        model=model,
+        operation=operation,
+    )
+
+
+def _category_for_status(status_code: int) -> str:
+    if status_code == 400:
+        return "invalid_request"
+    if status_code in {401, 403}:
+        return "authentication_error"
+    if status_code == 429:
+        return "rate_limit"
+    if status_code >= 500:
+        return "server_error"
+    return "http_error"
+
+
+def _extract_provider_error(response: httpx.Response) -> dict[str, str]:
+    try:
+        body = response.json()
+    except ValueError:
+        return {"message": _bounded_text(response.text)}
+    if not isinstance(body, dict):
+        return {"message": _bounded_text(str(body))}
+    raw_error = body.get("error")
+    if isinstance(raw_error, dict):
+        return {
+            "message": _bounded_text(str(raw_error.get("message") or "")),
+            "type": _bounded_text(str(raw_error.get("type") or ""), 120),
+            "code": _bounded_text(str(raw_error.get("code") or ""), 120),
+        }
+    return {"message": _bounded_text(str(body))}
+
+
+def _extract_request_id(response: httpx.Response) -> str | None:
+    headers = getattr(response, "headers", {}) or {}
+    if not hasattr(headers, "get"):
+        return None
+    for key in ("x-request-id", "x-ds-request-id", "request-id"):
+        value = headers.get(key)
+        if isinstance(value, str) and value.strip():
+            return _bounded_text(value.strip(), 120)
+    return None
+
+
+def _bounded_text(text: str, limit: int = _MAX_PROVIDER_MESSAGE_CHARS) -> str:
+    collapsed = " ".join(str(text).split())
+    if len(collapsed) <= limit:
+        return collapsed
+    return collapsed[: limit - 3] + "..."

@@ -24,6 +24,8 @@ Usage:
 from __future__ import annotations
 
 from app.rag.llm.base import BaseLLM
+from typing import Any
+
 from app.rag.llm.providers.claude import ClaudeLLM, ClaudeTextLLM
 from app.rag.llm.providers.deepseek import DeepSeekLLM, DeepSeekTextLLM
 from app.rag.llm.providers.openai import OpenAILLM, OpenAITextLLM
@@ -32,7 +34,11 @@ from app.rag.rewrite.query_rewrite_service import BaseTextLLM
 _SUPPORTED = ("deepseek", "openai", "claude")
 
 
-def get_llm(provider: str, api_key: str) -> BaseLLM:
+def get_llm(
+    provider: str,
+    api_key: str,
+    **kwargs: Any,
+) -> BaseLLM:
     """Return a BaseLLM adapter for the given provider.
 
     Args:
@@ -43,17 +49,23 @@ def get_llm(provider: str, api_key: str) -> BaseLLM:
         ValueError: If provider is not recognised.
     """
     if provider == "deepseek":
-        return DeepSeekLLM(api_key=api_key)
+        return DeepSeekLLM(api_key=api_key, **kwargs)
     if provider == "openai":
-        return OpenAILLM(api_key=api_key)
+        allowed = {k: v for k, v in kwargs.items() if k != "raise_on_error"}
+        return OpenAILLM(api_key=api_key, **allowed)
     if provider == "claude":
-        return ClaudeLLM(api_key=api_key)
+        allowed = {k: v for k, v in kwargs.items() if k != "raise_on_error"}
+        return ClaudeLLM(api_key=api_key, **allowed)
     raise ValueError(
         f"Unknown LLM provider: {provider!r}. Supported: {', '.join(_SUPPORTED)}"
     )
 
 
-def get_text_llm(provider: str, api_key: str) -> BaseTextLLM:
+def get_text_llm(
+    provider: str,
+    api_key: str,
+    **kwargs: Any,
+) -> BaseTextLLM:
     """Return a BaseTextLLM adapter for the given provider.
 
     Args:
@@ -64,11 +76,13 @@ def get_text_llm(provider: str, api_key: str) -> BaseTextLLM:
         ValueError: If provider is not recognised.
     """
     if provider == "deepseek":
-        return DeepSeekTextLLM(api_key=api_key)
+        return DeepSeekTextLLM(api_key=api_key, **kwargs)
     if provider == "openai":
-        return OpenAITextLLM(api_key=api_key)
+        allowed = {k: v for k, v in kwargs.items() if k != "raise_on_error"}
+        return OpenAITextLLM(api_key=api_key, **allowed)
     if provider == "claude":
-        return ClaudeTextLLM(api_key=api_key)
+        allowed = {k: v for k, v in kwargs.items() if k != "raise_on_error"}
+        return ClaudeTextLLM(api_key=api_key, **allowed)
     raise ValueError(
         f"Unknown LLM provider: {provider!r}. Supported: {', '.join(_SUPPORTED)}"
     )

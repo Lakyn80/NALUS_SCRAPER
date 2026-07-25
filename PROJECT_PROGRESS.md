@@ -1,5 +1,43 @@
 # Project Progress
 
+## 2026-07-23 Europe/Moscow - Task: Legal Retrieval v2 end-to-end pipeline
+
+- Goal:
+  Add the first isolated Legal Retrieval v2 end-to-end implementation: source adapters, parse audit, parser quality artifact, versioned v2 index builder, BGE-M3 + BM25 + RRF retriever, DeepSeek-backed QuerySpec interpreter, paragraph evidence selection, DeepSeek-backed semantic verifier, deterministic fail-closed gate, disabled API endpoint, metrics, scripts, tests, and documentation.
+- Starting audit:
+  Branch `main`, HEAD `cdfac0af582036afabe0b127636b8943b219f524`.
+  Pre-existing untracked generated artifacts were present under `artifacts/evaluation_quality/citizenship_query_retrieval_audit_20260712.*`, `artifacts/rag_eval/legal_qa/answer_eval/{mixed_document_gold_default,nsoud_document_gold_default,usoud_document_gold_default}/`, and `artifacts/rag_eval/legal_v2_seed_comparison_20260723/`.
+- What changed:
+  Added source adapters and source discovery for NALUS/Constitutional Court, Supreme Court, and generic fallback.
+  Added a parse-only audit runner and parser QA gate artifacts under `scripts/legal_v2/`.
+  Added an isolated v2 index builder that writes only `nalus_legal_paragraph_chunks_v2` and `nalus_legal_paragraph_bm25_v2`.
+  Added provider-backed DeepSeek QuerySpec and semantic verifier wrappers with deterministic fake providers for tests.
+  Added a v2 hybrid retriever using BGE-M3 dense retrieval, BM25, and RRF over isolated v2 names.
+  Added paragraph-aware evidence selection and stricter verifier evidence-window validation.
+  Added `POST /api/rag/search-v2`, disabled by default through `NALUS_LEGAL_V2_SEARCH_ENABLED=0`.
+  Added low-cardinality legal v2 metrics and bounded trace/log events.
+  Updated `.env.example`, `docker-compose.yml`, and `docs/LEGAL_RETRIEVAL_V2.md`.
+- Real-corpus parse audit:
+  Ran `python scripts\legal_v2\audit_corpus.py --limit 200 --output-dir artifacts\legal_v2\parse_audit_20260723`.
+  Result: `PASS`, 200 documents, 2,988 paragraphs, 2,602 child chunks, 2,602 parent windows, 523 boilerplate paragraphs, 1,154 citation blocks, 0 reconstruction failures, 0 offset failures, 0 boundary violations, 0 overlong chunks, 0 duplicate IDs.
+- Parser QA artifact:
+  Ran `python scripts\legal_v2\parser_quality_gate.py --limit 12 --output-dir artifacts\legal_v2\parser_quality_gate_20260723`.
+  Result artifact defaults reviewed documents to `needs_review`.
+- Benchmark:
+  Ran `python scripts\legal_v2\run_benchmark.py --output-dir artifacts\legal_v2\benchmark_20260723`.
+  It wrote a `blocked` report because no live v2 index has been built in this environment.
+- Blocked build/live smoke:
+  `python scripts\legal_v2\build_index.py --limit 5 --output-dir artifacts\legal_v2\index_build_20260723 --overwrite-bm25 --recreate-v2-collection` was blocked before any write because `qdrant_client` is not installed in the local Python environment.
+  `python scripts\legal_v2\live_smoke.py --output-dir artifacts\legal_v2\live_smoke_20260723` was blocked because DeepSeek credentials are not configured.
+- Tests:
+  `python -m pytest -q tests\rag\test_legal_v2_parser_chunking.py tests\rag\test_legal_v2_query_spec.py tests\rag\test_legal_v2_verifier.py tests\rag\test_legal_v2_evaluation.py tests\rag\test_legal_v2_end_to_end.py` -> `23 passed`, one Starlette/httpx deprecation warning.
+- Behavior preserved:
+  Existing production endpoints, frontend behavior, production Qdrant collection, production BM25 sidecar, retrieval profile, cache behavior, and feature flags remain unchanged. No commit or push.
+- Known limitations:
+  The full v2 index was not built locally because `qdrant_client` is missing. Parser QA is generated but not manually approved. Live DeepSeek smoke is blocked until credentials and the v2 index exist.
+- Next recommended step:
+  Install the runtime Qdrant dependency in this environment, run the full parse audit and manual parser QA review, then execute `scripts/legal_v2/build_index.py` against the isolated v2 collection.
+
 ## 2026-07-23 Europe/Moscow - Task: Universal Verified Legal Retrieval v2 foundation
 
 - Goal:

@@ -270,18 +270,24 @@ def _build_child_chunks(
                 current.append(unit)
                 continue
         chunks.append(_make_child_chunk(document_id, len(chunks), current))
-        overlap = _overlap_units(current, unit)
+        overlap = _overlap_units(current, unit, config)
         current = [*overlap, unit] if overlap else [unit]
     if current:
         chunks.append(_make_child_chunk(document_id, len(chunks), current))
     return chunks, merged_short
 
 
-def _overlap_units(previous: list[_ChunkUnit], next_unit: _ChunkUnit) -> list[_ChunkUnit]:
+def _overlap_units(
+    previous: list[_ChunkUnit],
+    next_unit: _ChunkUnit,
+    config: HierarchicalChunkConfig,
+) -> list[_ChunkUnit]:
     if not previous:
         return []
     last = previous[-1]
     if last.paragraph.section_type != next_unit.paragraph.section_type:
+        return []
+    if last.token_count + next_unit.token_count > config.child_hard_max_tokens:
         return []
     return [last]
 

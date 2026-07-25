@@ -27,7 +27,7 @@ services:
       - RAG_QUERY_CACHE_PROMPT_VERSION=${RAG_QUERY_CACHE_PROMPT_VERSION:-v1}
       - LLM_PROVIDER=deepseek
       - LLM_API_KEY=${LLM_API_KEY}
-      - LLM_MODEL_DEEPSEEK=deepseek-chat
+      - LLM_MODEL_DEEPSEEK=${LLM_MODEL_DEEPSEEK:-deepseek-v4-flash}
       - LLM_TIMEOUT=30
       - LLM_MAX_TOKENS=800
       - RAG_STRICT_REAL_MODE=1

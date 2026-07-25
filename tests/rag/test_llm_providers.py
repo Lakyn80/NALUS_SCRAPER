@@ -19,6 +19,7 @@ from app.rag.llm.models import LLMInput, LLMOutput
 from app.rag.llm.provider_factory import get_llm, get_text_llm
 from app.rag.llm.providers.claude import ClaudeLLM, ClaudeTextLLM
 from app.rag.llm.providers.deepseek import DeepSeekLLM, DeepSeekTextLLM
+from app.rag.llm.providers._base import LLMProviderError, LLMResponseStructureError
 from app.rag.llm.providers.openai import OpenAILLM, OpenAITextLLM
 from app.rag.retrieval.models import RetrievedChunk
 
@@ -77,6 +78,7 @@ def _mock_client(json_data: dict | None = None, status_code: int = 200, text: st
     mock_resp = MagicMock(spec=httpx.Response)
     mock_resp.status_code = status_code
     mock_resp.text = text if json_data is None else json.dumps(json_data)
+    mock_resp.headers = {}
     if json_data is not None:
         mock_resp.json.return_value = json_data
     else:
@@ -141,6 +143,11 @@ class TestGetTextLLM:
     def test_unknown_provider_raises(self) -> None:
         with pytest.raises(ValueError, match="Unknown LLM provider"):
             get_text_llm("llama", "key")
+
+    def test_deepseek_factory_passes_runtime_model(self) -> None:
+        llm = get_text_llm("deepseek", "key", model="deepseek-v4-flash")
+        assert isinstance(llm, DeepSeekTextLLM)
+        assert llm._model == "deepseek-v4-flash"
 
 
 # ---------------------------------------------------------------------------
@@ -239,6 +246,71 @@ class TestDeepSeekTextLLM:
         with patch("httpx.Client", mock_class):
             result = DeepSeekTextLLM(api_key="k").generate_text("p")
         assert result == ""
+
+    def test_400_is_classified_without_success_structure_parse(self, caplog) -> None:
+        import logging
+
+        error_body = {
+            "error": {
+                "message": (
+                    "The supported API model names are deepseek-v4-pro or "
+                    "deepseek-v4-flash, but you passed deepseek-chat."
+                ),
+                "type": "invalid_request_error",
+                "code": "invalid_request_error",
+            }
+        }
+        mock_class, _ = _mock_client(error_body, status_code=400)
+        with patch("httpx.Client", mock_class):
+            with caplog.at_level(logging.WARNING, logger="app.rag.llm.providers._base"):
+                result = DeepSeekTextLLM(api_key="k").generate_text("p")
+
+        assert result == ""
+        messages = [record.getMessage() for record in caplog.records]
+        assert any("category=invalid_request" in message for message in messages)
+        assert not any("invalid response structure" in message for message in messages)
+
+    def test_raise_on_error_exposes_safe_400_details(self) -> None:
+        error_body = {
+            "error": {
+                "message": (
+                    "The supported API model names are deepseek-v4-pro or "
+                    "deepseek-v4-flash, but you passed deepseek-chat."
+                ),
+                "type": "invalid_request_error",
+                "code": "invalid_request_error",
+            }
+        }
+        mock_class, _ = _mock_client(error_body, status_code=400)
+        with patch("httpx.Client", mock_class):
+            with pytest.raises(LLMProviderError) as exc_info:
+                DeepSeekTextLLM(
+                    api_key="k",
+                    model="deepseek-chat",
+                    raise_on_error=True,
+                ).generate_text("p")
+
+        error = exc_info.value
+        assert error.category == "invalid_request"
+        assert error.status_code == 400
+        assert error.error_code == "invalid_request_error"
+        assert error.model == "deepseek-chat"
+        assert "deepseek-v4-flash" in error.message
+
+    def test_raise_on_invalid_success_structure(self) -> None:
+        mock_class, _ = _mock_client({"no_choices": True})
+        with patch("httpx.Client", mock_class):
+            with pytest.raises(LLMResponseStructureError) as exc_info:
+                DeepSeekTextLLM(api_key="k", raise_on_error=True).generate_text("p")
+        assert exc_info.value.category == "invalid_success_response_structure"
+
+    def test_json_response_adds_response_format_to_payload(self) -> None:
+        mock_class, mock_instance = _mock_client(_openai_envelope('{"ok": true}'))
+        with patch("httpx.Client", mock_class):
+            DeepSeekTextLLM(api_key="k", json_response=True).generate_text("p")
+
+        payload = mock_instance.post.call_args.kwargs["json"]
+        assert payload["response_format"] == {"type": "json_object"}
 
     def test_never_raises(self) -> None:
         with patch("httpx.Client", _network_error_client()), patch("time.sleep"):
@@ -591,4 +663,7 @@ class TestLogging:
             with caplog.at_level(logging.WARNING, logger="app.rag.llm.providers._base"):
                 DeepSeekLLM(api_key="k", max_retries=0).generate(_llm_input())
         msgs = [r.getMessage() for r in caplog.records]
-        assert any("[llm]" in m and "HTTP 500" in m for m in msgs)
+        assert any(
+            "[llm]" in m and "category=server_error" in m and "status_code=500" in m
+            for m in msgs
+        )
