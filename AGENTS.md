@@ -37,6 +37,15 @@ These rules apply to all coding-agent work in this repository.
 - Business-relevant audit records, when added, must be append-only and integrity-verifiable.
 - Failure injection must be disabled by default and impossible to enable accidentally in production.
 
+## Canonical Documentation
+
+Keep project handoff information in exactly two root files:
+
+- `AGENTS.md` is the canonical coding-agent rulebook: workflow rules, invariants, validation policy, and git policy.
+- `PROJECT_PROGRESS.md` is the canonical chronological handoff log: current state, completed tasks, validation results, known limitations, and the next recommended task.
+
+Do not create or revive parallel root handoff files such as `AGENT.md`, `readme.dev`, `HANDOFF.md`, or task-specific status files for the same purpose. If a task changes durable behavior, update `PROJECT_PROGRESS.md`. If a task changes agent operating rules, update `AGENTS.md`. Technical documentation for a feature belongs under `docs/`.
+
 ## Mandatory Pre-Task Audit
 
 Before changing code for non-trivial work, inspect:

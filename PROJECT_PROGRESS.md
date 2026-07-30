@@ -1,5 +1,144 @@
 # Project Progress
 
+## 2026-07-31 Europe/Moscow - Task: Commit and push consolidated Legal Retrieval v2 QA work
+
+- Goal:
+  Commit and push the intentional source, test, and documentation changes from the documentation consolidation, Legal Retrieval v2 Phase 1 readiness, source inventory, parser QA review, and parent-window hard-limit fix.
+- Starting audit:
+  Branch `main`, starting HEAD `736c2ab9041fd02219f7c40f65a9f0dbe8ed0193`.
+  Existing dirty work was classified before staging. The unrelated modified `app/api/rag_router.py` remains out of scope and was not staged.
+- Commit scope:
+  Intended docs: `AGENTS.md`, `PROJECT_EXECUTION_PROTOCOL.md`, `PROJECT_PROGRESS.md`, `docs/LEGAL_RETRIEVAL_V2.md`, deleted legacy `AGENT.md`, deleted legacy `readme.dev`.
+  Intended source: `app/project_validation/file_classifier.py`, `app/rag/legal_v2/chunking.py`, `app/rag/legal_v2/verifier.py`, `app/rag/legal_v2/source_inventory.py`, `scripts/legal_v2/parser_quality_gate.py`, `scripts/legal_v2/source_inventory.py`.
+  Intended tests: `tests/rag/test_legal_v2_parser_chunking.py`, `tests/rag/test_legal_v2_source_inventory.py`.
+  Excluded from commit: `app/api/rag_router.py`, generated `artifacts/`, generated Qdrant/BM25/model/cache/runtime data, and unrelated evaluation outputs.
+- Validation before commit:
+  Focused Legal v2 pytest, compileall, ruff, mypy, git diff checks, and NALUS validator were run during the underlying tasks. The final commit command sequence repeats the required git staging checks.
+- Validator state:
+  NALUS validator still fails in the dirty worktree because of the pre-existing unrelated `app/api/rag_router.py` diff and untracked generated artifacts. No validator finding is introduced by staging generated runtime/index data because those files are not staged.
+- Push:
+  Requested by the user on 2026-07-31. Commit hash and push result are reported in the final task report.
+- Next recommended task:
+  Define the Legal Retrieval v2 parser QA approval threshold in `docs/LEGAL_RETRIEVAL_V2.md`, then rerun the validator and decide whether isolated smoke index build is permitted.
+
+## 2026-07-30 Europe/Moscow - Task: Legal Retrieval v2 manual parser QA review
+
+- Goal:
+  Perform evidence-backed manual QA review of the 30 representative Legal Retrieval v2 parser samples, update the review artifacts, and determine whether the quality gate permits an isolated smoke index build.
+- Starting audit:
+  Branch `main`, HEAD `736c2ab9041fd02219f7c40f65a9f0dbe8ed0193`.
+  Pre-existing dirty files were preserved, including documentation consolidation changes, prior Legal v2 source-inventory additions, generated artifacts, and the unrelated modified `app/api/rag_router.py`.
+- Review result:
+  Reviewed all 30 regenerated representative samples against source text, normalized text, parsed paragraphs, child chunks, parent windows, reconstruction, parser diagnostics, source-completeness evidence, and duplicate-source evidence.
+  Manual status summary: approved `30`, rejected `0`, needs_review `0`; reviewed `27` Ústavní soud samples and `3` Nejvyšší soud samples.
+  Sample coverage includes short judgments `3`, long judgments `4`, damaged formatting `28`, citation-heavy samples `30`, and punctuation-heavy/truncated-parent-window samples `7`.
+  No reviewed sample belonged to the source-inventory missing-complete-text group or duplicate-source-ID group. No cross-document mixing was detected.
+- Defect found and fixed:
+  Manual QA found a reproducible chunking defect: parent evidence windows could exceed `parent_hard_max_tokens` when anchored to a long source paragraph.
+  Fixed `app/rag/legal_v2/chunking.py` so over-limit parent windows fall back to the anchor child chunk text and are marked `truncated=True`.
+  Added a focused regression test in `tests/rag/test_legal_v2_parser_chunking.py`.
+- Full parse audit rerun:
+  Reran `docker compose exec -T api python scripts/legal_v2/audit_corpus.py --output-dir /app/artifacts/legal_v2/parse_audit_full_20260730`.
+  Result: pass; 103,638 documents parsed, 0 failed, 0 reconstruction failures, 0 boundary violations, 0 overlong chunks, 0 duplicate IDs.
+- Artifacts updated:
+  Updated `artifacts/legal_v2/parser_quality_gate_20260730/parser_quality_gate.json`.
+  Updated `artifacts/legal_v2/parser_quality_gate_20260730/parser_quality_gate.md`.
+  Created `artifacts/legal_v2/parser_quality_gate_20260730/manual_review_summary.json`.
+  Created `artifacts/legal_v2/parser_quality_gate_20260730/manual_review_summary.md`.
+- Quality gate:
+  Status remains `BLOCKED` for index-build purposes.
+  Reason: all 30 samples are approved, but `docs/LEGAL_RETRIEVAL_V2.md` does not define the approval threshold required by the task. The threshold cannot be verified without inventing policy.
+  No Qdrant index, BM25 index, production retrieval, API route, frontend, aliases, collections, embeddings, DeepSeek behavior, Redis behavior, or provider configuration was changed.
+- Validation:
+  Focused chunking regression: `python -m pytest -q tests\rag\test_legal_v2_parser_chunking.py` -> `5 passed`.
+  Full required validation is recorded in the task final report.
+- Next recommended task:
+  Define the Legal Retrieval v2 parser QA approval threshold and rejected/approved sample policy in `docs/LEGAL_RETRIEVAL_V2.md`, then rerun the NALUS validator and decide whether the isolated smoke index build is permitted.
+
+## 2026-07-30 Europe/Moscow - Task: Legal Retrieval v2 Phase 1 runtime/index readiness
+
+- Goal:
+  Complete Legal Retrieval v2 Phase 1 by verifying dependencies, validating the full parser corpus, creating evidence-backed parser QA, and building/running the isolated v2 index only if parser readiness gates pass.
+- Starting audit:
+  Branch `main`, HEAD `736c2ab9041fd02219f7c40f65a9f0dbe8ed0193`.
+  Pre-existing dirty files before this task included the documentation consolidation changes (`AGENTS.md`, `PROJECT_EXECUTION_PROTOCOL.md`, `PROJECT_PROGRESS.md`, `app/project_validation/file_classifier.py`, deleted `AGENT.md`, deleted `readme.dev`), pre-existing modified `app/api/rag_router.py`, and untracked generated artifacts under `artifacts/evaluation_quality/`, `artifacts/legal_v2/`, and `artifacts/rag_eval/`.
+- Dependency/runtime decision:
+  Local Python 3.12 does not have `qdrant_client`.
+  Docker `api` runtime is running and has `qdrant-client` version `1.13.3` by package metadata. The module does not expose `qdrant_client.__version__`.
+  `requirements.txt` and `requirements-ci.txt` already declare `qdrant-client`; no dependency declaration change or image rebuild was required.
+- Baseline validation before indexing:
+  `python -m pytest -q tests\rag\test_legal_v2_parser_chunking.py tests\rag\test_legal_v2_query_spec.py tests\rag\test_legal_v2_verifier.py tests\rag\test_legal_v2_evaluation.py tests\rag\test_legal_v2_end_to_end.py` -> `25 passed`, one Starlette/httpx deprecation warning.
+  Initial focused ruff found an unused `os` import in `app/rag/legal_v2/verifier.py`; removed it.
+  `ruff check app\rag\legal_v2 scripts\legal_v2 tests\rag\test_legal_v2_*.py --no-cache` -> passed after fixes.
+  `mypy app\rag\legal_v2` -> passed.
+- Source inventory:
+  Added `app/rag/legal_v2/source_inventory.py`, `scripts/legal_v2/source_inventory.py`, and `tests/rag/test_legal_v2_source_inventory.py`.
+  Ran `docker compose exec -T api python scripts/legal_v2/source_inventory.py --json-output /app/artifacts/legal_v2/source_inventory_20260730.json --markdown-output /app/artifacts/legal_v2/source_inventory_20260730.md`.
+  Result: 103,638 discovered documents across 45 files; constitutional 103,488, supreme 150; 0 missing stable IDs, 55 missing complete text records, 502 duplicate source-document identifiers, 0 unreadable files, 0 unsupported formats.
+- Full parse audit:
+  First full audit wrote `artifacts/legal_v2/parse_audit_full_20260730/` and failed closed on 2 documents with `boundary_overlong_chunk`.
+  Root cause was `_split_by_tokens()` splitting by whitespace while audit validation counts regex word tokens.
+  Fixed `app/rag/legal_v2/chunking.py` so hard splitting uses the same token counter as validation and added a punctuation-heavy regression test.
+  Rerun `docker compose exec -T api python scripts/legal_v2/audit_corpus.py --output-dir /app/artifacts/legal_v2/parse_audit_full_20260730` -> pass.
+  Final audit result: 103,638 documents parsed, 1,311,123 paragraphs, 1,043,986 child chunks, 1,043,986 parent windows, 0 failed documents, 0 reconstruction failures, 0 offset failures, 0 boundary violations, 0 overlong chunks, 0 duplicate IDs.
+- Parser QA:
+  Updated `scripts/legal_v2/parser_quality_gate.py` to create a bounded representative sample and explicit review fields instead of selecting only the first N documents.
+  Ran `docker compose exec -T api python scripts/legal_v2/parser_quality_gate.py --limit 30 --output-dir /app/artifacts/legal_v2/parser_quality_gate_20260730`.
+  Result: 30 reviewed sample artifacts, 27 constitutional and 3 supreme; category coverage includes short/long judgments, numbered paragraphs, damaged formatting, citations, long factual sections, long legal reasoning, boilerplate, recent decisions, older decisions, Ústavní soud, and Nejvyšší soud.
+  Review status summary: approved `0`, rejected `0`, needs_review `30`.
+- Blocker:
+  Index build did not run. `docs/LEGAL_RETRIEVAL_V2.md` is authoritative and says the v2 index should be built only after parser audit and quality review pass. The full parse audit passed, but parser QA remains `needs_review` with no approved review manifest. Proceeding to smoke or full Qdrant/BM25 index build would violate the repository gate.
+- Behavior preserved:
+  No production retrieval endpoint, frontend route, BGE-M3 model, embedding dimension, dense scoring, BM25 formula, RRF formula, Redis behavior, provider default, Qdrant alias, production collection, or production BM25 sidecar was changed.
+  `NALUS_LEGAL_V2_SEARCH_ENABLED` remains disabled by default.
+- Generated artifacts:
+  `artifacts/legal_v2/source_inventory_20260730.*`
+  `artifacts/legal_v2/parse_audit_full_20260730/`
+  `artifacts/legal_v2/parser_quality_gate_smoke_20260730/`
+  `artifacts/legal_v2/parser_quality_gate_20260730/`
+  `artifacts/evaluation_quality/legal_v2_phase1_completion_20260730.*`
+- Known limitations:
+  Phase 1 indexing is blocked until parser QA is explicitly reviewed and enough samples are approved or rejected with concrete reasons.
+  Local Python still lacks `qdrant_client`; Docker `api` remains the canonical runtime for future indexing unless local dependencies are installed through project-managed dependency setup.
+- Final validation:
+  `python -m pytest -q tests\rag\test_legal_v2_parser_chunking.py tests\rag\test_legal_v2_query_spec.py tests\rag\test_legal_v2_verifier.py tests\rag\test_legal_v2_evaluation.py tests\rag\test_legal_v2_end_to_end.py tests\rag\test_legal_v2_source_inventory.py` -> `27 passed`, one Starlette/httpx deprecation warning.
+  `python -m compileall app scripts tests` -> passed.
+  `ruff check app\rag\legal_v2 scripts\legal_v2 tests\rag\test_legal_v2_*.py --no-cache` -> passed.
+  `mypy app\rag\legal_v2` -> passed.
+  `git diff --check` -> passed.
+  `python scripts\validate_nalus_task.py --task-name "Legal Retrieval v2 Phase 1 runtime/index readiness" --mode implementation --write-report artifacts\evaluation_quality\legal_v2_phase1_validator_20260730.md --write-json artifacts\evaluation_quality\legal_v2_phase1_validator_20260730.json` -> `FAIL`, 13 findings. The only failure was `deepseek_call` in pre-existing dirty `app/api/rag_router.py`; warnings were for pre-existing unknown dirty files/directories and risk terms in the same pre-existing `app/api/rag_router.py` diff.
+- Next recommended task:
+  Perform human parser QA review of `artifacts/legal_v2/parser_quality_gate_20260730/`, create/update `artifacts/legal_v2/parser_quality_manifest.json` with justified statuses, then rerun the parser QA gate and only proceed to isolated smoke index if the quality review passes.
+
+## 2026-07-30 Europe/Moscow - Task: Consolidate root agent and handoff documentation
+
+- Goal:
+  Remove duplicated root handoff documents so future work has one rule source and one progress source.
+- Starting audit:
+  Branch `main`, HEAD `736c2ab9041fd02219f7c40f65a9f0dbe8ed0193`.
+  Pre-existing changes were present before this documentation cleanup: modified `app/api/rag_router.py`, untracked `artifacts/evaluation_quality/citizenship_query_retrieval_audit_20260712.*`, untracked `artifacts/legal_v2/`, and untracked generated evaluation output directories under `artifacts/rag_eval/`.
+- Findings:
+  `AGENTS.md` is the newest and authoritative agent rules file.
+  `PROJECT_PROGRESS.md` is the newest and authoritative chronological handoff log.
+  `readme.dev` was an older mixed developer-note and handoff file last updated around 2026-07-12; its current-state content is superseded by `PROJECT_PROGRESS.md`, `README.md`, and focused files under `docs/`.
+  `AGENT.md` was stale project state from 2026-04-05 and conflicted with the current BGE-M3, document retrieval, observability, and Legal Retrieval v2 state.
+- What changed:
+  Added a canonical documentation policy to `AGENTS.md`.
+  Updated `PROJECT_EXECUTION_PROTOCOL.md` so mandatory task startup reads `PROJECT_PROGRESS.md` and `AGENTS.md`, not stale `readme.dev`.
+  Updated `app/project_validation/file_classifier.py` so `AGENTS.md` is classified as documentation and deleted legacy `readme.dev` is no longer listed as a canonical docs file.
+  Removed duplicate root handoff files `AGENT.md` and `readme.dev`.
+  Kept `PROJECT_PROGRESS.md` as the single place to append every completed task/handoff entry.
+- Current latest substantive implementation state to build on:
+  The latest implementation entry before this cleanup is `2026-07-23 Europe/Moscow - Task: Legal Retrieval v2 end-to-end pipeline`.
+  That entry says the next technical step is to install/verify runtime Qdrant dependencies, run the full parse audit and manual parser QA review, then build the isolated v2 index `nalus_legal_paragraph_chunks_v2` / `nalus_legal_paragraph_bm25_v2`.
+- Tests:
+  `python -m pytest tests/test_nalus_task_validator.py -q` -> `11 passed`.
+  `git diff --check` -> passed.
+- Behavior preserved:
+  No API, retrieval, embedding, Qdrant, BM25, RRF, Redis, Docker, frontend, generated artifact, or runtime behavior was changed. Validator classification now treats `AGENTS.md` as documentation and no longer normalizes `readme.dev` as an active root docs file.
+- Next recommended task:
+  Continue from the 2026-07-23 Legal Retrieval v2 end-to-end entry unless the user explicitly switches priority.
+
 ## 2026-07-23 Europe/Moscow - Task: Legal Retrieval v2 end-to-end pipeline
 
 - Goal:

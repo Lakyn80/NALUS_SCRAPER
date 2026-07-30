@@ -78,7 +78,7 @@ Before changing code, the agent must do the following:
    - unknown / risky
 6. Read the relevant progress file:
    - PROJECT_PROGRESS.md
-   - readme.dev if used by the project
+   - AGENTS.md for agent rules and invariants
 7. Identify the last completed task.
 8. Identify the exact new task name.
 9. Define the allowed scope.

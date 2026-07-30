@@ -196,7 +196,7 @@ def build_parent_windows(
                 right += 1
             if not added:
                 break
-        windows.append(_make_parent_window(document.document_id, len(windows), child, selected))
+        windows.append(_make_parent_window(document.document_id, len(windows), child, selected, config=config))
     return windows
 
 
@@ -351,9 +351,19 @@ def _make_parent_window(
     window_index: int,
     child: RetrievalChildChunk,
     paragraphs: list[LegalParagraph],
+    *,
+    config: HierarchicalChunkConfig,
 ) -> ParentEvidenceWindow:
     paragraph_ids = [paragraph.paragraph_id for paragraph in paragraphs]
     text = _paragraph_text(paragraphs)
+    truncated = False
+    start_offset = min(paragraph.start_offset for paragraph in paragraphs)
+    end_offset = max(paragraph.end_offset for paragraph in paragraphs)
+    if _token_count(text) > config.parent_hard_max_tokens:
+        text = child.text
+        truncated = True
+        start_offset = child.start_offset
+        end_offset = child.end_offset
     return ParentEvidenceWindow(
         window_id=stable_chunk_id(
             document_id=document_id,
@@ -367,8 +377,9 @@ def _make_parent_window(
         paragraph_ids=paragraph_ids,
         child_chunk_ids=[child.chunk_id],
         section_types=sorted({paragraph.section_type for paragraph in paragraphs}, key=lambda item: item.value),
-        start_offset=min(paragraph.start_offset for paragraph in paragraphs),
-        end_offset=max(paragraph.end_offset for paragraph in paragraphs),
+        start_offset=start_offset,
+        end_offset=end_offset,
+        truncated=truncated,
     )
 
 
@@ -378,8 +389,39 @@ def _split_sentence_aware(text: str) -> list[str]:
 
 
 def _split_by_tokens(text: str, max_tokens: int) -> list[str]:
-    tokens = text.split()
-    return [" ".join(tokens[index : index + max_tokens]) for index in range(0, len(tokens), max_tokens)]
+    parts: list[str] = []
+    current: list[str] = []
+    current_tokens = 0
+    for piece in text.split():
+        piece_tokens = _token_count(piece)
+        if piece_tokens > max_tokens:
+            if current:
+                parts.append(" ".join(current))
+                current = []
+                current_tokens = 0
+            parts.extend(_split_piece_by_token_spans(piece, max_tokens))
+            continue
+        if current and current_tokens + piece_tokens > max_tokens:
+            parts.append(" ".join(current))
+            current = [piece]
+            current_tokens = piece_tokens
+            continue
+        current.append(piece)
+        current_tokens += piece_tokens
+    if current:
+        parts.append(" ".join(current))
+    return parts
+
+
+def _split_piece_by_token_spans(text: str, max_tokens: int) -> list[str]:
+    matches = list(_TOKEN_RE.finditer(text))
+    if not matches:
+        return [text]
+    parts: list[str] = []
+    for index in range(0, len(matches), max_tokens):
+        group = matches[index : index + max_tokens]
+        parts.append(text[group[0].start() : group[-1].end()])
+    return parts
 
 
 def _token_count(text: str) -> int:

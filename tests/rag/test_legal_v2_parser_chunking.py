@@ -5,7 +5,7 @@ from app.rag.legal_v2.chunking import (
     build_hierarchical_chunks,
     expand_parent_window,
 )
-from app.rag.legal_v2.models import SectionType
+from app.rag.legal_v2.models import MetadataProvenance, SectionType
 from app.rag.legal_v2.parser import parse_legal_document
 
 
@@ -103,6 +103,63 @@ def test_chunking_merges_splits_overlaps_and_preserves_reconstruction() -> None:
     assert set(anchor.paragraph_ids).issubset(parent.paragraph_ids)
     assert parent.token_count <= config.parent_hard_max_tokens
     assert parent.section_types == [anchor.section_type]
+
+
+def test_overlong_punctuation_heavy_paragraph_respects_hard_token_limit() -> None:
+    entries = " ".join(f"067 EX {number}/10-{number};" for number in range(60))
+    parsed = parse_legal_document(
+        document_id="DOC-PUNCT",
+        text=f"[1] {entries}",
+        metadata={"court": "test"},
+        provenance=MetadataProvenance(source="test", extraction_method="unit"),
+    )
+    config = HierarchicalChunkConfig(
+        child_target_min_tokens=20,
+        child_target_max_tokens=30,
+        child_hard_max_tokens=40,
+        parent_target_min_tokens=20,
+        parent_target_max_tokens=80,
+        parent_hard_max_tokens=120,
+    )
+
+    result = build_hierarchical_chunks(parsed, config=config)
+
+    assert result.diagnostics.split_overlong_paragraph_count == 1
+    assert result.child_chunks
+    assert all(chunk.token_count <= config.child_hard_max_tokens for chunk in result.child_chunks)
+
+
+def test_parent_window_for_overlong_paragraph_respects_hard_token_limit() -> None:
+    long_paragraph = " ".join(
+        f"Dlouhá věta číslo {index} zachovává právní argumentaci."
+        for index in range(120)
+    )
+    parsed = parse_legal_document(
+        document_id="DOC-PARENT-HARD",
+        text=f"ODŮVODNĚNÍ\n\n[1] {long_paragraph}",
+        metadata={"court": "test"},
+        provenance=MetadataProvenance(source="test", extraction_method="unit"),
+    )
+    config = HierarchicalChunkConfig(
+        child_target_min_tokens=40,
+        child_target_max_tokens=80,
+        child_hard_max_tokens=120,
+        parent_target_min_tokens=120,
+        parent_target_max_tokens=220,
+        parent_hard_max_tokens=240,
+    )
+
+    result = build_hierarchical_chunks(parsed, config=config)
+
+    assert result.diagnostics.split_overlong_paragraph_count == 1
+    assert result.parent_windows
+    assert any(window.truncated for window in result.parent_windows)
+    assert all(window.token_count <= config.parent_hard_max_tokens for window in result.parent_windows)
+    assert all(
+        child.text == window.text
+        for child, window in zip(result.child_chunks, result.parent_windows, strict=True)
+        if window.truncated
+    )
 
 
 def test_chunking_never_crosses_incompatible_sections() -> None:

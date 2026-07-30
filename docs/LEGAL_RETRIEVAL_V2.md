@@ -47,6 +47,22 @@ python scripts/legal_v2/parser_quality_gate.py --output-dir artifacts/legal_v2/p
 ```
 
 The review manifest supports `approved`, `rejected`, and `needs_review`.
+The generator selects a bounded representative sample instead of blindly taking
+the first N documents. The generated artifact includes explicit review fields
+for beginning/end parsing, headings, numbered paragraphs, legal reasoning,
+boilerplate, reconstruction, child chunks, parent windows, and cross-document
+mixing. Items remain `needs_review` unless the review manifest explicitly marks
+them otherwise.
+
+Create a source inventory before a full parse audit:
+
+```powershell
+python scripts/legal_v2/source_inventory.py
+```
+
+The inventory reports discovered document counts, source files, date coverage,
+missing identifiers/text, duplicate source-document identifiers, unreadable
+files, and unsupported formats.
 
 ## Index Builder
 

@@ -78,8 +78,8 @@ def classify_path(path: str, *, candidate_runs: set[str] | None = None) -> FileC
     if normalized.startswith("tests/"):
         return "tests"
     if normalized.startswith("docs/") or normalized in {
+        "AGENTS.md",
         "PROJECT_EXECUTION_PROTOCOL.md",
-        "readme.dev",
         "README.dev",
         "README.dev.md",
     }:
