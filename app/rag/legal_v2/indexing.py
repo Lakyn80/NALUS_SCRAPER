@@ -58,6 +58,12 @@ def payload_for_child_chunk(chunk: RetrievalChildChunk) -> dict[str, Any]:
         "end_offset": chunk.end_offset,
         "source_order": chunk.source_order,
         "heading_context": list(chunk.heading_context),
+        "parent_window_id": metadata.get("parent_window_id"),
+        "parent_window_paragraph_ids": _metadata_list(metadata.get("parent_window_paragraph_ids")),
+        "parent_window_child_chunk_ids": _metadata_list(metadata.get("parent_window_child_chunk_ids")),
+        "parent_window_text_checksum": metadata.get("parent_window_text_checksum"),
+        "parent_window_token_count": metadata.get("parent_window_token_count"),
+        "parent_window_truncated": bool(metadata.get("parent_window_truncated", False)),
         "token_count": chunk.token_count,
         "language": metadata.get("language", "cs"),
         "source": metadata.get("source"),
@@ -82,3 +88,7 @@ def payload_for_child_chunk(chunk: RetrievalChildChunk) -> dict[str, Any]:
         qdrant_collection=LEGAL_V2_COLLECTION_NAME,
         bm25_index_id=LEGAL_V2_BM25_INDEX_ID,
     )
+
+
+def _metadata_list(value: Any) -> list[Any]:
+    return list(value) if isinstance(value, list) else []

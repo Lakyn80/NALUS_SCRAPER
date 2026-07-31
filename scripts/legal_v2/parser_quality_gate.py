@@ -12,6 +12,10 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.rag.legal_v2.adapters import LegalAdapterRegistry, LegalSourceDocument  # noqa: E402
 from app.rag.legal_v2.chunking import build_hierarchical_chunks  # noqa: E402
 from app.rag.legal_v2.models import SectionType  # noqa: E402
+from app.rag.legal_v2.qa_gate import (  # noqa: E402
+    evaluate_initial_index_qa_gate,
+    write_gate_decision,
+)
 from app.rag.legal_v2.sources import discover_source_documents  # noqa: E402
 
 
@@ -20,11 +24,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--manifest", type=Path, default=PROJECT_ROOT / "artifacts/legal_v2/parser_quality_manifest.json")
     parser.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "artifacts/legal_v2/parser_quality_gate")
     parser.add_argument("--limit", type=int, default=12)
+    parser.add_argument("--evaluate-gate", action="store_true")
+    parser.add_argument("--parser-quality-gate", type=Path, default=None)
+    parser.add_argument("--manual-review-summary", type=Path, default=None)
+    parser.add_argument("--parse-audit", type=Path, default=PROJECT_ROOT / "artifacts/legal_v2/parse_audit_full_20260730/legal_v2_parse_audit.json")
+    parser.add_argument("--source-inventory", type=Path, default=PROJECT_ROOT / "artifacts/legal_v2/source_inventory_20260730.json")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.evaluate_gate:
+        decision = evaluate_initial_index_qa_gate(
+            parser_quality_path=args.parser_quality_gate or args.output_dir / "parser_quality_gate.json",
+            manual_review_summary_path=args.manual_review_summary or args.output_dir / "manual_review_summary.json",
+            parse_audit_path=args.parse_audit,
+            source_inventory_path=args.source_inventory,
+        )
+        json_path, markdown_path = write_gate_decision(decision, args.output_dir)
+        print(json_path)
+        print(markdown_path)
+        return 0 if decision.final_decision == "pass" else 1
     documents = _select_representative_documents(_qa_candidate_documents(args.limit), limit=args.limit)
     registry = LegalAdapterRegistry()
     statuses = _load_statuses(args.manifest)

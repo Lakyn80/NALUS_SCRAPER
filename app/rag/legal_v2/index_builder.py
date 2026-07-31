@@ -114,6 +114,7 @@ def build_legal_v2_index(
     vectors = embedder.embed_texts([payload["text"] for payload in payloads])
     _validate_vectors(vectors, LEGAL_V2_PROFILE.embedding_dimension)
     _upsert_payloads(qdrant_client, collection_name=config.collection_name, payloads=payloads, vectors=vectors, batch_size=config.batch_size)
+    _validate_qdrant_identity(qdrant_client, collection_name=config.collection_name, payloads=payloads)
     write_bm25_sidecar(payloads, config.bm25_path, overwrite=config.overwrite_bm25 or config.resume)
     _validate_bm25_identity(payloads, config.bm25_path)
     manifest = LegalV2BuildManifest(
@@ -214,7 +215,13 @@ def _chunks_for_approved_documents(
         parsed = registry.adapter_for(source_document.source).parse(source_document)
         content_hash = content_checksum(parsed.normalized_text)
         result = build_hierarchical_chunks(parsed, config=chunk_config)
+        parent_windows_by_child_id = {
+            child_id: window
+            for window in result.parent_windows
+            for child_id in window.child_chunk_ids
+        }
         for chunk in result.child_chunks:
+            parent_window = parent_windows_by_child_id.get(chunk.chunk_id)
             metadata = dict(chunk.metadata)
             metadata.update(
                 {
@@ -227,6 +234,12 @@ def _chunks_for_approved_documents(
                     "parser_version": PARSER_VERSION,
                     "chunker_version": CHUNKER_VERSION,
                     "document_content_hash": content_hash,
+                    "parent_window_id": parent_window.window_id if parent_window else None,
+                    "parent_window_paragraph_ids": parent_window.paragraph_ids if parent_window else [],
+                    "parent_window_child_chunk_ids": parent_window.child_chunk_ids if parent_window else [],
+                    "parent_window_text_checksum": content_checksum(parent_window.text) if parent_window else None,
+                    "parent_window_token_count": parent_window.token_count if parent_window else None,
+                    "parent_window_truncated": parent_window.truncated if parent_window else False,
                     "is_boilerplate": any(
                         paragraph.is_boilerplate for paragraph in parsed.paragraphs if paragraph.paragraph_id in chunk.paragraph_ids
                     ),
@@ -313,7 +326,11 @@ def _upsert_payloads(
             for payload, vector in zip(payloads, vectors, strict=True)
         ]
     for start in range(0, len(points), batch_size):
-        client.upsert(collection_name=collection_name, points=points[start : start + batch_size])
+        batch = points[start : start + batch_size]
+        try:
+            client.upsert(collection_name=collection_name, points=batch, wait=True)
+        except TypeError:
+            client.upsert(collection_name=collection_name, points=batch)
 
 
 @dataclass(frozen=True)
@@ -321,6 +338,54 @@ class SimplePoint:
     id: str
     vector: list[float]
     payload: dict[str, Any]
+
+
+def _validate_qdrant_identity(
+    client: Any,
+    *,
+    collection_name: str,
+    payloads: list[dict[str, Any]],
+) -> None:
+    expected = {str(payload["chunk_id"]) for payload in payloads}
+    actual = _qdrant_payload_chunk_ids(client, collection_name)
+    if expected != actual:
+        missing = sorted(expected - actual)[:10]
+        unexpected = sorted(actual - expected)[:10]
+        raise ValueError(
+            "Qdrant v2 chunk identity mismatch after upsert: "
+            f"missing={len(expected - actual)} sample_missing={missing}; "
+            f"unexpected={len(actual - expected)} sample_unexpected={unexpected}"
+        )
+
+
+def _qdrant_payload_chunk_ids(client: Any, collection_name: str) -> set[str]:
+    if hasattr(client, "scroll"):
+        chunk_ids: set[str] = set()
+        offset = None
+        while True:
+            batch, offset = client.scroll(
+                collection_name=collection_name,
+                limit=256,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+            chunk_ids.update(
+                str(point.payload.get("chunk_id"))
+                for point in batch
+                if getattr(point, "payload", None) and point.payload.get("chunk_id")
+            )
+            if offset is None:
+                return chunk_ids
+    if hasattr(client, "upserts"):
+        return {
+            str(point.payload.get("chunk_id"))
+            for name, points in client.upserts
+            if name == collection_name
+            for point in points
+            if getattr(point, "payload", None) and point.payload.get("chunk_id")
+        }
+    raise ValueError("Qdrant client does not support post-upsert identity validation.")
 
 
 def _validate_payload_identity(payloads: list[dict[str, Any]]) -> None:

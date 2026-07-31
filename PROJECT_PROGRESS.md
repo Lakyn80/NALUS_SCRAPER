@@ -1,5 +1,67 @@
 # Project Progress
 
+## 2026-07-31 Europe/Moscow - Task: Legal Retrieval v2 initial QA gate and isolated smoke index
+
+- Goal:
+  Define and enforce the initial Legal Retrieval v2 parser QA gate policy, re-evaluate the completed 30-document manual QA review, and build/validate only a small isolated v2 smoke index if the gate passes.
+- Starting audit:
+  Branch `main`, HEAD `302eba8053b4ea11c725cb5df88623ec5818f965`.
+  Required governance files read: `AGENTS.md`, `PROJECT_EXECUTION_PROTOCOL.md`, `PROJECT_PROGRESS.md`, and `docs/LEGAL_RETRIEVAL_V2.md`.
+  Dirty worktree classified before continuing. Pre-existing unrelated `app/api/rag_router.py` remains out of scope and was not edited. Generated artifacts under `artifacts/` and the isolated v2 BM25 sidecar are local outputs and must not be committed.
+- Scope:
+  In scope: Legal v2 QA gate policy/docs, deterministic gate evaluator, source-risk handling, reviewed-document smoke selection, isolated v2 collection `nalus_legal_paragraph_chunks_v2`, isolated BM25 sidecar `nalus_legal_paragraph_bm25_v2`, smoke validation scripts, focused tests, and this progress entry.
+  Out of scope: production aliases, existing production Qdrant collections, existing production BM25 sidecars, frontend, Redis behavior, provider configuration, retrieval scoring/ranking, embeddings model/dimension, and full v2 index build.
+- What changed:
+  Added policy version `legal_v2_initial_index_qa_v1` to `docs/LEGAL_RETRIEVAL_V2.md`.
+  Added `app/rag/legal_v2/qa_gate.py` and evaluator CLI support for a deterministic `pass` / `blocked` / `invalid` parser QA gate.
+  Added source-risk policy for incomplete sources and duplicate source identifiers; incomplete or conflicting duplicate sources are not silently merged or marked complete.
+  Added smoke-build safety inputs to `scripts/legal_v2/build_index.py`: explicit parser-quality artifact selection, gate-decision requirement, and document-id based source discovery.
+  Added parent-window provenance into indexed child payloads: `parent_window_id`, parent paragraph IDs, parent child chunk IDs, checksum, token count, and truncation flag.
+  Added `scripts/legal_v2/smoke_safety_snapshot.py` and `scripts/legal_v2/validate_smoke_index.py` for pre/post safety snapshots, Qdrant/BM25 integrity checks, provenance checks, and bounded smoke query reporting.
+  Added focused QA gate and build-gate tests.
+- Gate decision:
+  `python scripts\legal_v2\evaluate_parser_quality_gate.py --parser-quality artifacts\legal_v2\parser_quality_gate_20260730\parser_quality_gate.json --manual-review-summary artifacts\legal_v2\parser_quality_gate_20260730\manual_review_summary.json --parse-audit artifacts\legal_v2\parse_audit_full_20260730\legal_v2_parse_audit.json --source-inventory artifacts\legal_v2\source_inventory_20260730.json --output-dir artifacts\legal_v2\parser_quality_gate_20260730` -> `decision=pass smoke_index_permitted=True`.
+  Gate inputs: 30 samples, 30 reviewed, 30 approved, 0 rejected, 0 needs_review, full parse audit `pass`, 0 reconstruction failures, 0 boundary violations, 0 duplicate IDs, 0 cross-document mixing, 0 unresolved blocking defects.
+  Source inventory risks were reported, not hidden: 55 records missing complete text and 502 duplicate source-document identifiers. Reviewed samples indexed by the smoke build had 0 incomplete-source records and 0 unresolved conflicting duplicate-source records.
+- Isolated smoke index:
+  Final build command: `docker compose exec -T api python scripts/legal_v2/build_index.py --parser-quality-artifact /app/artifacts/legal_v2/parser_quality_gate_20260730/parser_quality_gate.json --gate-decision /app/artifacts/legal_v2/parser_quality_gate_20260730/gate_decision.json --limit 20 --qdrant-url http://qdrant:6333 --output-dir /app/artifacts/legal_v2/smoke_index_20260730/index_build --overwrite-bm25 --recreate-v2-collection`.
+  The command wrapper timed out after 40 minutes, so the state-changing operation was reconciled before reporting success. Reconciliation showed Qdrant count 384 and manifest `validation_status: pass`, `qdrant_write_status: pass`, `bm25_write_status: pass`.
+  Result: pass by reconciliation; 20 source documents indexed, 384 child chunks, Qdrant collection `nalus_legal_paragraph_chunks_v2`, BM25 sidecar `/app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2.sqlite`, embedding model `BAAI/bge-m3`, dimension 1024.
+  The Docker build manifest records `git_commit: unknown` and `dirty: true` because `/app` in the container was not a Git worktree; host repository HEAD was recorded separately in this progress entry.
+- Smoke validation:
+  `docker compose exec -T api python scripts/legal_v2/smoke_safety_snapshot.py --phase postbuild --qdrant-url http://qdrant:6333 --output-dir /app/artifacts/legal_v2/smoke_index_20260730` -> postbuild snapshot written.
+  `docker compose exec -T api python scripts/legal_v2/validate_smoke_index.py --qdrant-url http://qdrant:6333 --build-manifest /app/artifacts/legal_v2/smoke_index_20260730/index_build/legal_v2_build_manifest.json --prebuild-snapshot /app/artifacts/legal_v2/smoke_index_20260730/prebuild_snapshot.json --postbuild-snapshot /app/artifacts/legal_v2/smoke_index_20260730/postbuild_snapshot.json --output-dir /app/artifacts/legal_v2/smoke_index_20260730` -> `pass`.
+  Validation result: Qdrant points 384, BM25 rows 384, vector dimension 1024, duplicate chunk IDs `false`, missing provenance 0, missing document IDs 0, cross-document mixing `false`, Qdrant/BM25 ID mismatch 0, Qdrant/BM25 text fingerprint mismatch 0, production changes 0.
+  Positive smoke queries with expected candidates passed. English/no-candidate probes were explicitly reported as `no_candidates` under the current fail-closed hybrid retriever requirement that both dense and BM25 return candidates.
+- Tests and checks:
+  `python -m pytest -q tests\rag\test_legal_v2_qa_gate.py` -> `11 passed`.
+  `python -m pytest -q tests\rag\test_legal_v2_end_to_end.py` -> `8 passed`, one non-blocking Starlette/httpx deprecation warning.
+  `python -m pytest -q tests\rag\test_legal_v2_end_to_end.py tests\rag\test_legal_v2_qa_gate.py` -> `19 passed`, one non-blocking Starlette/httpx deprecation warning.
+  `python -m pytest -q tests/rag/test_legal_v2_*.py` -> failed before running tests because PowerShell did not expand the wildcard and pytest reported `file or directory not found`.
+  Explicit Legal v2 suite `python -m pytest -q tests\rag\test_legal_v2_end_to_end.py tests\rag\test_legal_v2_evaluation.py tests\rag\test_legal_v2_parser_chunking.py tests\rag\test_legal_v2_qa_gate.py tests\rag\test_legal_v2_query_spec.py tests\rag\test_legal_v2_source_inventory.py tests\rag\test_legal_v2_verifier.py` -> `41 passed`, one non-blocking Starlette/httpx deprecation warning.
+  `ruff check app\rag\legal_v2 scripts\legal_v2 tests\rag\test_legal_v2_end_to_end.py tests\rag\test_legal_v2_qa_gate.py --no-cache` -> passed.
+  `mypy app\rag\legal_v2 scripts\legal_v2\build_index.py scripts\legal_v2\parser_quality_gate.py scripts\legal_v2\evaluate_parser_quality_gate.py scripts\legal_v2\smoke_safety_snapshot.py scripts\legal_v2\validate_smoke_index.py` -> passed.
+  `python -m compileall app scripts tests` -> passed.
+  `git diff --check` -> passed; Git reported only CRLF normalization warnings.
+- Runtime/infra behavior:
+  `docker compose ps` showed `api`, `qdrant`, `redis`, `prometheus`, `grafana`, and `nalus-eval-metrics-exporter` running.
+  Qdrant was modified only for isolated collection `nalus_legal_paragraph_chunks_v2`.
+  BM25 was modified only for isolated sidecar `storage/rag/bm25/nalus_legal_paragraph_bm25_v2.sqlite`.
+  No production alias changed; `nalus_live` remained mapped to `nalus_stable_20260326`.
+  No model was downloaded; Docker loaded BGE-M3 from the existing local HuggingFace cache path.
+  No Redis, provider, frontend, production retrieval scoring, embedding model, embedding dimension, or fallback behavior was changed.
+- Validator:
+  `python scripts\validate_nalus_task.py --task-name "Legal Retrieval v2 initial QA gate and isolated smoke index" --mode implementation --write-report artifacts\evaluation_quality\legal_v2_initial_qa_gate_smoke_validator_20260730.md --write-json artifacts\evaluation_quality\legal_v2_initial_qa_gate_smoke_validator_20260730.json` -> `FAIL`, 19 findings.
+  The single failure is `deepseek_call` in pre-existing unrelated `app/api/rag_router.py`, which remained out of scope and was not edited.
+  Warnings include existing generated artifact directories plus intentional Legal v2 smoke/index validation terms (`bm25_change`, `dense_change`, `top_k_change`) in scripts/tests that validate the isolated v2 Qdrant/BM25 smoke index; no production retrieval behavior or scoring was changed.
+- Known limitations:
+  This is a small isolated smoke index, not the full Legal Retrieval v2 index.
+  The v2 search endpoint remains disabled by default.
+  Smoke queries validate candidate retrieval and provenance only; they do not validate final legal answer quality or semantic verifier output.
+  The current hybrid retriever fails closed when dense or BM25 has no candidates, so English/no-candidate probes are recorded as `no_candidates` rather than treated as positive retrieval matches.
+- Next recommended task:
+  Build a reviewed Legal Retrieval v2 retrieval benchmark/gold set against the isolated smoke index before any full v2 index build or `search-v2` activation decision.
+
 ## 2026-07-31 Europe/Moscow - Task: Commit and push consolidated Legal Retrieval v2 QA work
 
 - Goal:

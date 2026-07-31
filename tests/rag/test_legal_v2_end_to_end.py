@@ -21,6 +21,7 @@ from app.rag.legal_v2.retriever import LegalV2HybridRetriever, LegalV2RetrieverC
 from app.rag.legal_v2.verifier import ConstraintVerificationStatus
 from app.rag.retrieval.bm25_sidecar import Bm25Record, Bm25Sidecar
 from app.rag.retrieval.models import RetrievedChunk
+from scripts.legal_v2.build_index import _document_ids_from_parser_quality, _require_gate_pass
 
 
 def _source_document(document_id: str = "III. ÚS 2923/23") -> LegalSourceDocument:
@@ -96,6 +97,9 @@ def test_index_builder_writes_only_v2_identities(tmp_path: Path) -> None:
     assert {name for name, _ in client.upserts} == {"nalus_legal_paragraph_chunks_v2"}
     payload = client.upserts[0][1][0].payload
     assert payload["source"] == "constitutional"
+    assert payload["parent_window_id"]
+    assert payload["parent_window_paragraph_ids"]
+    assert "parent_window_truncated" in payload
     stored = json.loads((tmp_path / "legal_v2_build_manifest.json").read_text(encoding="utf-8"))
     assert stored["bm25_index_id"] == "nalus_legal_paragraph_bm25_v2"
 
@@ -215,6 +219,60 @@ def test_search_v2_endpoint_disabled_by_default(monkeypatch: pytest.MonkeyPatch)
 
     assert response.status_code == 404
     assert "disabled" in response.json()["detail"].lower()
+
+
+def test_build_index_selects_only_gate_safe_parser_quality_documents(tmp_path: Path) -> None:
+    artifact = tmp_path / "parser_quality.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "documents": [
+                    {
+                        "document_id": "approved",
+                        "review_status": "approved",
+                        "identified_defects": [],
+                        "source_completeness_status": "complete_from_available_source",
+                        "duplicate_source_identifier_status": "none",
+                    },
+                    {
+                        "document_id": "defective",
+                        "review_status": "approved",
+                        "identified_defects": ["bad_boundary"],
+                        "source_completeness_status": "complete_from_available_source",
+                        "duplicate_source_identifier_status": "none",
+                    },
+                    {
+                        "document_id": "incomplete",
+                        "review_status": "approved",
+                        "identified_defects": [],
+                        "source_completeness_status": "missing_complete_text",
+                        "duplicate_source_identifier_status": "none",
+                    },
+                    {
+                        "document_id": "conflicting_duplicate",
+                        "review_status": "approved",
+                        "identified_defects": [],
+                        "source_completeness_status": "complete_from_available_source",
+                        "duplicate_source_identifier_status": "conflicting_content",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert _document_ids_from_parser_quality(artifact, limit=None) == ["approved"]
+
+
+def test_build_index_requires_gate_decision_that_permits_smoke_index(tmp_path: Path) -> None:
+    gate = tmp_path / "gate.json"
+    gate.write_text(
+        json.dumps({"final_decision": "blocked", "smoke_index_permitted": False}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="does not permit indexing"):
+        _require_gate_pass(gate)
 
 
 def _retrieved_paragraph_chunk():
