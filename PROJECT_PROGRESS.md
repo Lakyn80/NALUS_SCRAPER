@@ -1,5 +1,71 @@
 # Project Progress
 
+## 2026-07-31 Europe/Moscow - Task: Complete live Legal Retrieval v2 API endpoint wiring
+
+- Goal:
+  Complete, validate, and document the existing uncommitted live `POST /api/rag/search-v2` implementation in `app/api/rag_router.py` without enabling Legal Retrieval v2 by default and without touching frontend, Qdrant data, BM25 data, Redis, embeddings, scoring, aliases, or production retrieval endpoints.
+- Starting audit:
+  Branch `main`, HEAD `54dac350dced5a1198f2ae0103cf1945bb036620`, `origin/main` matched HEAD.
+  Required governance and feature docs were read: `AGENTS.md`, `PROJECT_EXECUTION_PROTOCOL.md`, `PROJECT_PROGRESS.md`, `README.md`, `docs/LEGAL_RETRIEVAL_V2.md`, `docs/DOCUMENT_LEVEL_RETRIEVAL.md`, and `docs/CONSTRAINT_AWARE_RETRIEVAL.md`.
+  Previous audit artifacts were read: `artifacts/evaluation_quality/rag_router_dirty_diff_audit_20260731.md` and `.json`.
+  Dirty worktree was classified before editing: intended tracked work was the existing `app/api/rag_router.py` live-route diff; generated/untracked local output remained under `artifacts/**`; no staged files, merge, rebase, or cherry-pick was in progress.
+- Scope:
+  In scope: `app/api/rag_router.py`, route registration cleanup in `app/api_app.py`, removal of the superseded guard router, focused API tests in `tests/api/test_rag_api.py`, `docs/LEGAL_RETRIEVAL_V2.md`, and this progress entry.
+  Out of scope: frontend, `/api/rag/retrieve`, `/api/rag/retrieve-documents`, `/api/rag/retrieve-verified`, `/api/rag/query`, full-document reconstruction, Qdrant writes/rebuilds, BM25 rebuilds, aliases, Redis, provider credentials, embedding model/dimension, scoring formulas, full v2 index build, and unrelated generated artifacts.
+- Step:
+  Consolidate `search-v2` route registration.
+  Goal: make exactly one registered `POST /api/rag/search-v2` route and avoid route-order shadowing.
+  Files inspected: `app/api/rag_router.py`, `app/api_app.py`, `app/api/legal_v2_guard_router.py`, audit artifacts.
+  Files changed: `app/api_app.py`, deleted `app/api/legal_v2_guard_router.py`.
+  Behavior changed: the disabled guard is consolidated into the live route handler in `rag_router.py`; the duplicate guard router is no longer registered.
+  Tests added/updated: route-count endpoint test.
+  Verification command: `python -m pytest -q tests\api\test_rag_api.py::TestLegalV2SearchEndpoint`.
+  Result: `20 passed`, one non-blocking Starlette/httpx deprecation warning.
+  Risk: low; public disabled behavior remains controlled and enabled behavior now reaches the live handler only when feature-flagged.
+  Next step: keep the route disabled by default until a separate relevance benchmark and rollout decision.
+- Step:
+  Add Legal v2 runtime dependency injection and cache controls.
+  Goal: preserve production lazy initialization while allowing deterministic tests without Qdrant, BM25, BGE-M3, DeepSeek, or secrets.
+  Files inspected: `app/rag/legal_v2/pipeline.py`, `app/rag/legal_v2/retriever.py`, `app/rag/legal_v2/interpreter.py`, `app/rag/legal_v2/verifier.py`.
+  Files changed: `app/api/rag_router.py`, `tests/api/test_rag_api.py`.
+  Behavior changed: `get_legal_v2_runtime_provider()` returns a callable; disabled requests never call the runtime factory; enabled requests use the factory and cached runtime guarded by a lock; `reset_legal_v2_runtime_for_tests()` clears cache for tests.
+  Tests added/updated: disabled no-init, enabled fake runtime success, lazy cache reuse/reset, missing runtime config, missing Qdrant/BM25 dependency, provider timeout/invalid output, verifier failure, zero-result, limits, and evidence provenance tests.
+  Verification command: `python -m pytest -q tests\api\test_rag_api.py::TestLegalV2SearchEndpoint`.
+  Result: `20 passed`, one non-blocking Starlette/httpx deprecation warning.
+  Risk: medium; enabled path now wires live v2 runtime when explicitly enabled, but default remains off and no legacy fallback is introduced.
+  Next step: run broader API and Legal v2 regression suites before any commit.
+- Step:
+  Fix typing and privacy-safe response mapping.
+  Goal: remove the dirty-induced `qdrant_client` mypy failure and prevent raw provider/error/path/text leakage from API responses and logs.
+  Files inspected: `app/api/rag_router.py`, `app/rag/legal_v2/pipeline.py`, `app/rag/legal_v2/verifier.py`.
+  Files changed: `app/api/rag_router.py`, `tests/api/test_rag_api.py`.
+  Behavior changed: `qdrant_client` is loaded through `importlib.import_module()` only during enabled runtime construction; narrow Protocol annotations resolve older dependency-return mypy mismatches; exception logging records exception type only; provider/index/diagnostics/metadata payloads are bounded and redacted.
+  Tests added/updated: log-capture and response assertions prove fake raw queries, secrets, raw provider bodies, local paths, and paragraph text metadata are not exposed.
+  Verification command: `python -m mypy app/api/rag_router.py`; `ruff check app\api\rag_router.py tests\api\test_rag_api.py --no-cache`.
+  Result: mypy passed with no issues; ruff passed.
+  Risk: low; response detail becomes safer while preserving typed document/evidence contract.
+  Next step: run full required validation and validator.
+- Current status:
+  `POST /api/rag/search-v2` is technically wired and deterministic-testable. `NALUS_LEGAL_V2_SEARCH_ENABLED=0` remains the default. Frontend is not connected. The 20-document smoke index remains only an isolated wiring/smoke asset, not a production relevance benchmark.
+- Final validation:
+  `python -m pytest -q tests\api\test_rag_api.py` -> `64 passed`, one non-blocking Starlette/httpx deprecation warning.
+  Exact PowerShell command `python -m pytest -q tests/rag/test_legal_v2_*.py` -> failed before test collection because the wildcard was not expanded and pytest reported `file or directory not found`.
+  Explicit Legal v2 suite `python -m pytest -q tests\rag\test_legal_v2_end_to_end.py tests\rag\test_legal_v2_evaluation.py tests\rag\test_legal_v2_parser_chunking.py tests\rag\test_legal_v2_qa_gate.py tests\rag\test_legal_v2_query_spec.py tests\rag\test_legal_v2_source_inventory.py tests\rag\test_legal_v2_verifier.py` -> `41 passed`, one non-blocking Starlette/httpx deprecation warning.
+  `python -m pytest -q tests\rag\test_document_retrieval.py tests\rag\test_full_document_retrieval.py` -> `19 passed`.
+  `python -m pytest -q tests\rag\test_constraint_pipeline.py tests\rag\test_constraint_verification.py` -> `8 passed`.
+  `python -m compileall app scripts tests` -> passed.
+  `ruff check app/api/rag_router.py app/rag/legal_v2 scripts/legal_v2 tests/api/test_rag_api.py tests/rag/test_legal_v2_*.py --no-cache` -> passed.
+  `python -m mypy app/api/rag_router.py app/rag/legal_v2` -> passed, `20` source files checked.
+  `git diff --check` -> passed with CRLF normalization warnings only.
+  `docker compose ps` -> API, Qdrant, Redis, exporter, Prometheus, and Grafana were running.
+  Isolated TestClient smoke with temporary `NALUS_LEGAL_V2_SEARCH_ENABLED` override and fake runtime -> disabled `404`, enabled zero-result `200`; no real Qdrant, BM25, BGE-M3, DeepSeek, Redis, or provider credentials used.
+  Validator without allowlist `python scripts\validate_nalus_task.py --task-name "Complete live Legal Retrieval v2 API endpoint wiring" --mode implementation --write-report artifacts\evaluation_quality\legal_v2_live_api_endpoint_validator_20260731.md --write-json artifacts\evaluation_quality\legal_v2_live_api_endpoint_validator_20260731.json` -> `FAIL` only for conservative task-scope DeepSeek references and generated/unrelated artifact warnings.
+  Validator with explicit documented allowlist for intentional `search-v2` wiring terms `deepseek_call`, `top_k_change`, `rrf_change`, `bm25_change`, `dense_change`, and `logger_change` -> `WARN`, `0` failures. Remaining findings are pre-existing/generated untracked artifact directories: `artifacts/legal_v2/`, `mixed_document_gold_default/`, `nsoud_document_gold_default/`, `usoud_document_gold_default/`, and `legal_v2_seed_comparison_20260723/`.
+- Known limitations:
+  The endpoint is not production-ready until a reviewed full-corpus v2 index and relevance benchmark approve quality. External DeepSeek live smoke was not run in this task.
+- Next recommended task:
+  Build and manually review a Legal Retrieval v2 relevance benchmark against the isolated smoke/full v2 index before any frontend connection or default enablement decision.
+
 ## 2026-07-31 Europe/Moscow - Task: Fix Legal Retrieval v2 disabled endpoint CI guard
 
 - Goal:

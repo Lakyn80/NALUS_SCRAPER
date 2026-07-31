@@ -15,12 +15,14 @@ or test injection.
 
 import os
 import time
-from dataclasses import asdict
-from typing import Any
+from dataclasses import asdict, dataclass
+from importlib import import_module
+from threading import Lock
+from typing import Any, Callable, Protocol
 from unittest.mock import MagicMock
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.api.query_cache import (
     BaseQueryCache,
@@ -34,10 +36,24 @@ from app.observability.constraint_retrieval_metrics import (
     record_constraint_retrieval_error,
     record_constraint_retrieval_metrics,
 )
+from app.observability.legal_v2_metrics import record_request
 from app.rag.answer.answer_service import AnswerService
 from app.rag.clarification.orchestrator import ClarifyingOrchestratorService
 from app.rag.execution.execution_service import ExecutionService
-from app.rag.orchestration.pipeline import RetrievalPipeline
+from app.rag.legal_v2.interpreter import DeepSeekQuerySpecProvider, QuerySpecProvider
+from app.rag.legal_v2.indexing import LEGAL_V2_PROFILE
+from app.rag.legal_v2.pipeline import (
+    LegalV2SearchResult as RuntimeLegalV2SearchResult,
+    legal_v2_search_enabled,
+    search_legal_v2,
+)
+from app.rag.legal_v2.retriever import (
+    LegalV2HybridRetriever,
+    LegalV2RetrieverConfig,
+    build_live_legal_v2_retriever,
+    legal_v2_retriever_config_from_env,
+)
+from app.rag.legal_v2.verifier import DeepSeekSemanticVerifierProvider, SemanticVerifierProvider
 from app.rag.orchestrator.orchestrator_service import OrchestratorResult, OrchestratorService
 from app.rag.planner.planner_service import MockPlannerLLM, PlannerService
 from app.rag.retrieval.constraint_config import (
@@ -52,6 +68,7 @@ from app.rag.retrieval.document_retrieval import (
     document_retrieval_config_from_env,
 )
 from app.rag.retrieval.errors import RetrievalConfigurationError
+from app.rag.retrieval.bge_m3_embedder import BgeM3Embedder
 from app.rag.retrieval.full_document import (
     FullDocumentLookupError,
     FullDocumentResult,
@@ -60,11 +77,47 @@ from app.rag.retrieval.full_document import (
     validate_document_id,
 )
 from app.rag.retrieval.production_profile import DEFAULT_QDRANT_COLLECTION
+from app.rag.retrieval.production_profile import ProductionRetrievalConfig
 from app.rag.synthesis.synthesis_service import MockSynthesisLLM, SynthesisService
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/rag", tags=["rag"])
+
+LEGAL_V2_MAX_QUERY_LENGTH = 4000
+LEGAL_V2_MAX_REQUESTED_RESULTS = 50
+_SAFE_TEXT_LIMIT = 500
+_SAFE_LIST_LIMIT = 50
+_SENSITIVE_RESPONSE_KEYS = {
+    "api_key",
+    "authorization",
+    "bm25_sidecar_path",
+    "body",
+    "error",
+    "full_text",
+    "headers",
+    "path",
+    "prompt",
+    "provider_error",
+    "raw",
+    "raw_body",
+    "raw_diagnostics",
+    "raw_provider_response",
+    "response_body",
+    "secret",
+    "token",
+}
+_SENSITIVE_RESPONSE_KEY_FRAGMENTS = (
+    "api_key",
+    "authorization",
+    "raw_",
+    "_raw",
+    "secret",
+    "token",
+    "prompt",
+    "full_text",
+    "judgment_text",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -289,6 +342,85 @@ class VerifiedRetrieveResponse(BaseModel):
     diagnostics: ConstraintRetrievalDiagnosticsResult
 
 
+class LegalV2SearchRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    query: str = Field(min_length=1, max_length=LEGAL_V2_MAX_QUERY_LENGTH)
+    sources: list[str] | None = None
+    max_results: int = Field(default=10, ge=1, le=LEGAL_V2_MAX_REQUESTED_RESULTS)
+    debug: bool = False
+
+    @field_validator("query")
+    @classmethod
+    def _query_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("query must not be blank")
+        return value
+
+
+class LegalV2EvidenceResult(BaseModel):
+    constraint_id: str
+    paragraph_ids: list[str]
+    section_types: list[str]
+    quote: str
+    source_of_claim: str
+
+
+class LegalV2VerifiedDocumentResult(BaseModel):
+    document_id: str
+    score: float
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    evidence: list[LegalV2EvidenceResult]
+    constraint_results: list[dict[str, Any]]
+    verification_reason: str = ""
+    verifier_diagnostics: dict[str, Any] = Field(default_factory=dict)
+    dense_rank: int | None = None
+    bm25_rank: int | None = None
+    rrf_score: float | None = None
+
+
+class LegalV2SearchResponse(BaseModel):
+    status: str
+    interpretation_status: str
+    query_spec_summary: dict[str, Any] | None = None
+    verified_documents: list[LegalV2VerifiedDocumentResult]
+    rejected_documents: list[LegalV2VerifiedDocumentResult] = Field(default_factory=list)
+    rejection_counts: dict[str, int] = Field(default_factory=dict)
+    latency_ms_by_stage: dict[str, float] = Field(default_factory=dict)
+    provider: dict[str, Any] = Field(default_factory=dict)
+    index: dict[str, Any] = Field(default_factory=dict)
+    diagnostics: dict[str, Any] = Field(default_factory=dict)
+
+
+class SearchPipelineLike(Protocol):
+    def run(self, query: str, top_k: int = 5) -> Any:
+        ...
+
+
+class OrchestratorLike(Protocol):
+    def retrieve(self, query: str, top_k: int = 10) -> list[Any]:
+        ...
+
+    def run(self, query: str) -> OrchestratorResult:
+        ...
+
+
+LegalV2SearchCallable = Callable[..., RuntimeLegalV2SearchResult]
+
+
+@dataclass(frozen=True)
+class LegalV2Runtime:
+    retriever: LegalV2HybridRetriever
+    query_provider: QuerySpecProvider
+    verifier: SemanticVerifierProvider
+    config: LegalV2RetrieverConfig
+    search: LegalV2SearchCallable = search_legal_v2
+
+
+LegalV2RuntimeProvider = Callable[[], LegalV2Runtime]
+
+
 # ---------------------------------------------------------------------------
 # Live orchestrator — set by startup lifespan, None until Qdrant is ready
 # ---------------------------------------------------------------------------
@@ -310,6 +442,8 @@ _SOURCE_FILTER_ALIASES: dict[str, set[str]] = {
     "supreme": {"supreme"},
     "administrative": {"administrative"},
 }
+_legal_v2_runtime: LegalV2Runtime | None = None
+_legal_v2_runtime_lock = Lock()
 
 # ---------------------------------------------------------------------------
 # Dependency providers
@@ -320,7 +454,7 @@ def _collection_name() -> str:
     return os.getenv("QDRANT_COLLECTION_NAME", DEFAULT_QDRANT_COLLECTION)
 
 
-def get_pipeline() -> RetrievalPipeline:
+def get_pipeline() -> SearchPipelineLike:
     """
     Legacy /search endpoint compatibility pipeline.
 
@@ -335,7 +469,7 @@ def get_answer_service() -> AnswerService:
     return AnswerService()
 
 
-def get_orchestrator() -> OrchestratorService:
+def get_orchestrator() -> OrchestratorLike:
     """
     Returns the live orchestrator (real Qdrant + corpus) if startup succeeded,
     otherwise falls back to a stub with empty retrieval.
@@ -373,6 +507,58 @@ def get_full_document_store() -> FullDocumentStore:
         qdrant_url=os.getenv("QDRANT_URL", "http://qdrant:6333"),
         collection_name=_collection_name(),
     )
+
+
+def get_legal_v2_runtime() -> LegalV2Runtime:
+    global _legal_v2_runtime
+    if _legal_v2_runtime is not None:
+        return _legal_v2_runtime
+    with _legal_v2_runtime_lock:
+        if _legal_v2_runtime is not None:
+            return _legal_v2_runtime
+        config = legal_v2_retriever_config_from_env()
+        config.validate()
+        api_key = os.getenv("LLM_API_KEY", "").strip()
+        if not api_key or api_key == "your-api-key-here":
+            raise RetrievalConfigurationError("Legal v2 search requires configured DeepSeek credentials.")
+        qdrant_module = import_module("qdrant_client")
+        qdrant_client_type = getattr(qdrant_module, "QdrantClient")
+        client = qdrant_client_type(url=os.getenv("QDRANT_URL", "http://qdrant:6333"), timeout=10)
+        prod_config = ProductionRetrievalConfig(
+            profile=LEGAL_V2_PROFILE,
+            qdrant_collection=config.qdrant_collection,
+            bm25_sidecar_path=config.bm25_sidecar_path,
+            bm25_index_id=config.bm25_index_id,
+            model_path=config.model_path,
+            local_files_only=True,
+            trust_remote_code=False,
+            device=os.getenv("EMBEDDING_DEVICE", "cpu"),
+            candidate_multiplier=1,
+            min_candidate_count=1,
+            max_candidate_count=max(config.dense_candidate_chunks, config.bm25_candidate_chunks),
+            lexical_filter_enabled=False,
+        )
+        embedder = BgeM3Embedder(prod_config)
+        retriever = build_live_legal_v2_retriever(client, embedder, config)
+        query_provider = DeepSeekQuerySpecProvider(api_key)
+        verifier = DeepSeekSemanticVerifierProvider(api_key)
+        _legal_v2_runtime = LegalV2Runtime(
+            retriever=retriever,
+            query_provider=query_provider,
+            verifier=verifier,
+            config=config,
+        )
+        return _legal_v2_runtime
+
+
+def get_legal_v2_runtime_provider() -> LegalV2RuntimeProvider:
+    return get_legal_v2_runtime
+
+
+def reset_legal_v2_runtime_for_tests() -> None:
+    global _legal_v2_runtime
+    with _legal_v2_runtime_lock:
+        _legal_v2_runtime = None
 
 
 class _EmptyPipeline:
@@ -717,6 +903,102 @@ def _to_full_document_response(result: FullDocumentResult) -> FullDocumentRespon
     )
 
 
+def _to_legal_v2_search_response(result: RuntimeLegalV2SearchResult) -> LegalV2SearchResponse:
+    return LegalV2SearchResponse(
+        status=result.status,
+        interpretation_status=result.interpretation_status,
+        query_spec_summary=_safe_payload(result.query_spec_summary),
+        verified_documents=[_legal_v2_document(document) for document in result.verified_documents],
+        rejected_documents=[_legal_v2_document(document) for document in result.rejected_documents],
+        rejection_counts=_safe_payload(result.rejection_counts),
+        latency_ms_by_stage=_safe_payload(result.latency_ms_by_stage),
+        provider=_safe_payload(result.provider),
+        index=_safe_payload(result.index),
+        diagnostics=_safe_payload(result.diagnostics),
+    )
+
+
+def _legal_v2_document(document) -> LegalV2VerifiedDocumentResult:
+    return LegalV2VerifiedDocumentResult(
+        document_id=document.document_id,
+        score=document.score,
+        status=document.status,
+        metadata=_safe_metadata_payload(document.metadata),
+        evidence=[
+            LegalV2EvidenceResult(
+                constraint_id=str(item.get("constraint_id") or ""),
+                paragraph_ids=[
+                    _bounded_safe_text(str(paragraph_id), limit=200)
+                    for paragraph_id in item.get("paragraph_ids", [])
+                ],
+                section_types=[
+                    _bounded_safe_text(str(section_type), limit=100)
+                    for section_type in item.get("section_types", [])
+                ],
+                quote=_bounded_safe_text(str(item.get("quote") or "")),
+                source_of_claim=_bounded_safe_text(str(item.get("source_of_claim") or ""), limit=100),
+            )
+            for item in document.evidence
+        ],
+        constraint_results=_safe_payload(document.constraint_results),
+        verification_reason=_bounded_safe_text(getattr(document, "verification_reason", "") or ""),
+        verifier_diagnostics=_safe_payload(getattr(document, "verifier_diagnostics", {}) or {}),
+        dense_rank=document.dense_rank,
+        bm25_rank=document.bm25_rank,
+        rrf_score=document.rrf_score,
+    )
+
+
+def _bounded_safe_text(text: str, *, limit: int = _SAFE_TEXT_LIMIT) -> str:
+    collapsed = " ".join(text.split())
+    if len(collapsed) <= limit:
+        return collapsed
+    return collapsed[: limit - 3] + "..."
+
+
+def _safe_payload(value: Any, *, key: str = "") -> Any:
+    if _redact_response_key(key):
+        return "[redacted]"
+    if isinstance(value, str):
+        return _bounded_safe_text(value)
+    if isinstance(value, dict):
+        return {
+            str(item_key): _safe_payload(item_value, key=str(item_key))
+            for item_key, item_value in value.items()
+        }
+    if isinstance(value, list):
+        return [_safe_payload(item) for item in value[:_SAFE_LIST_LIMIT]]
+    if isinstance(value, tuple):
+        return [_safe_payload(item) for item in value[:_SAFE_LIST_LIMIT]]
+    if isinstance(value, bool | int | float) or value is None:
+        return value
+    return _bounded_safe_text(str(value))
+
+
+def _safe_metadata_payload(metadata: dict[str, Any]) -> dict[str, Any]:
+    forbidden = {
+        "chunk_text",
+        "full_text",
+        "paragraph_original_texts",
+        "paragraph_texts",
+        "text",
+    }
+    return {
+        str(key): _safe_payload(value, key=str(key))
+        for key, value in metadata.items()
+        if str(key) not in forbidden
+    }
+
+
+def _redact_response_key(key: str) -> bool:
+    normalized = key.strip().lower()
+    if normalized in _SENSITIVE_RESPONSE_KEYS:
+        return True
+    if normalized.endswith("_path"):
+        return True
+    return any(fragment in normalized for fragment in _SENSITIVE_RESPONSE_KEY_FRAGMENTS)
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -725,7 +1007,7 @@ def _to_full_document_response(result: FullDocumentResult) -> FullDocumentRespon
 @router.post("/search", response_model=SearchResponse)
 def search(
     request: SearchRequest,
-    pipeline: RetrievalPipeline = Depends(get_pipeline),
+    pipeline: SearchPipelineLike = Depends(get_pipeline),
     answer_service: AnswerService = Depends(get_answer_service),
 ) -> SearchResponse:
     trace_event(logger, "api.rag.start", query_length=len(request.query), top_k=request.top_k)
@@ -746,7 +1028,7 @@ def search(
 @router.post("/retrieve", response_model=RetrieveResponse)
 def retrieve(
     req: RetrieveRequest,
-    orchestrator: OrchestratorService = Depends(get_orchestrator),
+    orchestrator: OrchestratorLike = Depends(get_orchestrator),
 ) -> RetrieveResponse:
     logger.info("[api] retrieve received query_length=%d", len(req.query))
 
@@ -785,7 +1067,7 @@ def retrieve(
 @router.post("/retrieve-documents", response_model=DocumentRetrieveResponse)
 def retrieve_documents(
     req: DocumentRetrieveRequest,
-    orchestrator: OrchestratorService = Depends(get_orchestrator),
+    orchestrator: OrchestratorLike = Depends(get_orchestrator),
 ) -> DocumentRetrieveResponse:
     config = _document_retrieval_config()
     if not config.enabled:
@@ -840,7 +1122,7 @@ def retrieve_documents(
 @router.post("/retrieve-verified", response_model=VerifiedRetrieveResponse)
 def retrieve_verified(
     req: VerifiedRetrieveRequest,
-    orchestrator: OrchestratorService = Depends(get_orchestrator),
+    orchestrator: OrchestratorLike = Depends(get_orchestrator),
     store: FullDocumentStore = Depends(get_full_document_store),
 ) -> VerifiedRetrieveResponse:
     endpoint_label = "/api/rag/retrieve-verified"
@@ -903,6 +1185,68 @@ def retrieve_verified(
     )
 
 
+@router.post("/search-v2", response_model=LegalV2SearchResponse)
+def search_v2(
+    req: LegalV2SearchRequest,
+    runtime_provider: LegalV2RuntimeProvider = Depends(get_legal_v2_runtime_provider),
+) -> LegalV2SearchResponse:
+    endpoint_label = "/api/rag/search-v2"
+    if not legal_v2_search_enabled():
+        record_request(endpoint=endpoint_label, status="disabled")
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Legal Retrieval v2 search is disabled. Set "
+                "NALUS_LEGAL_V2_SEARCH_ENABLED=1 to enable the isolated endpoint."
+            ),
+        )
+    requested_sources = _normalize_filter_values(req.sources)
+    trace_event(
+        logger,
+        "api.legal_v2.search.start",
+        query_length=len(req.query),
+        sources=sorted(requested_sources),
+        max_results=req.max_results,
+    )
+    try:
+        runtime = runtime_provider()
+        config = runtime.config
+        bounded_config = LegalV2RetrieverConfig(
+            qdrant_collection=config.qdrant_collection,
+            bm25_sidecar_path=config.bm25_sidecar_path,
+            bm25_index_id=config.bm25_index_id,
+            model_path=config.model_path,
+            dense_candidate_chunks=config.dense_candidate_chunks,
+            bm25_candidate_chunks=config.bm25_candidate_chunks,
+            fused_candidate_chunks=config.fused_candidate_chunks,
+            candidate_documents=config.candidate_documents,
+            returned_verified_documents=max(1, min(req.max_results, config.returned_verified_documents)),
+            evidence_windows_per_constraint=config.evidence_windows_per_constraint,
+        )
+        bounded_config.validate()
+        result = runtime.search(
+            query=req.query,
+            retriever=runtime.retriever,
+            verifier=runtime.verifier,
+            config=bounded_config,
+            query_provider=runtime.query_provider,
+            source_filter=requested_sources,
+            debug=req.debug,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[api] legal v2 search failed type=%s", exc.__class__.__name__)
+        record_request(endpoint=endpoint_label, status="error")
+        raise HTTPException(status_code=503, detail="Legal Retrieval v2 search is temporarily unavailable.") from exc
+    record_request(endpoint=endpoint_label, status=result.status)
+    trace_event(
+        logger,
+        "api.legal_v2.search.done",
+        status=result.status,
+        verified_count=len(result.verified_documents),
+    )
+    return _to_legal_v2_search_response(result)
+
+
 @router.get("/documents/{document_id}", response_model=FullDocumentResponse)
 def get_full_document(
     document_id: str,
@@ -952,7 +1296,7 @@ def get_full_document(
 @router.post("/query", response_model=QueryResponse)
 def query(
     req: QueryRequest,
-    orchestrator: OrchestratorService = Depends(get_orchestrator),
+    orchestrator: OrchestratorLike = Depends(get_orchestrator),
 ) -> QueryResponse:
     logger.info("[api] query received query_length=%d", len(req.query))
     trace_event(logger, "api.query.start", query_length=len(req.query))

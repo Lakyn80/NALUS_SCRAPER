@@ -20,14 +20,14 @@ from fastapi.testclient import TestClient
 import app.api.rag_router as rtr
 from app.api.query_cache import CachedQueryResponse
 from app.api.rag_router import (
-    QueryResponse,
     get_answer_service,
     get_full_document_store,
     get_orchestrator,
     get_pipeline,
     router,
 )
-from app.rag.orchestrator.orchestrator_service import OrchestratorResult, OrchestratorService
+from app.rag.legal_v2.pipeline import LegalV2VerifiedDocument
+from app.rag.orchestrator.orchestrator_service import OrchestratorResult
 from app.rag.retrieval.full_document import (
     FullDocumentChunk,
     FullDocumentDiagnostics,
@@ -48,6 +48,7 @@ def _make_app(
     pipeline_override=None,
     answer_service_override=None,
     full_document_store_override=None,
+    legal_v2_runtime_provider_override=None,
 ) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
@@ -59,6 +60,10 @@ def _make_app(
         app.dependency_overrides[get_answer_service] = lambda: answer_service_override
     if full_document_store_override is not None:
         app.dependency_overrides[get_full_document_store] = lambda: full_document_store_override
+    if legal_v2_runtime_provider_override is not None:
+        app.dependency_overrides[rtr.get_legal_v2_runtime_provider] = (
+            lambda: legal_v2_runtime_provider_override
+        )
     return app
 
 
@@ -274,6 +279,139 @@ def _constraint_full_document(document_id: str, text: str) -> FullDocumentResult
     )
 
 
+def _legal_v2_config(returned_verified_documents: int = 3) -> rtr.LegalV2RetrieverConfig:
+    return rtr.LegalV2RetrieverConfig(
+        qdrant_collection="nalus_legal_paragraph_chunks_v2_test",
+        bm25_sidecar_path="storage/rag/bm25/nalus_legal_paragraph_bm25_v2_test.sqlite",
+        bm25_index_id="nalus_legal_paragraph_bm25_v2_test",
+        model_path="/models/BAAI/bge-m3",
+        dense_candidate_chunks=5,
+        bm25_candidate_chunks=6,
+        fused_candidate_chunks=7,
+        candidate_documents=4,
+        returned_verified_documents=returned_verified_documents,
+        evidence_windows_per_constraint=2,
+    )
+
+
+def _legal_v2_document(
+    document_id: str = "ECLI:CZ:US:2026:3.US.446.26.1",
+    *,
+    status: str = "verified_match",
+) -> LegalV2VerifiedDocument:
+    return LegalV2VerifiedDocument(
+        document_id=document_id,
+        score=0.91,
+        status=status,
+        metadata={
+            "document_id": document_id,
+            "ecli": document_id,
+            "court_name": "Ústavní soud",
+            "source": "nalus",
+            "case_reference": "III. ÚS 446/26",
+            "paragraph_texts": {"p1": "this must not leak"},
+        },
+        evidence=[
+            {
+                "constraint_id": "constraint_child_abduction",
+                "paragraph_ids": [f"{document_id}__p1"],
+                "section_types": ["reasoning"],
+                "quote": "Soud zjistil relevantní skutkový stav.",
+                "source_of_claim": "court_finding",
+            }
+        ],
+        constraint_results=[
+            {
+                "constraint_id": "constraint_child_abduction",
+                "status": "proven",
+                "reason": "bounded verifier reason",
+                "evidence_paragraph_ids": [f"{document_id}__p1"],
+            }
+        ],
+        dense_rank=1,
+        bm25_rank=2,
+        rrf_score=0.42,
+        verification_reason="ověřeno z odstavce soudu",
+        verifier_diagnostics={"constraint_result_count": 1, "raw_provider_response": "must not leak"},
+    )
+
+
+def _legal_v2_result(
+    *,
+    status: str = "verified_match",
+    interpretation_status: str = "ok",
+    verified_documents: list[LegalV2VerifiedDocument] | None = None,
+    rejected_documents: list[LegalV2VerifiedDocument] | None = None,
+    diagnostics: dict | None = None,
+    provider: dict | None = None,
+) -> rtr.RuntimeLegalV2SearchResult:
+    return rtr.RuntimeLegalV2SearchResult(
+        status=status,
+        interpretation_status=interpretation_status,
+        query_spec_summary={
+            "intent": "legal_research",
+            "requires_verification": True,
+            "retrieval_queries": ["mezinárodní únos dítěte"],
+        },
+        verified_documents=verified_documents if verified_documents is not None else [_legal_v2_document()],
+        rejected_documents=rejected_documents if rejected_documents is not None else [],
+        rejection_counts={document.status: 1 for document in rejected_documents or []},
+        latency_ms_by_stage={"total": 12.5},
+        provider=provider or {"query_interpreter": "fake", "verifier": "fake"},
+        index={
+            "collection": "nalus_legal_paragraph_chunks_v2_test",
+            "bm25_index_id": "nalus_legal_paragraph_bm25_v2_test",
+            "bm25_sidecar_path": "C:/secret/local/path.sqlite",
+        },
+        diagnostics=diagnostics or {"candidate_documents": 1},
+    )
+
+
+class _FakeLegalV2RuntimeProvider:
+    def __init__(
+        self,
+        *,
+        result: rtr.RuntimeLegalV2SearchResult | None = None,
+        error: Exception | None = None,
+        config: rtr.LegalV2RetrieverConfig | None = None,
+    ) -> None:
+        self.result = result if result is not None else _legal_v2_result()
+        self.error = error
+        self.config = config if config is not None else _legal_v2_config()
+        self.runtime_calls = 0
+        self.search_calls: list[dict] = []
+
+    def __call__(self) -> rtr.LegalV2Runtime:
+        self.runtime_calls += 1
+        if self.error is not None:
+            raise self.error
+        return rtr.LegalV2Runtime(
+            retriever=object(),
+            query_provider=object(),
+            verifier=object(),
+            config=self.config,
+            search=self._search,
+        )
+
+    def _search(self, **kwargs):
+        self.search_calls.append(kwargs)
+        return self.result
+
+
+def _search_v2_route_count(app: FastAPI) -> int:
+    count = 0
+    for route in app.routes:
+        nested_router = getattr(route, "original_router", None)
+        candidates = nested_router.routes if nested_router is not None else [route]
+        count += sum(
+            1
+            for candidate in candidates
+            if getattr(candidate, "path", None) == "/api/rag/search-v2"
+            and "POST" in getattr(candidate, "methods", set())
+        )
+    return count
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -305,7 +443,9 @@ def _reset_router_cache_state() -> None:
     rtr._query_cache_backend = "none"
     rtr._query_cache_error = None
     rtr._corpus_version = "test-corpus"
+    rtr.reset_legal_v2_runtime_for_tests()
     yield
+    rtr.reset_legal_v2_runtime_for_tests()
     rtr._query_cache = original_cache
     rtr._query_cache_backend = original_backend
     rtr._query_cache_error = original_error
@@ -702,6 +842,390 @@ class TestRawRetrieveEndpoint:
 
         assert resp.status_code == 503
         assert resp.json()["detail"] == "Constraint-aware retrieval is temporarily unavailable."
+
+
+class TestLegalV2SearchEndpoint:
+    def test_registered_once_in_main_app(self) -> None:
+        from app.api_app import app as main_app
+
+        assert _search_v2_route_count(main_app) == 1
+
+    def test_disabled_returns_controlled_response_without_runtime(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("NALUS_LEGAL_V2_SEARCH_ENABLED", raising=False)
+        provider = _FakeLegalV2RuntimeProvider()
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+
+        resp = client.post("/api/rag/search-v2", json={"query": "únos dítěte"})
+
+        assert resp.status_code == 404
+        assert "Legal Retrieval v2 search is disabled" in resp.json()["detail"]
+        assert provider.runtime_calls == 0
+
+    def test_enabled_success_uses_fake_runtime_and_preserves_contract(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        provider = _FakeLegalV2RuntimeProvider()
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+
+        resp = client.post(
+            "/api/rag/search-v2",
+            json={
+                "query": "mezinárodní únos dítěte matkou do Ruska",
+                "sources": ["constitutional"],
+                "max_results": 2,
+                "debug": True,
+            },
+        )
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["status"] == "verified_match"
+        assert payload["interpretation_status"] == "ok"
+        assert payload["verified_documents"][0]["document_id"] == "ECLI:CZ:US:2026:3.US.446.26.1"
+        assert payload["verified_documents"][0]["metadata"]["court_name"] == "Ústavní soud"
+        assert "paragraph_texts" not in payload["verified_documents"][0]["metadata"]
+        assert payload["verified_documents"][0]["verification_reason"] == "ověřeno z odstavce soudu"
+        assert payload["verified_documents"][0]["verifier_diagnostics"]["raw_provider_response"] == "[redacted]"
+        assert payload["verified_documents"][0]["evidence"][0]["paragraph_ids"] == [
+            "ECLI:CZ:US:2026:3.US.446.26.1__p1"
+        ]
+        assert payload["index"]["bm25_sidecar_path"] == "[redacted]"
+        assert provider.runtime_calls == 1
+        assert provider.search_calls[0]["source_filter"] == {"constitutional"}
+
+    def test_enabled_zero_results_do_not_fallback(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        provider = _FakeLegalV2RuntimeProvider(
+            result=_legal_v2_result(
+                status="no_verified_results",
+                verified_documents=[],
+                diagnostics={"candidate_documents": 0, "zero_result": True},
+            )
+        )
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(retrieve_results=[_chunk(chunk_id="legacy-hit")]),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+
+        resp = client.post("/api/rag/search-v2", json={"query": "nenalezitelný právní dotaz"})
+
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["status"] == "no_verified_results"
+        assert payload["verified_documents"] == []
+        assert payload["diagnostics"]["zero_result"] is True
+        assert provider.search_calls
+
+    def test_missing_runtime_configuration_returns_503_without_secret_leak(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        secret = "sk-test-secret-value"
+        raw_query = "RAW_QUERY_SHOULD_NOT_APPEAR"
+        provider = _FakeLegalV2RuntimeProvider(
+            error=rtr.RetrievalConfigurationError(
+                f"missing config {secret} {raw_query}"
+            )
+        )
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+
+        with caplog.at_level(logging.WARNING, logger="app.api.rag_router"):
+            resp = client.post("/api/rag/search-v2", json={"query": raw_query})
+
+        body = str(resp.json())
+        logs = "\n".join(record.getMessage() for record in caplog.records)
+        assert resp.status_code == 503
+        assert resp.json()["detail"] == "Legal Retrieval v2 search is temporarily unavailable."
+        assert secret not in body
+        assert secret not in logs
+        assert raw_query not in body
+        assert raw_query not in logs
+
+    @pytest.mark.parametrize(
+        ("error_text", "expected_status"),
+        [
+            ("missing qdrant collection nalus_legal_paragraph_chunks_v2_test", 503),
+            ("missing bm25 sidecar nalus_legal_paragraph_bm25_v2_test", 503),
+        ],
+    )
+    def test_missing_isolated_index_dependencies_return_503(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        error_text: str,
+        expected_status: int,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        provider = _FakeLegalV2RuntimeProvider(error=rtr.RetrievalConfigurationError(error_text))
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+
+        resp = client.post("/api/rag/search-v2", json={"query": "únos dítěte"})
+
+        assert resp.status_code == expected_status
+        assert "temporarily unavailable" in resp.json()["detail"]
+
+    def test_queryspec_provider_error_uses_existing_fail_closed_result_and_redacts_raw_payload(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        raw_query = "DISTINCTIVE_RAW_QUERY"
+        provider = _FakeLegalV2RuntimeProvider(
+            result=_legal_v2_result(
+                status="query_interpretation_error",
+                interpretation_status="failed",
+                verified_documents=[],
+                provider={
+                    "query_interpreter": "fake",
+                    "reason": "query_interpreter_provider_error",
+                    "error": "RAW_PROVIDER_BODY sk-test-secret",
+                },
+                diagnostics={"raw_provider_response": "RAW_PROVIDER_BODY sk-test-secret"},
+            )
+        )
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+
+        with caplog.at_level(logging.WARNING, logger="app.api.rag_router"):
+            resp = client.post("/api/rag/search-v2", json={"query": raw_query})
+
+        body = str(resp.json())
+        logs = "\n".join(record.getMessage() for record in caplog.records)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "query_interpretation_error"
+        assert "RAW_PROVIDER_BODY" not in body
+        assert "sk-test-secret" not in body
+        assert raw_query not in logs
+
+    def test_verifier_failure_returns_no_verified_candidate(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        rejected = _legal_v2_document(document_id="DOC-REJECTED", status="verifier_error")
+        provider = _FakeLegalV2RuntimeProvider(
+            result=_legal_v2_result(
+                status="no_verified_results",
+                verified_documents=[],
+                rejected_documents=[rejected],
+            )
+        )
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+
+        resp = client.post("/api/rag/search-v2", json={"query": "únos dítěte", "debug": True})
+
+        assert resp.status_code == 200
+        assert resp.json()["verified_documents"] == []
+        assert resp.json()["rejected_documents"][0]["document_id"] == "DOC-REJECTED"
+
+    @pytest.mark.parametrize("error", [TimeoutError("RAW_PROVIDER_BODY"), ValueError("invalid RAW_PROVIDER_BODY")])
+    def test_provider_timeout_or_invalid_output_returns_503_without_raw_body(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+        error: Exception,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        provider = _FakeLegalV2RuntimeProvider()
+
+        def failing_search(**kwargs):
+            provider.search_calls.append(kwargs)
+            raise error
+
+        provider.result = _legal_v2_result()
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=lambda: rtr.LegalV2Runtime(
+                    retriever=object(),
+                    query_provider=object(),
+                    verifier=object(),
+                    config=_legal_v2_config(),
+                    search=failing_search,
+                ),
+            )
+        )
+
+        with caplog.at_level(logging.WARNING, logger="app.api.rag_router"):
+            resp = client.post("/api/rag/search-v2", json={"query": "citlivý dotaz"})
+
+        combined = str(resp.json()) + "\n".join(record.getMessage() for record in caplog.records)
+        assert resp.status_code == 503
+        assert "RAW_PROVIDER_BODY" not in combined
+        assert "citlivý dotaz" not in combined
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"query": ""},
+            {"query": "   \t"},
+            {"query": "a" * (rtr.LEGAL_V2_MAX_QUERY_LENGTH + 1)},
+            {"query": "dotaz", "max_results": 0},
+            {"query": "dotaz", "max_results": rtr.LEGAL_V2_MAX_REQUESTED_RESULTS + 1},
+        ],
+    )
+    def test_request_validation_rejects_invalid_payloads(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        payload: dict,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        provider = _FakeLegalV2RuntimeProvider()
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+
+        resp = client.post("/api/rag/search-v2", json=payload)
+
+        assert resp.status_code == 422
+        assert provider.runtime_calls == 0
+
+    def test_czech_unicode_and_extra_fields_follow_pydantic_ignore_policy(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        provider = _FakeLegalV2RuntimeProvider()
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+        query = "Ústavní soud řešil únos dítěte podle Haagské úmluvy"
+
+        resp = client.post(
+            "/api/rag/search-v2",
+            json={"query": query, "unsupported": "ignored"},
+        )
+
+        assert resp.status_code == 200
+        assert provider.search_calls[0]["query"] == query
+
+    def test_requested_final_limit_is_bounded_by_runtime_config(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        provider = _FakeLegalV2RuntimeProvider(config=_legal_v2_config(returned_verified_documents=3))
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+
+        resp = client.post("/api/rag/search-v2", json={"query": "únos dítěte", "max_results": 20})
+
+        assert resp.status_code == 200
+        bounded_config = provider.search_calls[0]["config"]
+        assert bounded_config.returned_verified_documents == 3
+        assert bounded_config.dense_candidate_chunks == 5
+        assert bounded_config.bm25_candidate_chunks == 6
+        assert bounded_config.fused_candidate_chunks == 7
+        assert bounded_config.candidate_documents == 4
+
+    def test_runtime_cache_reuse_and_reset_without_real_services(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls = {"qdrant": 0, "build": 0}
+
+        class FakeQdrantClient:
+            def __init__(self, **kwargs) -> None:
+                del kwargs
+                calls["qdrant"] += 1
+
+        monkeypatch.setenv("LLM_API_KEY", "valid-test-key")
+        monkeypatch.setattr(rtr, "import_module", lambda name: SimpleNamespace(QdrantClient=FakeQdrantClient))
+        monkeypatch.setattr(rtr, "BgeM3Embedder", lambda config: object())
+        monkeypatch.setattr(rtr, "DeepSeekQuerySpecProvider", lambda api_key: object())
+        monkeypatch.setattr(rtr, "DeepSeekSemanticVerifierProvider", lambda api_key: object())
+
+        def fake_build_live_legal_v2_retriever(client, embedder, config):
+            del client, embedder, config
+            calls["build"] += 1
+            return object()
+
+        monkeypatch.setattr(rtr, "build_live_legal_v2_retriever", fake_build_live_legal_v2_retriever)
+
+        first = rtr.get_legal_v2_runtime()
+        second = rtr.get_legal_v2_runtime()
+        rtr.reset_legal_v2_runtime_for_tests()
+        third = rtr.get_legal_v2_runtime()
+
+        assert first is second
+        assert third is not first
+        assert calls == {"qdrant": 2, "build": 2}
+
+    def test_evidence_provenance_belongs_to_returned_document(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "1")
+        document_id = "ECLI:CZ:US:2026:3.US.446.26.1"
+        provider = _FakeLegalV2RuntimeProvider(
+            result=_legal_v2_result(verified_documents=[_legal_v2_document(document_id=document_id)])
+        )
+        client = TestClient(
+            _make_app(
+                _FakeOrchestrator(),
+                legal_v2_runtime_provider_override=provider,
+            )
+        )
+
+        resp = client.post("/api/rag/search-v2", json={"query": "únos dítěte"})
+
+        document = resp.json()["verified_documents"][0]
+        assert all(
+            paragraph_id.startswith(document["document_id"])
+            for evidence in document["evidence"]
+            for paragraph_id in evidence["paragraph_ids"]
+        )
 
 
 class TestFullDocumentEndpoint:

@@ -9,6 +9,16 @@ Status: implemented as an isolated, disabled-by-default pipeline. It is not prod
 - New Qdrant collection: `nalus_legal_paragraph_chunks_v2`.
 - New BM25 sidecar: `storage/rag/bm25/nalus_legal_paragraph_bm25_v2.sqlite`.
 - Existing `/api/rag/retrieve`, `/api/rag/query`, `/api/rag/retrieve-documents`, `/api/rag/retrieve-verified`, frontend behavior, cache behavior, and production retrieval profile are unchanged.
+- Exactly one FastAPI route registers `POST /api/rag/search-v2`; the disabled
+  guard behavior lives in the same handler as the live implementation.
+- With `NALUS_LEGAL_V2_SEARCH_ENABLED=0`, the endpoint returns a controlled
+  disabled response and does not initialize Qdrant, BM25, BGE-M3, DeepSeek
+  providers, or credentials.
+- With `NALUS_LEGAL_V2_SEARCH_ENABLED=1`, the endpoint initializes the Legal v2
+  runtime lazily and uses only the isolated v2 Qdrant collection and v2 BM25
+  sidecar. It does not fall back to legacy retrieval or pad results with
+  unrelated documents.
+- The frontend is not connected to `search-v2`.
 
 ## Pipeline
 
@@ -27,6 +37,55 @@ Original query
 ```
 
 Unit tests use deterministic fake providers and do not call DeepSeek.
+
+## `POST /api/rag/search-v2` Contract
+
+Request:
+
+```json
+{
+  "query": "mezinárodní únos dítěte matkou do Ruska",
+  "sources": ["constitutional"],
+  "max_results": 10,
+  "debug": false
+}
+```
+
+Validation:
+
+- `query` must be non-blank and at most 4000 characters.
+- `max_results` must be between 1 and 50 and is still bounded by the runtime
+  `returned_verified_documents` configuration.
+- Extra request fields follow the current Pydantic policy and are ignored.
+
+Response summary:
+
+- `status` and `interpretation_status`;
+- safe query-spec summary when available;
+- `verified_documents` with document id, score, status, safe metadata, bounded
+  evidence quotes, paragraph ids, section types, constraint results, verifier
+  reason, and bounded verifier diagnostics;
+- `rejected_documents` only when the runtime includes them, normally through
+  debug behavior;
+- bounded latency, provider, index, and diagnostics maps.
+
+The API response must not expose API keys, authorization headers, raw provider
+response bodies, stack traces, raw prompts, internal filesystem paths, complete
+judgments, or unbounded diagnostics. Provider, verifier, retrieval, Qdrant, BM25,
+or unexpected internal failures fail closed with a controlled `503` response
+unless the Legal v2 pipeline returns its existing structured provider-error
+result. A successful zero-result search returns an empty `verified_documents`
+list with diagnostics; it does not call old retrieval.
+
+Deterministic isolated API smoke without external providers:
+
+```powershell
+python -m pytest -q tests\api\test_rag_api.py::TestLegalV2SearchEndpoint
+```
+
+This validates API wiring against fake providers and the 20-document smoke-index
+contract only. It is not a relevance benchmark and does not prove production
+quality over the full corpus.
 
 ## Parser Audit
 
