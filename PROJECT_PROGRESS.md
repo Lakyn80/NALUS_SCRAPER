@@ -1,5 +1,31 @@
 # Project Progress
 
+## 2026-07-31 Europe/Moscow - Task: Push Legal Retrieval v2 QA gate and smoke-index commit
+
+- Goal:
+  Record the safe commit and push outcome for the intentional Legal Retrieval v2 parser QA gate and isolated smoke-index implementation.
+- Governance:
+  Required governance files were read before Git operations: `AGENTS.md`, `PROJECT_EXECUTION_PROTOCOL.md`, `PROJECT_PROGRESS.md`, and `docs/LEGAL_RETRIEVAL_V2.md`.
+  Branch was `main`; pre-push local HEAD was `79e35ee799cd48699fecd12129494c081e46d692`.
+  Dirty files were classified before staging and push.
+- Commit pushed:
+  `79e35ee799cd48699fecd12129494c081e46d692` - `Complete isolated Legal Retrieval v2 smoke indexing`.
+  Previous remote HEAD was `302eba8053b4ea11c725cb5df88623ec5818f965`.
+  Remote divergence before push was `0 1` for `origin/main...HEAD`, so local `main` was one commit ahead and remote was not ahead.
+  Push command `git push origin main` succeeded: `302eba8..79e35ee main -> main`.
+- Scope preserved:
+  Committed only intended Legal v2 source, scripts, tests, docs, and this progress file from the QA gate / smoke-index task.
+  `app/api/rag_router.py` remained modified but unstaged and uncommitted.
+  Generated artifacts under `artifacts/`, isolated Qdrant/BM25 runtime data, caches, logs, and secrets were not committed.
+  No force push, rebase, reset, clean, or broad staging command was used.
+- Verification:
+  Local `HEAD` and `origin/main` matched after push at `79e35ee799cd48699fecd12129494c081e46d692`.
+  Post-push `git status --short` still showed only the preserved unrelated `app/api/rag_router.py` modification and untracked generated artifact directories.
+- Known limitations:
+  The NALUS validator still reports a blocking `deepseek_call` in the pre-existing excluded `app/api/rag_router.py` dirty diff, plus generated-artifact warnings. These were not part of the pushed commit.
+- Next recommended task:
+  Review and either intentionally finish or discard the separate `app/api/rag_router.py` work before any task that changes runtime RAG API behavior.
+
 ## 2026-07-31 Europe/Moscow - Task: Legal Retrieval v2 initial QA gate and isolated smoke index
 
 - Goal:
