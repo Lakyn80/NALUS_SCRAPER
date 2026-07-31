@@ -1,0 +1,181 @@
+{
+  "audit_id": "previous_five_year_build_audit_20260731",
+  "generated_at_local": "2026-07-31 Europe/Moscow",
+  "scope": "Read-only forensic audit of the prior approximately five-year BGE-M3 indexing claim versus the current Legal Retrieval v2 CPU estimate.",
+  "classification": "PARTIALLY_SUPPORTED",
+  "classification_reason": "A roughly three-hour BGE-M3 run is supported for a 600-document newest-first slice, not for a completed five-year build. The prior five-year run is evidenced as partial and in-progress.",
+  "guardrails": {
+    "embedding_build_run": false,
+    "qdrant_modified": false,
+    "bm25_modified": false,
+    "aliases_modified": false,
+    "runtime_source_code_modified": false,
+    "frontend_modified": false,
+    "search_v2_enabled": false,
+    "gpu_used": false,
+    "cuda_used": false,
+    "downloads": false,
+    "tests_run": false
+  },
+  "evidence": [
+    {
+      "finding": "The old five-year candidate was not completed.",
+      "paths": [
+        "artifacts/nalus_update/usoud_bge_m3_mvp_5y_20260708/dry_run_summary.json",
+        "artifacts/nalus_update/usoud_bge_m3_mvp_5y_20260708/execute_checkpoint.json",
+        "artifacts/nalus_update/usoud_bge_m3_mvp_5y_20260708/logs/mvp_5y_20260708_224835.log"
+      ],
+      "details": "The dry run selected 18062 records and estimated 155414 chunks for 2021-07-08 through 2026-07-08. The checkpoint remained in_progress at record 650 with 8335 inserted points. No completed execute summary for the five-year slice was found."
+    },
+    {
+      "finding": "The confirmed approximately three-hour run was a 600-document recent slice.",
+      "paths": [
+        "artifacts/nalus_update/usoud_bge_m3_mvp_recent_3h_20260709/dry_run_summary.json",
+        "artifacts/nalus_update/usoud_bge_m3_mvp_recent_3h_20260709/execute_summary.json"
+      ],
+      "details": "The execute command used --limit 600, --newest-first, and decision_date_to 2026-07-09. It produced 4980 chunks in about 2h41m, around 0.513 chunks/s and 223 documents/hour."
+    },
+    {
+      "finding": "The combined old collection is a merge of partial five-year and 600-document recent points.",
+      "paths": [
+        "artifacts/nalus_update/usoud_bge_m3_rag_combined_20260709/merge_execute_summary.json",
+        "storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite"
+      ],
+      "details": "The merge combined 8335 points from nalus_us_bge_m3_mvp_5y_20260708 and 4980 points from nalus_us_bge_m3_mvp_recent_3h_20260709 for 13315 total points. The durable combined BM25 sidecar has 13315 rows."
+    },
+    {
+      "finding": "Current Legal Retrieval v2 has higher chunk density and richer metadata.",
+      "paths": [
+        "docs/LEGAL_RETRIEVAL_V2.md",
+        "artifacts/legal_v2/build_6y_20260731"
+      ],
+      "details": "The 100-document Legal v2 sample produced 1810 chunks, about 18.1 chunks/document, and ran at about 1.197 chunks/s. The old 600-document recent slice produced 8.3 chunks/document; the old five-year dry run estimated about 8.6 chunks/document."
+    }
+  ],
+  "previous_builds": {
+    "claimed_three_hour_run": {
+      "claim_status": "PARTIALLY_SUPPORTED",
+      "script": "scripts/build_usoud_bge_m3_candidate.py",
+      "command": "python scripts/build_usoud_bge_m3_candidate.py --mode full --limit 600 --collection-name nalus_us_bge_m3_mvp_recent_3h_20260709 --source-manifest batches/manifest.json --output-dir artifacts/nalus_update/usoud_bge_m3_mvp_recent_3h_20260709 --no-alias-update --ingest-slice mvp_recent_3h --decision-date-to 2026-07-09 --newest-first --embedding-batch-size 16 --full-record-batch-size 50 --execute --recreate-full-collection",
+      "manifest": "artifacts/nalus_update/usoud_bge_m3_mvp_recent_3h_20260709/execute_summary.json",
+      "logs": "NOT_FOUND",
+      "qdrant_collection": "nalus_us_bge_m3_mvp_recent_3h_20260709",
+      "qdrant_points": 4980,
+      "bm25_sidecar": "NOT_FOUND",
+      "bm25_rows": "NOT_FOUND",
+      "date_range": {
+        "decision_date_from": null,
+        "decision_date_to": "2026-07-09",
+        "newest_first": true,
+        "limit": 600
+      },
+      "documents": 600,
+      "chunks": 4980,
+      "chunks_per_document": 8.3,
+      "model": "BAAI/bge-m3",
+      "dimension": 1024,
+      "chunking": "Old simple text chunking, approximately 1400 characters with 35-word overlap and flat payload metadata.",
+      "embedding_batch": 16,
+      "qdrant_batch": 64,
+      "bm25_strategy": "Candidate-run BM25 validation only; durable BM25 was later built from merged Qdrant points.",
+      "cpu_threads": "UNKNOWN",
+      "total_duration": "approximately 2h41m",
+      "chunks_per_second": 0.513,
+      "build_full_or_incremental": "incremental/slice MVP, not full five-year",
+      "embeddings_reused": false
+    },
+    "previous_five_year_candidate": {
+      "claim_status": "NOT_COMPLETED",
+      "script": "scripts/build_usoud_bge_m3_candidate.py",
+      "command": "python scripts/build_usoud_bge_m3_candidate.py --mode full --limit 0 --collection-name nalus_us_bge_m3_mvp_5y_20260708 --source-manifest batches/manifest.json --output-dir artifacts/nalus_update/usoud_bge_m3_mvp_5y_20260708 --no-alias-update --years-back 5 --ingest-slice mvp_5y --embedding-batch-size 16 --full-record-batch-size 50 --execute --recreate-full-collection",
+      "manifest": "NOT_FOUND",
+      "checkpoint": "artifacts/nalus_update/usoud_bge_m3_mvp_5y_20260708/execute_checkpoint.json",
+      "logs": "artifacts/nalus_update/usoud_bge_m3_mvp_5y_20260708/logs/mvp_5y_20260708_224835.log",
+      "qdrant_collection": "nalus_us_bge_m3_mvp_5y_20260708",
+      "qdrant_points": 8335,
+      "date_range": {
+        "decision_date_from": "2021-07-08",
+        "decision_date_to": "2026-07-08"
+      },
+      "documents": "650 indexed of 18062 selected",
+      "chunks": "8335 inserted of 155414 expected",
+      "chunks_per_document_expected": 8.604,
+      "model": "BAAI/bge-m3",
+      "dimension": 1024,
+      "embedding_batch": 16,
+      "qdrant_batch": 64,
+      "total_duration": "NOT_FOUND",
+      "chunks_per_second": "UNKNOWN",
+      "build_full_or_incremental": "full-mode candidate, partial/in-progress only"
+    },
+    "combined_old_collection": {
+      "qdrant_collection": "nalus_us_bge_m3_rag_combined_20260709",
+      "qdrant_points": 13315,
+      "bm25_sidecar": "storage/rag/bm25/nalus_us_bge_m3_rag_combined_20260709.sqlite",
+      "bm25_rows": 13315,
+      "source_collections": [
+        "nalus_us_bge_m3_mvp_5y_20260708",
+        "nalus_us_bge_m3_mvp_recent_3h_20260709"
+      ]
+    }
+  },
+  "current_legal_v2_sample": {
+    "model": "BAAI/bge-m3",
+    "dimension": 1024,
+    "model_loaded_once": "Per builder process yes; the 100-document checkpoint/resume sample loaded once per invocation, twice overall.",
+    "embedding_batch": 64,
+    "qdrant_batch": 64,
+    "bm25_strategy": "SQLite bm25_chunks append per document batch with full metadata JSON and Qdrant/BM25 identity validation.",
+    "documents": 100,
+    "chunks": 1810,
+    "chunks_per_document": 18.1,
+    "chunks_per_second": 1.197,
+    "estimated_six_year_documents": 21776,
+    "estimated_six_year_chunks": 394000,
+    "estimated_cpu_duration_hours": 91.5
+  },
+  "bottlenecks": {
+    "parsing": "Secondary/possible. Legal v2 parsing and audit metadata are richer than old chunking.",
+    "embedding": "Primary CPU bottleneck because cost scales with chunk count and BGE-M3 CPU encoding dominates the run.",
+    "qdrant": "Secondary. Upserts are wait=true in batches of 64, but available evidence does not show Qdrant as dominant.",
+    "bm25": "Low/secondary. Legal v2 writes a larger JSON metadata sidecar, but this is not the leading cost in the 100-document sample.",
+    "validation_checkpoint": "Secondary. Checkpoint and identity validation add safety cost and may grow with collection size.",
+    "docker_resource": "CPU-only Docker. CUDA/GPU unavailable by policy; CPU thread settings are UNKNOWN."
+  },
+  "root_causes": [
+    "The roughly three-hour run was a 600-document newest-first slice, not a completed five-year build.",
+    "The current target is larger: 21776 documents and about 394k chunks versus 600 documents/4980 chunks for the confirmed old run and 18062 documents/155414 expected chunks for the unfinished old five-year candidate.",
+    "Legal Retrieval v2 creates paragraph-aware hierarchical chunks with evidence metadata, producing about 18.1 chunks/document in the sample versus about 8.3 to 8.6 chunks/document in the old builder."
+  ],
+  "reuse_assessment": {
+    "old_qdrant_points_reusable": false,
+    "old_vectors_reusable": false,
+    "old_parsing_reusable": "PARTIAL",
+    "reusable_documents": "UNKNOWN",
+    "reusable_chunks": 0,
+    "reason": "The model and vector dimension match, but chunk text, chunk boundaries, identifiers, payload schema, paragraph metadata, and fingerprints do not. Source documents and date-filtering concepts may be reused as input evidence only."
+  },
+  "recommendation": {
+    "selected": "E. RECONSTRUCT_EXPECTATION",
+    "expected_optimized_duration": "NOT_APPLICABLE; no optimization implemented in this audit. The old three-hour evidence does not imply a full six-year Legal v2 CPU build can complete in three hours.",
+    "confidence": "HIGH for the three-hour/five-year discrepancy; MEDIUM for bottleneck attribution.",
+    "exact_next_implementation_task": "Create a read-only rebaseline estimator that separates document count, chunk density, embedding throughput, Qdrant write cost, BM25 write cost, and validation cost before any full build is started."
+  },
+  "files_created": [
+    "artifacts/evaluation_quality/previous_five_year_build_audit_20260731.md",
+    "artifacts/evaluation_quality/previous_five_year_build_audit_20260731.json"
+  ],
+  "tracked_files_modified_by_this_audit": [
+    "PROJECT_PROGRESS.md"
+  ],
+  "pre_existing_dirty_runtime_files": [
+    "app/rag/legal_v2/index_builder.py",
+    "app/rag/legal_v2/source_inventory.py",
+    "app/rag/legal_v2/sources.py",
+    "docs/LEGAL_RETRIEVAL_V2.md",
+    "scripts/legal_v2/build_index.py",
+    "scripts/legal_v2/source_inventory.py",
+    "tests/rag/test_legal_v2_end_to_end.py",
+    "tests/rag/test_legal_v2_source_inventory.py"
+  ]
+}

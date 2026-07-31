@@ -1,5 +1,18 @@
 # Project Progress
 
+## 2026-07-31 Europe/Moscow - Task: Forensic audit previous five-year build expectation
+
+- Goal:
+  Read-only audit of why the earlier BGE-M3 indexing was believed to take about three hours while current Legal Retrieval v2 estimates about `91.5h`; no build, tests, Qdrant/BM25 mutation, aliases, downloads, GPU/CUDA, frontend, or runtime source edits.
+- Result:
+  Claim classification: `PARTIALLY_SUPPORTED`. The approximately three-hour evidence applies to `mvp_recent_3h`, a `600`-document newest-first slice producing `4,980` chunks in about `2h41m`, not to a completed five-year build. The old five-year candidate `mvp_5y` stopped in progress at `650` indexed documents and `8,335` inserted points out of `18,062` selected records and `155,414` expected chunks.
+- Root cause:
+  The old three-hour slice was conflated with a full five-year build. Current Legal Retrieval v2 has a larger six-year scope, higher chunk density, paragraph-aware payloads, richer BM25 metadata, checkpointing, and validation; old vectors are not directly reusable because chunk boundaries, payload schema, and fingerprints differ.
+- Artifacts:
+  `artifacts/evaluation_quality/previous_five_year_build_audit_20260731.md` and `artifacts/evaluation_quality/previous_five_year_build_audit_20260731.json`.
+- Recommendation:
+  `E. RECONSTRUCT_EXPECTATION`; rebaseline expected CPU build time from document count, chunk density, and measured per-phase throughput before any full build.
+
 ## 2026-07-31 Europe/Moscow - Task: Complete live Legal Retrieval v2 API endpoint wiring
 
 - Goal:
