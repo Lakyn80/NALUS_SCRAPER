@@ -218,7 +218,8 @@ def test_search_v2_endpoint_disabled_by_default(monkeypatch: pytest.MonkeyPatch)
     )
 
     assert response.status_code == 404
-    assert "disabled" in response.json()["detail"].lower()
+    assert "Legal Retrieval v2 search is disabled" in response.json()["detail"]
+    assert "NALUS_LEGAL_V2_SEARCH_ENABLED=1" in response.json()["detail"]
 
 
 def test_build_index_selects_only_gate_safe_parser_quality_documents(tmp_path: Path) -> None:

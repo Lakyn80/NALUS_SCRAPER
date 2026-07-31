@@ -1,5 +1,33 @@
 # Project Progress
 
+## 2026-07-31 Europe/Moscow - Task: Fix Legal Retrieval v2 disabled endpoint CI guard
+
+- Goal:
+  Fix the CI failure where `POST /api/rag/search-v2` returned FastAPI's generic `Not Found` instead of an explicit disabled Legal Retrieval v2 response when `NALUS_LEGAL_V2_SEARCH_ENABLED` is unset.
+- Starting audit:
+  Branch `main`, HEAD `85d4c78348cbaedad7b440475f70b0afbc07ec2b`.
+  Required governance files read: `AGENTS.md`, `PROJECT_EXECUTION_PROTOCOL.md`, `PROJECT_PROGRESS.md`, and `docs/LEGAL_RETRIEVAL_V2.md`.
+  Dirty worktree classified before editing. Pre-existing modified `app/api/rag_router.py` contains a larger Legal v2 runtime route diff and remains risky/outside this minimal CI guard task. Generated `artifacts/**` remain local outputs and were not touched.
+- Scope:
+  In scope: API app registration and a disabled-by-default fallback guard for `/api/rag/search-v2`.
+  Out of scope: full Legal v2 runtime execution, DeepSeek provider wiring, Qdrant/BM25 retrieval behavior, model loading, aliases, Redis, frontend behavior, and the existing dirty `app/api/rag_router.py` implementation.
+- What changed:
+  Added `app/api/legal_v2_guard_router.py`, a small fallback router that returns `404` with an explicit disabled message while `NALUS_LEGAL_V2_SEARCH_ENABLED` is unset.
+  Registered the fallback router after the main RAG router in `app/api_app.py`, so a future full `/api/rag/search-v2` implementation in `app/api/rag_router.py` takes precedence and is not shadowed.
+  If the feature flag is enabled but no full runtime route is registered, the fallback returns an explicit `503` instead of silently calling providers or changing retrieval behavior.
+- Tests run:
+  `python -m pytest -q tests\rag\test_legal_v2_end_to_end.py::test_search_v2_endpoint_disabled_by_default` -> `1 passed`, one non-blocking Starlette/httpx deprecation warning.
+  Isolated fallback-router `TestClient` smoke -> `404` with detail containing `disabled`.
+  `python -m pytest -q tests\rag\test_legal_v2_end_to_end.py tests\api\test_rag_api.py` -> `52 passed`, one non-blocking Starlette/httpx deprecation warning.
+  `python -m compileall app tests scripts` -> passed.
+  `ruff check app\api\legal_v2_guard_router.py app\api_app.py tests\rag\test_legal_v2_end_to_end.py --no-cache` -> passed.
+- Behavior preserved:
+  No Qdrant write, no BM25 write, no model download, no DeepSeek call, no Redis behavior change, no production alias change, no retrieval scoring/ranking/top_k/RRF change, and no frontend behavior change.
+- Known limitations:
+  This task intentionally fixes only the disabled-default endpoint contract. It does not validate or approve the larger dirty `app/api/rag_router.py` Legal v2 runtime route.
+- Next recommended task:
+  Review the separate `app/api/rag_router.py` Legal v2 runtime diff as its own controlled task before enabling or committing live `search-v2` behavior.
+
 ## 2026-07-31 Europe/Moscow - Task: Push Legal Retrieval v2 QA gate and smoke-index commit
 
 - Goal:
