@@ -44,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
             llm_config=llm_config.to_safe_dict(),
         )
         return 2
-    from qdrant_client import QdrantClient
+    from qdrant_client import QdrantClient  # type: ignore[import-not-found]
 
     config = legal_v2_retriever_config_from_env()
     if not config.bm25_sidecar_path.exists():

@@ -34,7 +34,7 @@ class Bm25Sidecar:
         b: float,
         index_id: str,
     ) -> None:
-        self._path = path
+        self._path = Path(path)
         self._k1 = k1
         self._b = b
         self._index_id = index_id

@@ -21,8 +21,8 @@ from app.rag.retrieval.bm25_sidecar import Bm25Sidecar  # noqa: E402
 from app.rag.retrieval.production_profile import ProductionRetrievalConfig  # noqa: E402
 
 SMOKE_QUERIES = [
-    "matka unesla dítě z Česka do Ruska",
-    "udělování českého občanství ruským občanům",
+    "mezinárodní rodinný spor o přemístění nezletilého do zahraničí",
+    "správní řízení o státním občanství žadatele s cizí státní příslušností",
     "ordinary domestic custody",
     "paternity",
     "maintenance",

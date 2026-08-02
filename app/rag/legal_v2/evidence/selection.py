@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
+from unicodedata import combining, normalize
 
 from app.rag.legal_v2.models import LegalParagraph, SectionType
 from app.rag.legal_v2.query_spec import QuerySpecV2
@@ -42,7 +44,7 @@ def select_evidence_windows(
     max_window_chars: int = 1400,
 ) -> list[EvidenceWindowForConstraint]:
     windows: list[EvidenceWindowForConstraint] = []
-    for constraint in query_spec.hard_constraints:
+    for constraint in [*query_spec.hard_constraints, *query_spec.soft_constraints]:
         ranked = sorted(
             candidate.paragraphs,
             key=lambda paragraph: (
@@ -63,7 +65,10 @@ def select_evidence_windows(
                     text=text,
                     section_types=[item.section_type for item in context],
                     heading_context=paragraph.heading_context,
-                    source_of_claim=source_of_claim_for_section(paragraph.section_type),
+                    source_of_claim=effective_source_of_claim(
+                        section=paragraph.section_type,
+                        text=text,
+                    ),
                     current_case_classification=(
                         "cited_case" if paragraph.section_type == SectionType.CITED_CASE else "current_case"
                     ),
@@ -84,6 +89,50 @@ def source_of_claim_for_section(section: SectionType) -> str:
     return "unknown"
 
 
+def effective_source_of_claim(*, section: SectionType, text: str) -> str:
+    """Resolve claim source, repairing mislabeled judgment-body paragraphs.
+
+    Some indexed chunks store operative/reasoning paragraphs as ``header``.
+    Those must not be treated as metadata-only for holding verification.
+    """
+    source = source_of_claim_for_section(section)
+    if source in {"metadata", "unknown"} and looks_like_court_holding_text(text):
+        return "court_finding"
+    return source
+
+
+def looks_like_court_holding_text(text: str) -> bool:
+    raw = str(text or "").strip()
+    if len(raw) < 80:
+        return False
+    folded = " ".join(
+        "".join(
+            character
+            for character in normalize("NFKD", raw.casefold())
+            if not combining(character)
+        ).split()
+    )
+    numbered = bool(re.match(r"^\d+\.\s+\S", raw))
+    has_court = "ustavni soud" in folded or folded.startswith("soud ")
+    disposition_markers = (
+        "odmitl",
+        "odmita",
+        "odmitnout",
+        "nepripustn",
+        "vyhovel",
+        "zrusil",
+        "zamitl",
+        "pro nepripustnost",
+    )
+    has_disposition = any(marker in folded for marker in disposition_markers)
+    has_statute = "§ 43" in raw or "§ 75" in raw or "paragrafu 43" in folded
+    if numbered and (has_court or has_disposition or has_statute):
+        return True
+    if has_court and (has_disposition or has_statute) and len(folded) >= 120:
+        return True
+    return False
+
+
 def _paragraph_score(paragraph: LegalParagraph, normalized_value: str) -> float:
     text = paragraph.normalized_text.lower()
     score = 0.0
@@ -93,7 +142,14 @@ def _paragraph_score(paragraph: LegalParagraph, normalized_value: str) -> float:
     if paragraph.section_type in PREFERRED_SECTIONS:
         score += 0.4
     if paragraph.section_type in RESTRICTED_SECTIONS:
-        score -= 0.6
+        # Mislabeled operative/reasoning paragraphs often land in HEADER.
+        # Do not bury lexical holding matches behind the restricted penalty.
+        if paragraph.section_type == SectionType.HEADER and looks_like_court_holding_text(
+            paragraph.normalized_text or paragraph.original_text
+        ):
+            score += 0.2
+        else:
+            score -= 0.6
     if paragraph.is_citation_block:
         score -= 0.4
     if paragraph.is_boilerplate:
