@@ -1,5 +1,182 @@
 # Project Progress
 
+## 2026-08-02 Europe/Moscow - Task: uq_028 benchmark correction + incomplete-hard demote
+
+- Goal:
+  Stop treating content-correct `3.US.2419.20.1` as FA; unblock false rejection of clearly relevant refusals (e.g. `1.US.2639.24.1`) without further gate tightening against the query.
+- Benchmark (`reviewed_benchmark_v2.json` item `uq_028`):
+  Moved `ECLI:CZ:US:2020:3.US.2419.20.1` hard_negative → strongly_relevant (reason: §§9–15 subsidiarity / §43(1)(e)).
+  Broadened strong: `3.US.931.21.1`, `1.US.2639.24.1`; material: `3.US.2242.20.1`, `2.US.262.24.2`; related_only: `3.US.2302.20.1`.
+  Remaining HN for query: `2.US.3645.25.1` only.
+  Correction note: `artifacts/.../thinking_ab_test/uq_028_benchmark_correction_20260802.md`.
+- Runtime:
+  Compact expand demotes exact/strong when hard PROVEN+`court_finding` coverage is incomplete (not only empty) → enables thinking escalation.
+  Pipeline escalate safety net for exact/strong with ≤2 missing hard concepts.
+  Smoke schema gate tolerates transient `empty_message_content` / timeout / network fail-closed (candidate still rejected).
+- Live canary `hybrid_canary_uq028_after_benchmark_fix.*`:
+  FA **0**, FR **0**, cost ~$0.010, verified **4** including gold `1.US.2639.24.1`, `3.US.931.21.1`, `3.US.2419.20.1` (+ `2.US.1321.25.1`).
+  Smoke gate **passed** after transient-empty accounting.
+- Unit tests: header-holding + incomplete-hard demote + verifier suite **40 passed**.
+- Next step:
+  Capped 16-smoke under budget; then review `uq_031`/`uq_037` separately (do not reverse this uq_028 correction).
+
+## 2026-08-02 Europe/Moscow - Task: HEADER holding source repair + classification honesty
+
+- Goal:
+  Fix uq_028-style false negatives where relevant judgments had holding text mislabeled as `header`/`metadata`, so compact expand wiped all hard `PROVEN` and the gate rejected them — while also stopping exact/strong from advertising `verified_match` with zero holding-backed proof.
+- Root cause:
+  1. Indexed/retrieved paragraphs for some US refusals are almost all `section_type=header` → `source_of_claim=metadata` → expand/gate require `court_finding` → every hard PROVEN wiped (`proven=[]`, `source=unknown`).
+  2. Compact expand still mapped exact/strong → `verified_match` even after that wipe (lying classification vs empty proof).
+- Fix (no Stage A / index rebuild):
+  `effective_source_of_claim` + `looks_like_court_holding_text` in `evidence/selection.py`: upgrade mislabeled header/unknown text that looks like operative holding to `court_finding`; soften HEADER ranking penalty for those paragraphs.
+  Compact expand demotes exact/strong without any hard PROVEN+`court_finding` evidence to `insufficient_evidence` / `ambiguous` (`positive_classification_without_holding_proven_constraints`).
+- Validation:
+  `tests/rag/test_legal_v2_header_holding_source.py` + verifier suite: **39 passed**; compileall on touched packages; `git diff --check` clean on touched files.
+- Paid provider calls made: **none** in this task.
+- Next step:
+  Re-run cheap `uq_028` canary with `--dump-full-documents` (expect rank 2/6 to survive if holdings still retrieved); then capped 16-smoke; only then capped 59.
+
+## 2026-08-02 Europe/Moscow - Task: DeepSeek eval budget guard (no paid calls)
+
+- Goal:
+  Add strict provider-call and USD-cost budget accounting to Legal Retrieval v2 hybrid evaluation, without changing retrieval quality or Stage A/index.
+- Implementation:
+  Pricing table `deepseek_v4_2026_07_31` in `app/rag/llm/deepseek_pricing.py`.
+  Thread-safe `EvalBudgetTracker` with pre-call reservation in `app/rag/llm/deepseek_eval_budget.py` (+ `app/rag/legal_v2/eval_budget.py` re-export).
+  `DeepSeekTextLLM` captures usage into `last_meta` and settles/reserves when a tracker is bound; no prompts/keys/reasoning logged.
+  Hybrid smoke CLI: `--max-cost-usd`, `--max-provider-calls`, `--max-queryspec-calls`, `--max-fast-verifier-calls`, `--max-thinking-fallback-calls`.
+  Resume requires matching evaluation fingerprint (benchmark, policy, model, pricing table, budget config, index identity).
+  Budget stop reasons are not treated as retrieval-quality failures; partial artifacts remain resumable.
+- Validation (non-paid only):
+  compileall; `tests/rag/test_deepseek_eval_budget.py` 21 passed; focused provider/verifier suites green; ruff clean on touched files; mypy on `app/rag/legal_v2` + `scripts/legal_v2`; `git diff --check` clean on new budget files.
+- Paid provider calls made: **none**.
+- Next step:
+  One-query budget canary, then capped 16-smoke with explicit USD/call limits.
+
+## 2026-08-02 Europe/Moscow - Task: Holding-quality gate + thinking promotion delta
+
+- Goal:
+  Cut remaining smoke false approvals (`uq_028`, `uq_031`, `uq_037`) without Stage A / index changes and without loading benchmark `excluded_concepts` into runtime.
+- Code changes:
+  Gate requires hard `PROVEN` with non-empty `court_finding` evidence; rejects explicit `holding_supports_query=False` / `legal_issue_match=False`.
+  Compact expand + semantic validate fail-closed / downgrade non-holding `PROVEN`.
+  Thinking promotion to `verified_match` only with PROVEN delta + new evidence IDs + `court_finding`.
+  Pipeline document diagnostics: ECLI, rank, fast constraint snapshot, constraint status summary, promotion rejection codes.
+  Smoke artifact adds per-candidate `candidate_documents` (benchmark labels eval-only) and `--query-ids` for capped retests.
+- Validation:
+  Unit tests for gate/promotion/logging shape added in `tests/rag/test_legal_v2_verifier.py` (run focused pytest before live spend).
+- Live retest (cost-capped, user-run):
+  Only `uq_028,uq_031,uq_037` via `--query-ids`; gate target FA 0/3 with ECLI/evidence logged. Do **not** run 16-smoke or 59 until that 3-query gate passes.
+- Next step:
+  Focused unit tests → capped 3-query live retest → new 16-smoke → only then capped 59.
+
+## 2026-08-02 Europe/Moscow - Task: Offline forensics of 3 smoke false approvals
+
+- Goal:
+  Complete detailed root-cause cards for smoke FA cases `uq_028`, `uq_031`, `uq_037` with **zero** live LLM / DeepSeek calls.
+- Method:
+  Joined `hybrid_smoke_16_quality_fix.json`, pre-fix `hybrid_eval_59_nonholdout.json`, and `reviewed_benchmark_v2.json`.
+- Results:
+  All three hard-negative sets are also `related_only`. Path split: `uq_028`/`uq_031` FA from **fast** exact/strong; `uq_037` FA from **thinking fallback** (fast had 0 verified). `uq_031` has `verified_count==1==FA`, so the sole verified doc is a hard-negative (one of two listed ECLIs). Smoke artifact still lacks verified document IDs / evidence refs — exact ECLI for 028/037 cannot be named offline.
+- Artifacts:
+  `artifacts/legal_v2/pilot_600_20260731/universal_quality/thinking_ab_test/false_approval_offline_forensics_3.md` and `.json`.
+- Next step:
+  Fix thinking promotion policy (037), excluded-concept/fair-trial negative gate (031), exact_match overconfidence (028); optionally extend smoke logging for document IDs. No Stage A change.
+
+## 2026-08-01 Europe/Moscow - Task: Legal v2 quality fixes + in-place modularity
+
+- Goal:
+  Fix QuerySpec `hard_constraints_lost` and verifier false-approval root causes first, then split fat `legal_v2` modules into subpackages with compatibility re-export shims. No Stage A / embedding / pilot index changes; no `rag2` rename.
+- Phase 1A QuerySpec:
+  Tolerant constraint parse (default category/polarity; stable `hashlib` constraint ids).
+  Prompt schema includes hard `polarity` + allowed categories; intent hint no longer uses `clarification`.
+  Deterministic merge of origin/destination/hard constraints/negations/entity roles before preservation validation (`query_interpreter_merged:...`).
+- Phase 1B Verifier:
+  `VERIFIED_MATCH` only for `exact_match`/`strong_match`; partial/related → `AMBIGUOUS`.
+  Aliases: strongly/materially → `PARTIAL_MATCH`; `not_relevant` → `INSUFFICIENT_EVIDENCE`.
+  Gate also requires provider `VERIFIED_MATCH`, rejects explicit `jurisdiction_match=False`, confidence `<0.6`, and non-empty `contradictory_facts`.
+  Compact evidence: max 2/constraint and 12 total, hard-first concepts, evidence text limit 700.
+  Hallucinated compact concept IDs are dropped instead of fail-closed; unknown evidence IDs still fail closed.
+- Phase 2 modularity:
+  Packages `verify/`, `query/`, `interpret/`, `retrieve/`, `evidence/`, `ingest/` with thin shims on original import paths (`verifier.py`, `query_spec.py`, `interpreter.py`, `retriever.py`, `parser.py`, …). Behavior-preserving move.
+- Validation:
+  `python -m compileall app/rag/legal_v2` + focused legal_v2 pytest: **94 passed**.
+  16-query hybrid smoke `hybrid_smoke_16_quality_fix.*`: gate **passed** after resume of 2 schema/network flakes (kept 14). QuerySpec schema 100%, interpretation_failures **0**, false approvals **3** (prior smoke had 6). Fast/thinking schema + evidence-ID success true. Retrieval/prompt-injection/wrong-index 0.
+- Artifacts:
+  `artifacts/legal_v2/pilot_600_20260731/universal_quality/thinking_ab_test/hybrid_smoke_16_quality_fix.json` / `.md`.
+- Constraints preserved:
+  Stage A unchanged; pilot Qdrant/BM25 immutable; no commit/push; API container still has stale `LLM_API_KEY` (host `.env` suffix differs) — pass `-e LLM_API_KEY=...` or recreate api for live runs; key rotation still required before push.
+- Next step:
+  Optional full 59-eval under the tightened gate to measure FA/FN vs prior `hybrid_eval_59_*`; then quality review of remaining false approvals before enablement.
+
+## 2026-08-01 Europe/Moscow - Task: Complete 59-query hybrid non-holdout evaluation
+
+- Goal:
+  Finish the full available non-holdout hybrid thinking evaluation after mid-run DeepSeek DNS outages blocked the first attempt at 51/59.
+- Resilience changes:
+  QuerySpec and thinking-fallback escalation treat `network_error` as retryable/escalatable.
+  Full eval (`query-limit > 16`) uses `LLM_RETRY=2`, disables QuerySpec early-stop, supports `--resume-json` with checkpoint writes, and keeps 16-smoke early-stop behavior.
+- Result:
+  `hybrid_eval_59_nonholdout.json` completed **59/59** (resume kept 39, reran 20). Stop reason none. Strict smoke gate **failed** on quality debt, not infra abort.
+  Status mix: verified_match 26, unverifiable_query 15, no_verified_results 9, query_interpretation_error 9.
+  Interpretation failures are all `hard_constraints_lost` (not network). False approvals 14. Retrieval errors / prompt-injection / wrong-index 0. Final transient network failures 0.
+  Latency: p50 ~113s, p95 ~270s. Fast verifier calls 211, thinking fallback 69.
+- Artifacts:
+  `artifacts/legal_v2/pilot_600_20260731/universal_quality/thinking_ab_test/hybrid_eval_59_nonholdout.*`,
+  `hybrid_eval_59_report.md` / `.json`,
+  `hybrid_eval_59_nonholdout.partial51.*` (pre-resume backup).
+- Constraints preserved:
+  Stage A unchanged; pilot immutable; no embedding rebuild; no commit/push; key rotation still required before push.
+- Next step:
+  Investigate QuerySpec `hard_constraints_lost` (especially ambiguous cases) and review the 14 false-approval rows before any enablement.
+
+## 2026-08-01 Europe/Moscow - Task: Fix fast-verifier fail-closed and re-gate hybrid smoke
+
+- Goal:
+  Unblock the hybrid 16-query smoke gate after thinking A/B policy selection, then run the full available non-holdout semantic evaluation.
+- Root causes fixed:
+  1. Compact payload expansion invented `PROVEN`/`CONTRADICTED` without matching constraint evidence or with restricted-only sources (`party_claim`/`cited_case`), which later fail-closed.
+  2. Fast-verifier provider timeouts were not escalated to thinking fallback because all `failed_closed` outcomes were excluded.
+- Code changes:
+  `app/rag/legal_v2/verifier.py` downgrades invalid compact expansions to `NOT_PROVEN` instead of emitting terminal statuses that fail closed; prompt clarifies concept/evidence alignment and restricted sources.
+  `app/rag/legal_v2/pipeline.py` escalates recoverable fail-closed reasons (`timeout`, empty content, invalid JSON) to one thinking attempt.
+- Validation:
+  Compact expansion + escalation unit tests passed.
+  16-query hybrid smoke re-run passed (`hybrid_smoke_16_rerun2.json` / promoted `hybrid_smoke_16.json`): QuerySpec/fast/thinking schema 100%, evidence-ID 100%, retrieval errors 0, prompt-injection 0. False approvals remain 6 (quality debt, not schema gate).
+- Full evaluation:
+  Benchmark has 59 diagnostic+tuning rows (not 64). Full non-holdout hybrid eval started as `hybrid_eval_59_nonholdout.*`.
+- Constraints preserved:
+  Stage A unchanged; pilot Qdrant/BM25 immutable; no commit/push; historical key rotation still required.
+- Next step:
+  Collect 59-query eval results; then quality review of remaining false approvals before any push.
+
+## 2026-08-01 Europe/Moscow - Task: Fair thinking vs non-thinking Legal v2 A/B and hybrid policy
+
+- Goal:
+  Replace the insufficient 30-second QuerySpec diagnostic with a fair thinking-versus-non-thinking quality evaluation at a 120-second ceiling, then select a quality-first hybrid production policy without modifying Stage A or rebuilding embeddings.
+- Starting audit:
+  Branch `main`, HEAD `e0396d4ef08d9525c05d2fac8110698435f30aa1`. Large pre-existing dirty Legal v2 / artifact worktree was preserved and not restored or overwritten.
+- Why 30 seconds was insufficient:
+  Thinking QuerySpec completed with final `message.content` in about 9–26 seconds under a fair 120-second ceiling. A 30-second cutoff incorrectly treated slow-but-valid legal thinking as failure.
+- A/B design:
+  4 diagnostic/tuning intents (actors, countries/jurisdictions, procedural, ambiguous). QuerySpec 8 calls and verifier 12 calls, identical prompts/schemas/evidence/timeouts within each comparison, explicit `thinking` enabled/disabled only. QuerySpec scored via production `interpret_query_spec_v2`.
+- QuerySpec result:
+  Thinking schema success 3/4, non-thinking 2/4, timeouts 0. Thinking uniquely preserved mother/child roles and succeeded on the clarification case. Selected: thinking enabled, timeout 120s, max_tokens 8000, max 2 provider attempts.
+- Verifier result:
+  Non-thinking 6/6 schema success at ~2.3s average with compact evidence-ID payload retained. Thinking 5/6 with final content within 120s, not materially better on false approvals. Selected: fast non-thinking verifier at 30s, thinking fallback only for difficult classifications, max 2 candidates/query.
+- Structural gate:
+  2/2 thinking QuerySpec, 2/2 fast verifier, 2/2 thinking fallback, 0 timeouts, gate passed.
+- 16-query hybrid smoke:
+  Second run exercised real retrieval/verification after BM25 `Path` coercion and a shared-retriever lock: 16/16 QuerySpec schema success, 73 fast verifier calls, 15 thinking-fallback calls, 0 retrieval errors, 0 timeouts, 0 prompt-injection, thinking-fallback schema 100%. Smoke gate did **not** pass because fast verifier had fail-closed schema/evidence-ID failures (`verifier_evidence_required_for_terminal_status`, `verifier_restricted_source_claim_used_as_proof`) and 6 hard-negative false approvals. Full 64-query evaluation remains blocked by this smoke gate.
+- Immutability:
+  Pilot Qdrant 13824 / BM25 13824 / checksum `85ceb99dfc9bbf682d59628d6efdb861b61ce96dac3e9946583f7eb4f7de816f` unchanged; production resources untouched; no GPU/CUDA/downloads/Redis required for this task.
+- Security:
+  `.env.example` has one `LLM_API_KEY=your-api-key-here`. Historical key-like value remains in seven commits. Key rotation required; safe to push before rotation: no. No commit/push performed.
+- Artifacts:
+  `artifacts/legal_v2/pilot_600_20260731/universal_quality/thinking_ab_test/` (`current_state.md`, `case_selection.*`, `ab_results.*`, `quality_review.md`, `mode_policy.json`, `structural_gate.*`, `hybrid_smoke_16.*`).
+- Next step:
+  Reduce fast-verifier fail-closed rate on the compact evidence-ID path (empty/terminal evidence and restricted-source proof), re-run the 16-query hybrid smoke to gate pass, then run the full 64-query semantic evaluation under the selected hybrid policy. Do not push before key rotation.
+
 ## 2026-07-31 Europe/Moscow - Task: Forensic audit previous five-year build expectation
 
 - Goal:
@@ -12,6 +189,152 @@
   `artifacts/evaluation_quality/previous_five_year_build_audit_20260731.md` and `artifacts/evaluation_quality/previous_five_year_build_audit_20260731.json`.
 - Recommendation:
   `E. RECONSTRUCT_EXPECTATION`; rebaseline expected CPU build time from document count, chunk density, and measured per-phase throughput before any full build.
+
+## 2026-07-31 Europe/Moscow - Task: Gate six-year Legal Retrieval v2 CPU build
+
+- Goal:
+  Prepare and gate a CPU-only Legal Retrieval v2 build for the exact decision-date window `2020-07-31` through `2026-07-31`, without GPU/CUDA, model/package downloads, frontend changes, `search-v2` enablement, or production Qdrant collection changes.
+- Starting audit:
+  Branch `main`, HEAD `91bd906d4383cb81ed9f1b13fd99687b021599b0`. Pre-existing tracked changes were already present in `PROJECT_PROGRESS.md`, `docs/LEGAL_RETRIEVAL_V2.md`, `app/rag/legal_v2/index_builder.py`, `scripts/legal_v2/build_index.py`, and `tests/rag/test_legal_v2_end_to_end.py`, plus generated/untracked artifacts under `artifacts/**`. They were not reverted.
+- What changed:
+  Added shared Legal v2 decision-date parsing/filtering for ISO and Czech date formats.
+  Added `--decision-date-from` and `--decision-date-to` to `scripts/legal_v2/build_index.py` and `scripts/legal_v2/source_inventory.py`.
+  Added source-selection/date-filter stats to the Legal v2 build manifest.
+  Added batch checkpointing through `legal_v2_execute_checkpoint.json`, with guarded `--resume` and intentional `--stop-after-document-batches` for safe stop/resume testing.
+  Updated `docs/LEGAL_RETRIEVAL_V2.md` to document the six-year window, inventory command, date-filtered build command, and checkpoint resume rules.
+- Source range inventory:
+  Command: `docker compose exec -T api python scripts/legal_v2/source_inventory.py --decision-date-from 2020-07-31 --decision-date-to 2026-07-31 --json-output /app/artifacts/legal_v2/source_inventory_20260731_6y.json --markdown-output /app/artifacts/legal_v2/source_inventory_20260731_6y.md`.
+  Total discovered source documents: `103,638`.
+  Exact in-range documents: `21,776` total, comprising `21,626` constitutional and `150` supreme documents.
+  Out-of-range documents: `81,862`.
+  Missing/invalid decision dates in discovered complete documents: `0`.
+- Runtime constraints verified:
+  Only `api` and `qdrant` containers were started. `docker compose ps` showed no Redis, exporter, Prometheus, or Grafana.
+  API container uses CPU-only PyTorch: `torch 2.6.0+cpu`, `cuda_available=False`, `cuda_device_count=0`.
+  Offline flags remained set: `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, `EMBEDDING_DEVICE=cpu`.
+  Existing BGE-M3 snapshots were present in the Docker HuggingFace cache. No model/package download was triggered.
+  `NALUS_LEGAL_V2_SEARCH_ENABLED=0` remained disabled.
+- 100-document checkpointed CPU test:
+  First command intentionally stopped after one 50-document batch with exit code `75`, checkpoint present, Qdrant points `904`, BM25 rows `904`, elapsed `760.3s`.
+  Resume command completed the same 100-document request with `--resume`, exit code `0`, elapsed `751.4s`.
+  Final 100-document manifest: `100` indexed documents, `1,810` chunks, `30` Qdrant upsert batches, `1,810` Qdrant points, validation status `pass`, Qdrant write `pass`, BM25 write `pass`.
+  Checkpoint was cleared after successful completion.
+  Post-run reconciliation: Qdrant points `1,810`, BM25 rows `1,810`, match `true`.
+- Safety state:
+  Pre/post safety snapshots are under `artifacts/legal_v2/build_6y_20260731/safety_prebuild/` and `artifacts/legal_v2/build_6y_20260731/safety_post_100/`.
+  `nalus_live` alias remained pointed at `nalus_stable_20260326`.
+  Production collections `nalus` and `nalus_stable_20260326` retained their pre/post point counts.
+  Only isolated `nalus_legal_paragraph_chunks_v2` and isolated `nalus_legal_paragraph_bm25_v2.sqlite` changed.
+- Feasibility result:
+  The 100-document gate passed functionally but failed practical CPU feasibility.
+  Measured throughput was about `100 docs / 1511.7s`, `1810 chunks / 1511.7s`, roughly `238 docs/hour` or `1.2 chunks/second`.
+  Extrapolated full six-year scope is about `21,776` documents and about `394k` chunks at the observed chunk density, yielding about `91.5 hours` of CPU wall time before validation overhead. A 500-document CPU test would likely take a little over `2 hours`.
+  Because the 100-document gate already revealed impractical CPU runtime, the 500-document test and full six-year build were not started.
+- Resource estimate:
+  API memory after the run was about `1.9 GiB`; Qdrant memory about `3.5 GiB`.
+  C: free space was about `160.9 GB`.
+  The v2 BM25 sidecar was `15.1 MB` for `1,810` chunks; linear estimate for full six-year BM25 is roughly `3.3 GB`.
+  Qdrant collection disk usage was about `622 MB` for the small v2 test collection, while existing 8k-13k BGE-M3 collections were about `656 MB`; because fixed overhead dominates small collections, realistic full six-year Qdrant disk should be treated as a multi-GB range rather than a reliable linear estimate.
+- Validation:
+  `python -m pytest -q tests\rag\test_legal_v2_end_to_end.py tests\rag\test_legal_v2_source_inventory.py` -> `13 passed`, one non-blocking Starlette/httpx warning.
+  `ruff check app\rag\legal_v2\index_builder.py app\rag\legal_v2\sources.py app\rag\legal_v2\source_inventory.py scripts\legal_v2\build_index.py scripts\legal_v2\source_inventory.py tests\rag\test_legal_v2_end_to_end.py tests\rag\test_legal_v2_source_inventory.py --no-cache` -> passed.
+  `python -m mypy app/rag/legal_v2/index_builder.py app/rag/legal_v2/sources.py app/rag/legal_v2/source_inventory.py scripts/legal_v2/build_index.py scripts/legal_v2/source_inventory.py` -> passed.
+- Current status:
+  Full six-year build was not started. `search-v2` remains disabled. Frontend unchanged. Production Qdrant unchanged.
+  Isolated v2 test index currently contains the completed 100-document / 1,810-chunk test state.
+- Next recommended task:
+  Do not start the full six-year CPU build on this runtime. Either accept a multi-day CPU build window, provide precomputed embeddings/index artifacts, or use an explicitly approved faster indexing runtime. If another CPU-only gate is required, run the 500-document test as a separate long-running benchmark, not as an automatic precursor to full build.
+
+## 2026-07-31 Europe/Moscow - Task: Pause Legal Retrieval v2 rollout safely
+
+- Goal:
+  Stop the current Legal Retrieval v2 rollout work safely because the user needs to shut down and clean the PC now. Do not continue benchmarking, indexing, optimization, frontend work, provider testing, commits, or pushes.
+- Timestamp:
+  `2026-07-31T16:32:06+03:00`.
+- Current process state:
+  No `build_index.py` process was running when inspected. `docker compose top api` showed only the Uvicorn API process. No SIGINT or SIGKILL was required.
+  The last bounded builder command had already completed: restoring the 20-document smoke index with `--limit 20 --batch-size 64 --document-batch-size 5`.
+- CPU/runtime policy recorded:
+  Future work is CPU-only. GPU, CUDA, NVIDIA runtime use, package downloads, and model downloads are prohibited unless the user explicitly changes this policy later.
+  Current API container confirms CPU-only PyTorch: `torch 2.6.0+cpu`, `cuda_available=False`, `cuda_device_count=0`.
+- Current isolated v2 state:
+  Qdrant collection `nalus_legal_paragraph_chunks_v2`.
+  BM25 identifier `nalus_legal_paragraph_bm25_v2`.
+  Latest manifest: `artifacts/legal_v2/smoke_index_20260730/index_build_restore_20260731/legal_v2_build_manifest.json`.
+  Latest manifest result: 20 source documents, 20 indexed documents, 384 chunks, 8 Qdrant upsert batches, 384 Qdrant upsert points, vector dimension 1024, validation status `pass`.
+  Qdrant/BM25 verification: Qdrant point IDs `384`, BM25 row IDs `384`, ID mismatch `0`.
+  20-document smoke restoration status: completed.
+  Partial batch detected: no.
+  Checkpoint available: no separate checkpoint; the completed manifest is available.
+- Protected resources:
+  Production Qdrant collections unchanged.
+  Aliases unchanged.
+  Production BM25 sidecars unchanged.
+  Redis unchanged.
+  Frontend unchanged by this pause task.
+  `NALUS_LEGAL_V2_SEARCH_ENABLED` remains disabled by default and was not enabled locally.
+- Build scope decision:
+  Do not start the complete 103,638-document historical build again.
+  The intended next final index scope is only the rolling five-year date window `2021-07-31` through `2026-07-31`.
+  Before the next build, verify actual source metadata and report documents inside the range, outside the range, missing/invalid decision dates, incomplete sources inside the range, and duplicate source identifiers inside the range.
+  Do not silently include documents without a valid decision date.
+  The current builder does not expose a safe date-range filter; implementing and testing that filter is the first requirement for the next session.
+- Exact safe resume command:
+  Do not resume a build directly. First implement and verify the five-year date-range filter. The safe smoke restore command, if the 20-document smoke index must be recreated, is:
+  `docker compose exec -T api python scripts/legal_v2/build_index.py --parser-quality-artifact /app/artifacts/legal_v2/parser_quality_gate_20260730/parser_quality_gate.json --gate-decision /app/artifacts/legal_v2/parser_quality_gate_20260730/gate_decision.json --limit 20 --qdrant-url http://qdrant:6333 --output-dir /app/artifacts/legal_v2/smoke_index_20260730/index_build_restore_20260731 --overwrite-bm25 --recreate-v2-collection --batch-size 64 --document-batch-size 5`.
+- Exact next task:
+  Add a safe Legal v2 source date inventory and builder date-range filter for `2021-07-31` through `2026-07-31`, prove that missing/invalid dates are excluded or reported, then run only a bounded CPU feasibility smoke before any five-year index build.
+- Current tracked changes:
+  `PROJECT_PROGRESS.md`, `docs/LEGAL_RETRIEVAL_V2.md`, `app/rag/legal_v2/index_builder.py`, `scripts/legal_v2/build_index.py`, `tests/rag/test_legal_v2_end_to_end.py`.
+- Current untracked/generated changes:
+  Existing generated reports under `artifacts/evaluation_quality/*.json` and `*.md`; generated Legal v2 outputs under `artifacts/legal_v2/`; existing answer-eval outputs under `artifacts/rag_eval/legal_qa/answer_eval/{mixed_document_gold_default,nsoud_document_gold_default,usoud_document_gold_default}/`; existing `artifacts/rag_eval/legal_v2_seed_comparison_20260723/`.
+- Lightweight verification:
+  Qdrant/BM25 consistency check -> `qdrant_points=384`, `bm25_rows=384`, `id_mismatch=0`.
+  Final `git status --short`, `git diff --check`, and `docker compose ps` are recorded in the final response for this pause task.
+
+## 2026-07-31 Europe/Moscow - Task: Attempt full Legal Retrieval v2 local rollout
+
+- Goal:
+  Execute the requested end-to-end Legal Retrieval v2 local rollout: full isolated v2 index, reviewed relevance benchmark, local backend enablement, explicit frontend v2 mode, validation, commit, and push, stopping only if an acceptance gate or genuine blocker prevents safe continuation.
+- Starting audit:
+  Backend branch `main`, HEAD `91bd906d4383cb81ed9f1b13fd99687b021599b0`, `origin/main` matched. Required backend governance and feature docs were read: `AGENTS.md`, `PROJECT_EXECUTION_PROTOCOL.md`, `PROJECT_PROGRESS.md`, `README.md`, and `docs/LEGAL_RETRIEVAL_V2.md`.
+  Backend dirty work before editing was classified as generated local `artifacts/**` only.
+  Frontend branch `main`, HEAD `9da811aca1d4f086d31f7e02e180777be296b043`. Frontend dirty work was classified as an existing uncommitted MVP retrieval/frontend/Docker integration in `../.env.example`, `../docker-compose.yml`, `frontend/.env.example`, `Dockerfile`, `README.md`, `package*.json`, `src/app/**`, `src/components/**`, `src/data/**`, `src/lib/**`, and `src/types/**`. It was not overwritten.
+- Runtime readiness:
+  `docker compose ps` showed backend API, Qdrant, Redis, exporter, Prometheus, and Grafana running.
+  C: free space was about 152.6 GB, enough for an attempted isolated build.
+  `docker compose exec -T api python -c "import qdrant_client; print(qdrant_client.__version__)"` cannot print `__version__` because this installed module does not expose it; package metadata reports `qdrant-client 1.13.3`.
+  BGE-M3 was available from the existing Docker cache at `/root/.cache/huggingface/hub/models--BAAI--bge-m3/snapshots/5617a9f61b028005a4858fdac845db406aefb181`.
+  Safe DeepSeek direct and provider smoke checks passed without printing the API key.
+  Docker has an `nvidia` runtime installed, but the current API container uses CPU-only PyTorch: `torch 2.6.0+cpu`, `cuda_available=False`, `cuda_device_count=0`.
+- Step:
+  Add bounded Legal v2 full-index builder processing.
+  Goal: prevent full-corpus indexing from building all vectors in memory and disappearing without a manifest.
+  Files inspected: `app/rag/legal_v2/index_builder.py`, `scripts/legal_v2/build_index.py`, `tests/rag/test_legal_v2_end_to_end.py`, `docs/LEGAL_RETRIEVAL_V2.md`.
+  Files changed: `app/rag/legal_v2/index_builder.py`, `scripts/legal_v2/build_index.py`, `tests/rag/test_legal_v2_end_to_end.py`, `docs/LEGAL_RETRIEVAL_V2.md`.
+  Behavior changed: the isolated v2 builder now processes document batches, embeds/upserts in bounded batches, writes BM25 incrementally, emits progress events, and records `batch_size`, `document_batch_size`, Qdrant batch count, and upsert point count in the manifest. The CLI adds `--batch-size` and `--document-batch-size`.
+  Tests added/updated: regression test proving the builder does not pass all payloads to the embedder at once.
+  Verification command: `python -m pytest -q tests\rag\test_legal_v2_end_to_end.py::test_index_builder_writes_only_v2_identities tests\rag\test_legal_v2_end_to_end.py::test_index_builder_embeds_and_upserts_in_configured_batches tests\rag\test_legal_v2_qa_gate.py`; `ruff check app\rag\legal_v2\index_builder.py scripts\legal_v2\build_index.py tests\rag\test_legal_v2_end_to_end.py --no-cache`; `python -m mypy app/rag/legal_v2/index_builder.py scripts/legal_v2/build_index.py`.
+  Result: pytest `13 passed` with one non-blocking Starlette/httpx deprecation warning; Ruff passed; Mypy passed.
+  Risk: isolated to the Legal v2 builder; no model, embedding dimension, scoring, aliases, Redis behavior, provider configuration, endpoint default, frontend behavior, or legacy retrieval changed.
+  Next step: run Docker builder smoke, then decide whether full build is feasible.
+- Step:
+  Attempt and reconcile full isolated v2 index build.
+  Goal: build `nalus_legal_paragraph_chunks_v2` and `nalus_legal_paragraph_bm25_v2` from the complete available corpus.
+  Files inspected: `artifacts/legal_v2/index_build_full_20260731/source_inventory.json`, pre/post safety snapshots, Docker/Qdrant state.
+  Files changed: generated local artifacts under `artifacts/legal_v2/index_build_full_20260731/` and restored smoke output under `artifacts/legal_v2/smoke_index_20260730/index_build_restore_20260731/`; isolated v2 Qdrant collection and v2 BM25 sidecar were rewritten only for smoke restore.
+  Behavior changed: no committed runtime behavior changed.
+  Tests added/updated: none beyond builder tests.
+  Verification command: `docker compose exec -T api python scripts/legal_v2/source_inventory.py ...`; `docker compose exec -T api python scripts/legal_v2/smoke_safety_snapshot.py --phase prebuild ...`; full build command with `--overwrite-bm25 --recreate-v2-collection --batch-size 64`; reconciliation with Qdrant/BM25 counts; bounded Docker smoke with `--limit 5`; smoke restore with `--limit 20`.
+  Result: source inventory found 103,638 discovered source documents, 55 missing complete text records, 502 duplicate source-document identifiers, 0 unreadable files, and 0 unsupported formats. The first full build attempt returned from the command without a manifest and without changing the v2 collection or sidecar; reconciliation showed the previous smoke state still at 384 Qdrant points and 384 BM25 rows. The new stream builder Docker smoke passed for 5 documents / 74 chunks, but took about 88 seconds of builder duration. Restoring the 20-document smoke index passed with 20 documents / 384 chunks, Qdrant points 384, BM25 rows 384, vector dimension 1024.
+  Risk: full corpus indexing in the current CPU-only Docker API runtime is not practically executable today. The 20-document smoke state was restored; no production collection, alias, production BM25, Redis, provider, or frontend behavior was changed.
+  Next step: do not proceed to benchmark/frontend rollout until a GPU-enabled or otherwise accelerated API indexing runtime is available, or a precomputed full v2 embedding/index artifact is provided.
+- Blocker:
+  Full-corpus Legal Retrieval v2 local rollout is blocked by the current Docker API runtime being CPU-only for BGE-M3 embeddings. Measured real Docker build throughput was 20 reviewed smoke documents / 384 chunks in about 505 seconds after stream-builder changes. The expected full index is on the order of 1.5-2.0 million chunks from 103,583 complete indexed source documents, which extrapolates to many days on the current CPU-only runtime. Continuing to Phase 3-7 would violate the prompt because the required full isolated index and relevance gate have not passed.
+- Current status:
+  Full v2 index was not built. Local v2 collection and BM25 sidecar are restored to the prior isolated smoke scale: 384 Qdrant points and 384 BM25 rows. `NALUS_LEGAL_V2_SEARCH_ENABLED` remains disabled by default. Frontend v2 mode was not connected. No commit or push was made because acceptance criteria did not pass.
+- Next recommended task:
+  Do not use GPU/CUDA or the NVIDIA runtime. Add and verify a safe five-year date-range filter for `2021-07-31` through `2026-07-31`, then evaluate CPU feasibility on that reduced scope before any resumed indexing.
 
 ## 2026-07-31 Europe/Moscow - Task: Complete live Legal Retrieval v2 API endpoint wiring
 
@@ -1242,3 +1565,242 @@
   This task implements and tests the framework. It does not create a curated multi-document gold dataset and does not run a real corpus benchmark artifact.
 - Next recommended task:
   Build a reviewed multi-document gold dataset for ÚS/NSoud and run the new benchmark once the gold set is approved.
+
+## 2026-07-31 23:xx Europe/Moscow — Task: Local Legal Retrieval v2 pilot 600
+
+- Goal:
+  Safely free local disk, build an isolated Legal Retrieval v2 pilot over approximately 600 deterministic six-year documents, validate integrity/retrieval, and wire explicit local frontend v2 mode without changing production defaults.
+- Disk cleanup:
+  Removed Docker build cache with `docker builder prune -a -f` and dangling images with `docker image prune -f`. Preserved `nalus-scraper_qdrant_storage`, `nalus-scraper_huggingface_cache`, source data, model cache, production BM25, and benchmark sidecars.
+  Deleted only obsolete Qdrant collections proven unaliased and incompatible with Legal v2 reuse: `nalus_us_bge_m3_mvp_recent_3h_20260709` (4,980 points) and `nalus_us_bge_m3_mvp_5y_20260708` (8,335 points). No BM25 sidecars were deleted.
+- Pilot manifest:
+  Wrote `artifacts/legal_v2/pilot_600_20260731/pilot_manifest_600.json`, `pilot_manifest_600.md`, and `pilot_document_ids.txt`.
+  Selected 600 complete documents in the `2020-07-31` through `2026-07-31` window: 450 Ústavní soud and 150 Nejvyšší soud. Validation found date violations 0, missing/invalid dates 0, incomplete documents 0, duplicate selected documents 0, and unresolvable selected IDs 0.
+- Builder changes:
+  `LegalV2BuildConfig` now accepts isolated pilot collection names under `nalus_legal_paragraph_chunks_v2_*` with a non-canonical BM25 index id, while retaining protected collection checks. CLI env config now passes Qdrant collection and BM25 index id into the builder. Payload and BM25 provenance now record the configured pilot identities.
+- Pilot build:
+  Built `nalus_legal_paragraph_chunks_v2_pilot_600` and `/app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_pilot_600.sqlite` using cached `BAAI/bge-m3`, dimension 1024, CPU-only, `HF_HUB_OFFLINE=1`, and `TRANSFORMERS_OFFLINE=1`.
+  First run with `document-batch-size=64` was stopped and discarded because a long second document batch created too large a no-checkpoint window. Only the isolated failed pilot collection/BM25/checkpoint were deleted. Successful rerun used `batch-size=128` and `document-batch-size=8`.
+  Final build: 600 indexed documents, 13,824 chunks, duration 10,578,114 ms, 1.3068 chunks/s, 0 failed documents, checkpoint removed after success.
+- Integrity gate:
+  `artifacts/legal_v2/pilot_600_20260731/pilot_integrity_validation.json` passed. Qdrant points 13,824, BM25 rows 13,824, unique pilot documents 600/600, Qdrant/BM25 id mismatch 0, content checksum mismatch 0, date violations 0, metadata identity mismatches 0, duplicate chunk IDs 0, protected aliases/collections/BM25 changes 0.
+- Retrieval/runtime gate:
+  `pilot_retrieval_gate.json` passed for deterministic pilot retrieval: 14 reviewed/gold pilot QA items, recall@10 0.5714, recall@20 0.7143, smoke candidate failures 0, external LLM calls in corrected gate 0.
+  Precision@5 over the single-gold pilot QA subset was 0.1000 (7 top-5 hits over 14 queries). A supplemental deterministic gate covering the requested practical query set passed: 11 queries, clarification correctness 2/2, zero-result correctness 1/1, unverified candidates returned 0, legacy fallback 0, endpoint crashes 0.
+  An earlier retrieval-gate attempt accidentally allowed 2 DeepSeek calls during pipeline smoke, and an initial supplemental-gate attempt accidentally allowed 11 DeepSeek query-interpretation calls before being rerun with `NALUS_LEGAL_V2_QUERY_PROVIDER=none`. No external provider was called during indexing, and the corrected gate/supplement made 0 external LLM calls.
+  Local API `/docs` and `/health` were reachable after runtime overrides. `POST /api/rag/search-v2` succeeded with pilot provenance under reduced local runtime limits (`candidate_documents=5`, `returned_verified_documents=3`) but returned `no_verified_results` for the tested child-removal query.
+- Frontend:
+  Added explicit `NALUS_RETRIEVAL_MODE=legacy|v2` support. Committed defaults remain `legacy`. In v2 mode, the Next.js proxy calls `/api/rag/search-v2` without automatic legacy fallback and maps verified documents/evidence only. Added visible pilot notice text and clarification message handling.
+  Frontend Docker image was not rebuilt because Docker build would run `npm ci` after cache cleanup and package downloads are prohibited. Local Next dev server was briefly verified on `http://localhost:3017/vyhledavani` with the pilot notice visible; the background job was not durable after the shell ended.
+- Validation:
+  Backend focused pytest: 95 passed, 1 unrelated Starlette warning. `python -m compileall app scripts tests` passed. `ruff check ... --no-cache` passed. `git diff --check` reported only CRLF warnings. `python -m mypy ...` failed only on missing local `qdrant_client` import stubs for `scripts/legal_v2/live_smoke.py`.
+  Frontend `npm run typecheck`, `npm run lint`, and `npm run build` passed.
+- Defaults preserved:
+  `NALUS_LEGAL_V2_SEARCH_ENABLED` committed default remains disabled. Frontend committed default remains legacy. `search-v2` was not made default. Production alias `nalus_live -> nalus_stable_20260326` and protected production collections/BM25 sidecars were unchanged.
+- Remaining limitation:
+  This is a pilot-corpus build, not full six-year coverage. Real DeepSeek endpoint verification is slow and returned no verified documents for the tested child-removal query under local pilot limits.
+- Next recommended task:
+  Before any full 21,776-document build, add a builder-safe per-document or smaller checkpoint strategy as the default for CPU runs, then run a controlled resumed full build into a new isolated non-production collection with the exact six-year manifest and no frontend default change.
+
+## 2026-08-01 02:xx Europe/Moscow — Task: Legal Retrieval v2 universal pilot quality iteration
+
+- Goal:
+  Improve the existing immutable 600-document Legal Retrieval v2 pilot as a general-purpose Czech legal judgment retrieval system without rebuilding the pilot, starting the full six-year build, enabling production defaults, using Redis, or calling external providers before a deterministic quality gate passes.
+- Scope:
+  Runtime changes were limited to general query understanding, document aggregation, evidence-window selection, verifier output normalization, and the `search-v2` response contract. Dense similarity, BM25 scoring, RRF fusion, BGE-M3 model, embedding dimension, Qdrant collections, aliases, production BM25 sidecars, frontend defaults, and `search-v2` disabled-by-default behavior were preserved.
+- Immutable pilot snapshot:
+  Wrote `artifacts/legal_v2/pilot_600_20260731/universal_quality/pre_task_snapshot.json` and `.md` before tuning, and `post_task_snapshot.json` and `.md` after tuning.
+  Pilot Qdrant points remained 13,824; pilot BM25 rows remained 13,824; pilot BM25 checksum remained `85ceb99dfc9bbf682d59628d6efdb861b61ce96dac3e9946583f7eb4f7de816f`; aliases, protected collection counts, and production BM25 checksums were unchanged.
+- Reviewed benchmark:
+  Wrote `reviewed_benchmark.json` and `.md` under `artifacts/legal_v2/pilot_600_20260731/universal_quality/`.
+  The artifact contains 20 intents and 64 queries: 48 gold/evaluable queries, 8 ambiguous queries, 8 zero-result queries, 12 hard-negative pairs, and diagnostic/tuning/holdout split sizes 28/20/16.
+  This is broader than the earlier 14-item pilot gate but still below the requested minimum of 36 reviewed legal intents, so it is not sufficient for a final universal-quality claim.
+- Failure tracing:
+  Wrote representative traces under `artifacts/legal_v2/pilot_600_20260731/universal_quality/traces/` and `failure_classification.json`/`.md`.
+  Top failure classes were clarification policy for broad concept-only queries, query interpretation gaps, RRF ranking, chunk-to-document aggregation, and verifier instruction/evidence coverage.
+- Changes retained:
+  QuerySpec now recognizes general legal-concept synonym groups across family, citizenship, service/deadline, civil/criminal/constitutional procedure, fair-trial/evidence, property, contracts, damages, employment, public administration, jurisdiction, and extraordinary remedies.
+  Hybrid retrieval still uses the same dense/BM25/RRF formulas, but document aggregation adds a small bounded evidence-coverage bonus from hard/soft constraint coverage, relation coverage, and multi-passage support.
+  Evidence selection now considers both hard and soft constraints when choosing bounded windows.
+  Verifier normalization now carries `classification` values (`strongly_relevant`, `materially_relevant`, `related_only`, `incidental_overlap`, `not_relevant`, `insufficient_evidence`) and safe coverage diagnostics; the deterministic final gate remains fail-closed on hard constraints.
+  API `search-v2` document results now include `relevance_classification`.
+  `scripts/legal_v2/live_smoke.py` uses a narrow mypy ignore for the optional `qdrant_client` runtime dependency.
+  Exact diagnostic query strings were removed from `scripts/legal_v2/validate_smoke_index.py` smoke defaults.
+- Deterministic metrics:
+  Baseline on the reviewed set before tuning: candidate macro precision@5 0.1083, macro recall@10 0.4271, recall@20 0.6042.
+  Tuning iteration 1 after retained general changes: candidate macro precision@5 0.2083, candidate macro recall@10 0.6042, candidate recall@20 0.6771, candidate MRR 0.5447.
+  Verified returned-document precision@5 was 0.1958 and verified recall@10 was 0.4896. Clarification correctness was 1.0 and zero-result correctness was 1.0.
+  The deterministic gate failed because recall@10/20 stayed below threshold and deterministic hard-negative verified leakage was 23. Provider calls were 0 and retrieval errors were 0.
+- Regressions/gates:
+  Because the deterministic universal gate did not pass, the real HTTP DeepSeek provider gate and frontend v2 validation were not run.
+  No full build was started, no pilot/production index was rebuilt or modified, no model/package download was performed, and no GPU/CUDA path was used or configured.
+- Validation:
+  `python -m compileall app scripts tests` passed.
+  `python -m mypy app/api/rag_router.py app/api_app.py app/rag/legal_v2 scripts/legal_v2` passed.
+  Focused pytest for Legal v2 QuerySpec/verifier/end-to-end/API passed: 96 tests passed with one unrelated Starlette warning.
+  Targeted ruff on changed runtime/test files passed.
+  Broad requested ruff command failed on pre-existing unused imports/local variables in unrelated tests.
+  `git diff --check` reported CRLF normalization warnings only.
+  Project validator failed because of pre-existing dirty/generated artifacts, existing builder/test Qdrant write terms, and diff-scan detection of a DeepSeek reference in the changed verifier file; no DeepSeek call was made in this task.
+- Remaining blockers:
+  The reviewed benchmark must be expanded to at least 36 reliable legal intents from the immutable pilot or the requirement must be adjusted.
+  The deterministic verifier/final gate needs a stronger general evidence relevance model; current token coverage admits related hard negatives as verified.
+  Do not run the real HTTP provider gate or frontend v2 validation until the deterministic universal gate passes.
+- Next recommended task:
+  Expand the reviewed pilot benchmark to the requested intent count, then implement a second general verifier/evidence iteration focused on rejecting related-only hard negatives without lowering recall in family, maintenance, service/deadline, citizenship, and procedural domains.
+
+## 2026-08-01 03:xx Europe/Moscow — Task: Legal Retrieval v2 candidate/semantic architecture correction
+
+- Goal:
+  Correct the Legal Retrieval v2 pilot architecture so deterministic retrieval is evaluated as a candidate supplier for an LLM verifier, not as a complete semantic legal judge.
+- Benchmark:
+  Expanded the canonical reviewed benchmark artifact to v2 under `artifacts/legal_v2/pilot_600_20260731/universal_quality/reviewed_benchmark.json`.
+  The benchmark now reports 52 distinct `intent_id` values, 80 total queries, 64 gold/evaluable queries, diagnostic/tuning/holdout sizes 34/25/21, 8 ambiguous queries, 8 zero-result queries, and 94 hard-negative document pairs.
+  Added review log artifacts `benchmark_review_log.json` and `.md`; new labels use immutable pilot BM25 evidence only. No documents were indexed or rebuilt.
+- Architecture split:
+  Added `architecture_responsibility_split.json` and `.md`.
+  Stage A deterministic retrieval is responsible for query normalization, explicit constraints, legal synonym expansion, dense/BM25/RRF retrieval, document aggregation, and objective hard-constraint contradictions only.
+  Stage B DeepSeek semantic verification is responsible for legal issue matching, factual/procedural similarity, holding support, related-only rejection, evidence selection, and final verified ranking.
+- Candidate retrieval:
+  Ran `baseline_candidate_metrics.json` over the expanded benchmark with candidate window 60 and provider calls 0.
+  Baseline candidate metrics: macro precision@5 0.18125, macro recall@10 0.671875, recall@20 0.765625, MRR 0.53245, gold coverage in candidate window 0.953125, retrieval errors 0.
+  Added general QuerySpec concept aliases for right to interpreter, migration/asylum/residence, enforcement, court costs, burden of proof, limitation periods, public-law sanctions, legal standing, child contact, administrative procedure, court competence, tax, validity of legal acts, and procedural default.
+  Tuning iteration 1 did not improve the candidate gate: macro recall@10 stayed 0.671875, recall@20 decreased to 0.75, gold coverage@60 stayed 0.953125. Because the approved candidate gate did not pass, no HTTP/DeepSeek/frontend gate was run.
+- Semantic verifier implementation:
+  Extended verifier classification support to the Stage B classes `exact_match`, `strong_match`, `partial_match`, `related_only`, `contradictory`, and `insufficient_evidence`.
+  DeepSeek prompt instructions now require structured semantic fields, treat candidate judgment text as untrusted evidence, and require evidence quotations from supplied windows only.
+  Added validation that semantic payloads with required fields fail closed when malformed, when positive results lack evidence, or when evidence quotes are not present in supplied candidate text.
+  Added prompt-injection resistance coverage where instruction-like candidate text is treated only as evidence.
+  Wrote `deepseek_prompt_and_schema.json` and `.md`. HTTP/semantic/frontend artifacts were written with explicit `blocked` status because the candidate gate failed.
+- Validation:
+  Focused Legal v2/API pytest passed: 100 tests passed with one unrelated Starlette warning.
+  `python -m mypy app/api/rag_router.py app/api_app.py app/rag/legal_v2 scripts/legal_v2` passed.
+  Targeted ruff on changed Legal v2/API/test files passed.
+  `python -m compileall app scripts tests` passed.
+  Benchmark leakage scan over `app` and `scripts` found no exact diagnostic benchmark query/ECLI matches.
+  `git diff --check` reported CRLF normalization warnings only.
+- Data safety:
+  Added `candidate_semantic_pre_task_snapshot.*` and `candidate_semantic_post_task_snapshot.*`, both tied to the last verified immutable snapshot. Pilot points remained 13,824 and pilot BM25 rows remained 13,824; no production Qdrant, alias, or production BM25 change was performed.
+- Remaining blockers:
+  Candidate retrieval gate is still false under the existing recall@10/recall@20 thresholds, despite high coverage in a wider LLM candidate window. DeepSeek HTTP validation and frontend validation remain blocked by gate order.
+- Next recommended task:
+  Investigate the three true candidate-window misses and the low constitutional/criminal/extraordinary-remedy recall cases with full trace comparison, then decide whether to implement a general second-stage candidate expansion into the LLM window or correct proven annotation errors before any real DeepSeek gate.
+
+## 2026-08-01 04:xx Europe/Moscow — Task: Correct Stage A gate and run bounded DeepSeek semantic smoke
+
+- Goal:
+  Apply the corrected two-stage Legal Retrieval v2 quality gates: treat Stage A as a broad candidate supplier evaluated by coverage/recall, preserve valid benchmark/verifier work, revert only the regressive candidate-ranking effect from iteration 1, and enter real DeepSeek semantic smoke only after Stage A and local Stage B contract checks pass.
+- Starting state:
+  Backend branch `main`, HEAD `e0396d4ef08d9525c05d2fac8110698435f30aa1`. Frontend branch `main`, HEAD `9da811aca1d4f086d31f7e02e180777be296b043`. Both repositories had pre-existing dirty work; unrelated frontend files were inspected but not changed. No commit or push was performed.
+- Change classification:
+  Wrote `current_change_classification.json` and `.md` under `artifacts/legal_v2/pilot_600_20260731/universal_quality/`. Valid work was preserved: benchmark v2, architecture split, QuerySpec concepts, semantic verifier classes/schema validation, evidence quote validation, prompt-injection protection, and frontend explicit v2 mode. Generated artifacts remain local and should not be committed.
+- Candidate iteration 1 rollback:
+  The regressive iteration was identified as newer QuerySpec concept aliases affecting Stage A ranking. The concepts remain in structured `QuerySpec` for Stage B metadata, but only the baseline candidate-retrieval concept set is allowed to add Stage A hard constraints and retrieval-query expansions.
+- Stage A rerun:
+  Added eval-only `scripts/legal_v2/evaluate_stage_a_candidate_gate.py` and ran it inside the API container against immutable pilot resources `nalus_legal_paragraph_chunks_v2_pilot_600` and `nalus_legal_paragraph_bm25_v2_pilot_600`.
+  Result: Stage A gate passed under the corrected criteria. Current rerun metrics were precision@5 `0.190625`, recall@10 `0.6875`, recall@20 `0.7578125`, MRR `0.51707`, coverage@60 `0.953125`, retrieval errors `0`, zero-candidate gold queries `0`, wrong index identity `0`, runtime benchmark leakage `0`, query-specific production rules `0`, and endpoint-independent retrieval crashes `0`.
+  The original baseline was not reproduced exactly: precision@5 and recall@10 improved, while recall@20 and MRR were lower than the earlier artifact. This was reported in `stage_a_baseline_comparison.json` and `.md`; Stage A still qualifies only as a candidate pool for Stage B, not final ranking.
+- Stage B local contract:
+  Deterministic QuerySpec/verifier/API tests passed. Provider payload validation remains fail-closed for malformed output, incomplete output, fabricated evidence quotes, missing positive evidence, and prompt-injection-like candidate text.
+- Bounded DeepSeek smoke:
+  Added eval-only `scripts/legal_v2/evaluate_deepseek_semantic_smoke.py` and ran the intended configured DeepSeek QuerySpec provider and semantic verifier on a bounded diagnostic/tuning smoke. No prompts, raw provider responses, or secrets were printed or written.
+  Across the three bounded diagnostic smoke attempts in this phase, DeepSeek made 12 provider calls total. The final smoke attempt stopped fail-closed after 4 provider calls: 2 QuerySpec calls and 2 semantic verifier calls. It processed 2 of 16 planned smoke rows, then stopped for repeated structural failures. Failure classes were `query_interpreter_invalid_json` and semantic verifier invalid JSON/schema failures. Wrong index identity remained `0`; verified hard-negative leakage was `0` before stop.
+- General tuning attempts:
+  Iteration 1: targeted rollback of newer QuerySpec concepts from Stage A ranking inputs while preserving them for Stage B metadata.
+  Iteration 2: added safe extraction of the first balanced JSON object from provider text envelopes in both QuerySpec and verifier parsing.
+  Iteration 3: tightened QuerySpec and verifier prompts to require exactly one JSON object and string enum values for semantic similarity fields.
+  After these general fixes, the bounded DeepSeek smoke still failed structurally, so no further provider runs were started.
+- Gates not run:
+  Full 64-query semantic evaluation was not run. Real HTTP `POST /api/rag/search-v2` gate was not run. Frontend validation on port `3017` was not run. Holdout answers were not used for tuning.
+- Validation:
+  `python -m pytest -q tests\rag\test_legal_v2_query_spec.py` -> 9 passed.
+  `python -m pytest -q tests\rag\test_legal_v2_verifier.py tests\rag\test_legal_v2_end_to_end.py tests\api\test_rag_api.py` -> 92 passed with one unrelated Starlette/httpx deprecation warning.
+  `python -m pytest -q tests\rag\test_legal_v2_query_spec.py tests\rag\test_legal_v2_verifier.py` -> 25 passed.
+  Targeted Ruff and Mypy for changed QuerySpec/verifier/eval runner files passed. Targeted compileall for changed files passed.
+- Safety:
+  No rebuild/reindex was performed. Pilot Qdrant points and BM25 rows were not modified. Production Qdrant, aliases, and production BM25 were not modified. BGE-M3 remained CPU-only from the existing cache. No model/package download, GPU, CUDA, Redis dependency, legacy fallback, commit, or push was introduced.
+- Remaining blocker:
+  Stage B cannot proceed until the DeepSeek provider path reliably returns valid structured JSON for both QuerySpec and semantic verification under the current model/configuration. The next step is a safe redacted provider response-shape diagnostic or provider adapter fix; do not run the 64-query semantic evaluation, HTTP gate, or frontend validation until the bounded smoke passes structurally.
+
+## 2026-08-01 05:xx Europe/Moscow — Task: DeepSeek Legal v2 adapter structured-output diagnosis
+
+- Goal:
+  Narrow the Stage B blocker to the concrete Legal v2 QuerySpec and semantic-verifier provider calls without spending more calls on authentication, transport availability, or generic JSON-mode support.
+- Security cleanup:
+  Sanitized root `.env.example` so it has one `LLM_API_KEY=your-api-key-here` placeholder and no duplicate key-like value. Git history search found the removed key-like value in 7 commits including current `HEAD`, so key rotation is mandatory before treating the key as safe. The local `.env` runtime secret was not committed by this task and was not intentionally printed in reports.
+- Response-shape diagnostic:
+  Added `scripts/legal_v2/diagnose_deepseek_adapter.py` and wrote redacted artifacts under `artifacts/legal_v2/pilot_600_20260731/universal_quality/deepseek_adapter_fix/`. The diagnostic made exactly 2 provider calls: 1 QuerySpec and 1 semantic verifier. It recorded envelope keys, `finish_reason`, content length/hash, extraction method, token usage, truncation indicators, parse status, and schema errors without prompts, complete provider output, authorization headers, or secrets.
+- Failure classification:
+  QuerySpec diagnostic returned HTTP 200 with non-empty `message.content`, direct JSON parse success, and schema enum mismatch: provider intent `legal_information_retrieval` was outside local `QueryIntent`. Semantic verifier diagnostic returned HTTP 200 with `finish_reason=length`, empty `message.content`, non-empty `reasoning_content`, and no JSON object in extracted content. This distinguishes QuerySpec schema drift from verifier output truncation/empty content.
+- Adapter and parser changes:
+  Added shared `app/rag/legal_v2/structured_output.py` for strict JSON object extraction with diagnostics. Interpreter and verifier now use the shared extractor. DeepSeek text adapter now classifies empty `message.content`, tool-call-without-content, and refusal instead of handing empty content to JSON parsing. QuerySpec accepts known intent aliases while preserving fail-closed behavior for unknown values. QuerySpec and verifier Legal v2 structured-output providers use a 6000-token floor to avoid DeepSeek v4 reasoning consuming the whole 2400-token budget. Verifier normalization safely accepts bare evidence quote strings only after the existing supplied-evidence validation can prove the quote was in the provided evidence.
+- Structural gate:
+  First 2-query structural gate after the initial limit fix had QuerySpec 2/2 success but verifier 0/2 success: one timeout and one evidence-passage schema mismatch. After verifier prompt/normalization refinement, the final gate was run with `LLM_RETRY=0` to prevent a third transport attempt per operation. QuerySpec remained 2/2 structurally successful; verifier remained 0/2 because both verifier calls timed out at the configured 30-second timeout. Total counted LLM operations in the final gate were 2 QuerySpec and 2 verifier, cache hits 0, wrong index identity 0, secrets logged 0.
+- Gates not run:
+  The bounded 16-query semantic smoke was not run because the 4-operation structural gate did not pass. Full 64-query semantic evaluation, HTTP gate, and frontend validation were not run.
+- Validation:
+  Focused deterministic tests for structured output, DeepSeek text adapter, QuerySpec, and verifier passed locally. Mypy and Ruff for the touched adapter/Legal v2 files passed before final repository-wide validation.
+- Safety:
+  No retrieval ranking, dense scoring, BM25 scoring, RRF, embeddings, Qdrant collections, BM25 rows, aliases, production resources, Redis behavior, frontend, model downloads, GPU, CUDA, commit, or push changed in this task.
+- Remaining blocker:
+  Semantic verifier requests remain too slow for the configured 30-second provider timeout on real pilot evidence windows. The next step is to reduce verifier prompt/evidence payload size or introduce an explicit reviewed Legal v2 verifier timeout policy, then rerun the 2 QuerySpec + 2 verifier structural gate before any 16-query smoke.
+
+## 2026-08-01 05:xx Europe/Moscow — Task: Compact Legal v2 semantic verifier payload
+
+- Goal:
+  Fix the remaining DeepSeek semantic-verifier timeout/missing-final-content blocker by making the verifier a short classifier for one candidate judgment instead of a long legal-analysis generator.
+- Preflight:
+  Backend stayed on branch `main`, HEAD `e0396d4ef08d9525c05d2fac8110698435f30aa1`. The worktree was already dirty from prior Legal v2 phases; unrelated changes were not reverted. Stage A candidate retrieval, dense retrieval, BM25, RRF, embeddings, Qdrant, BM25 sidecars, production resources, aliases, frontend, Redis, GPU/CUDA, and downloads were out of scope.
+- Payload measurement:
+  Wrote `payload_measurement.json` and `.md` under `artifacts/legal_v2/pilot_600_20260731/universal_quality/verifier_latency_fix/`. The original verifier prompt for representative `uq_001` was 17,191 characters with 5 evidence windows and 7,000 evidence characters; it required copied evidence text in the provider output and used the prior 6,000-token verifier floor. The corrected prompt is 6,493 characters with 3 bounded evidence windows, a 1,024-token verifier output budget, and evidence-ID output only. Token estimates are character based; no tokenizer was downloaded.
+- Verifier redesign:
+  The verifier prompt now supplies compact query fields, up to 12 concept IDs, and up to 3 request-local evidence IDs. The model returns `document_id`, `classification`, `confidence`, `supported_concept_ids`, `missing_concept_ids`, `contradiction_ids`, `evidence_ids`, and `reason_code` only. It must not copy evidence, produce markdown, or write a legal memorandum.
+  Application validation expands compact payloads back into the existing internal verifier contract. Unknown evidence IDs, duplicate evidence IDs, unknown concept IDs, positive classifications without evidence IDs, contradiction without evidence IDs, and too-long reason codes fail closed. Evidence IDs are mapped only to supplied same-operation evidence windows, and matching evidence for a supported concept must belong to that constraint.
+- Output budget and reasoning mode:
+  The 6,000-token verifier floor was removed. The verifier now uses `NALUS_LEGAL_V2_VERIFIER_MAX_TOKENS` when set, otherwise a verifier-specific 1,024-token budget bounded to 256..2048. QuerySpec keeps its already-working configuration. Local code and existing diagnostics show only JSON object response-format support; no documented direct/non-reasoning parameter is available in the current adapter, so no speculative parameter was sent.
+- One-case real diagnostic:
+  Ran one real verifier operation on a reviewed diagnostic case with `LLM_RETRY=0`, compact evidence-ID prompt, one candidate judgment, and the 30-second timeout policy. It did not timeout; latency was about 11.3 seconds. It still failed closed with `verifier_provider_error:empty_message_content:none:unknown`, meaning DeepSeek returned HTTP 200 but no usable final `message.content`. Because the failure was not a timeout, the 60-second timeout diagnostic was not run. QuerySpec provider calls for this diagnostic were 0.
+- Gates not run:
+  The 2+2 structural gate was not rerun after the one-case diagnostic because Phase 11 did not produce valid final JSON. The bounded 16-query smoke, full 64-query semantic evaluation, HTTP gate, and frontend validation were not run.
+- Security:
+  `.env.example` remained sanitized with one placeholder `LLM_API_KEY`. The previously exposed key-like value is still present in 7 historical commits, so key rotation remains mandatory before any safe push. No old key value, prompts, complete provider outputs, complete judgment text, authorization headers, or reasoning content were intentionally logged.
+- Validation:
+  Focused deterministic tests for verifier compact evidence IDs, structured output, DeepSeek text adapter, and QuerySpec passed locally before runtime diagnostics. Final broader validation is recorded in the task artifacts and final report.
+- Remaining blocker:
+  Even after compacting the verifier prompt and reducing output budget, the current `deepseek-v4-flash` call can return empty final `message.content`. The next step is either a documented provider/model mode that emits direct final content for classification, a different configured non-reasoning model/provider, or an even smaller two-step deterministic classifier design; do not run 2+2, 16-query smoke, full 64, HTTP, or frontend gates until one-case verifier final JSON succeeds.
+
+## 2026-08-01 06:xx Europe/Moscow — Task: DeepSeek V4 Flash non-thinking verifier mode
+
+- Goal:
+  Fix the remaining Legal Retrieval v2 semantic-verifier empty final-content failure by using the official DeepSeek V4 Flash non-thinking request parameter for the compact one-candidate verifier classification.
+- Request tracing:
+  Wrote redacted request-shape artifacts under `artifacts/legal_v2/pilot_600_20260731/universal_quality/verifier_non_thinking_fix/`.
+  Before the fix, the compact verifier request used `model=deepseek-v4-flash`, `response_format={"type":"json_object"}`, `max_tokens=1024`, timeout 30 seconds, temperature 0, one message, no tools/stream/reasoning_effort, and omitted `thinking`.
+  After the fix, the verifier sends top-level direct-HTTP `thinking={"type":"disabled"}`. SDK-style `extra_body` is not used because the project DeepSeek adapter uses direct HTTP. QuerySpec remains unchanged and still omits `thinking`.
+- Runtime changes:
+  Added typed `DeepSeekThinkingMode` for `DeepSeekTextLLM` with `PROVIDER_DEFAULT`, `ENABLED`, and `DISABLED`. The provider default still omits the parameter. Only `DeepSeekSemanticVerifierProvider` requests `DISABLED`.
+  Added one bounded retry inside the semantic verifier only for `empty_message_content`; the repeated request keeps the same prompt, evidence windows, `thinking.disabled`, 1024 max tokens, and timeout. Repeated empty content still fails closed.
+  Fixed the compact evidence-ID expansion so internally generated legacy evidence passages are exact supplied substrings even for long evidence windows. This preserves the evidence-ID design while satisfying the existing quote-grounding validator.
+- One-case non-thinking diagnostic:
+  The final recorded verifier diagnostic used one reviewed diagnostic query and one candidate judgment with 3 evidence windows, 4,200 evidence-character cap, `max_tokens=1024`, timeout 30 seconds, and `thinking.disabled`.
+  Result: HTTP 200, latency 1,566 ms, `finish_reason=stop`, final `message.content` present with 351 characters, `reasoning_content` absent, JSON parse success, schema success, evidence-ID success, classification `partial_match`, retry used false.
+  Two additional provider calls occurred while building the diagnostic artifact: one crashed after HTTP 200 due to a local diagnostic field-name bug, and one exposed the long-evidence expansion incompatibility before the fix. No prompts, complete provider outputs, reasoning content, or secrets were logged.
+- 2+2 structural gate:
+  Ran the bounded gate with `LLM_RETRY=0`, query limit 2, one verifier candidate per query, and verifier timeout 30 seconds.
+  Result: gate did not pass. QuerySpec was 1/2 because the first QuerySpec call timed out; the second QuerySpec call succeeded. Semantic verifier was 1/1 reached and passed structurally with classification `strong_match`, final content success, schema success, evidence-ID success, timeout 0 for the reached verifier call, wrong index identity 0, secrets logged 0.
+  Because the required 2 QuerySpec + 2 verifier structural success was not met, the 16-query smoke was not run.
+- Gates not run:
+  The 16-query smoke, full 64-query semantic evaluation, HTTP gate, and frontend validation were not run.
+- Validation:
+  `python -m compileall app scripts tests` passed.
+  Focused pytest for DeepSeek provider, Legal v2 QuerySpec, verifier, and structured output passed: 119 tests passed.
+  Targeted Ruff on changed provider/Legal v2/test files passed.
+  `python -m mypy app/rag/legal_v2 scripts/legal_v2` passed.
+  `git diff --check` passed with CRLF warnings only.
+  Project validator failed with 41 findings, mainly generated/dirty artifacts, historical `.env.example` diff heuristics, and pre-existing builder/test Qdrant/BM25 safety terms. This is not a validator pass.
+- Security:
+  `.env.example` has exactly one `LLM_API_KEY=your-api-key-here` placeholder and no tracked working-tree key-like `LLM_API_KEY` hit. Git history still contains the exposed key or stable prefix in 7 commits, so key rotation remains mandatory and safe-to-push remains no until rotation is verified. No key was intentionally printed or committed by this task.
+- Immutability:
+  Pilot Qdrant points remained 13,824; pilot BM25 rows remained 13,824; pilot BM25 checksum remained `85ceb99dfc9bbf682d59628d6efdb861b61ce96dac3e9946583f7eb4f7de816f`. No production Qdrant, aliases, production BM25, Stage A retrieval, dense retrieval, BM25, RRF, embeddings, frontend, Redis behavior, GPU/CUDA path, model download, or package download changed.
+- Remaining blocker:
+  The verifier non-thinking path now works on one reviewed case, but the required 2+2 structural gate is blocked by QuerySpec reliability under the current 30-second provider timeout. Do not run the 16-query smoke, full 64, HTTP gate, frontend validation, commit, or push until a 2 QuerySpec + 2 verifier gate passes.
