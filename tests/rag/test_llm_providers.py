@@ -18,7 +18,11 @@ import pytest
 from app.rag.llm.models import LLMInput, LLMOutput
 from app.rag.llm.provider_factory import get_llm, get_text_llm
 from app.rag.llm.providers.claude import ClaudeLLM, ClaudeTextLLM
-from app.rag.llm.providers.deepseek import DeepSeekLLM, DeepSeekTextLLM
+from app.rag.llm.providers.deepseek import (
+    DeepSeekLLM,
+    DeepSeekTextLLM,
+    DeepSeekThinkingMode,
+)
 from app.rag.llm.providers._base import LLMProviderError, LLMResponseStructureError
 from app.rag.llm.providers.openai import OpenAILLM, OpenAITextLLM
 from app.rag.retrieval.models import RetrievedChunk
@@ -304,6 +308,21 @@ class TestDeepSeekTextLLM:
                 DeepSeekTextLLM(api_key="k", raise_on_error=True).generate_text("p")
         assert exc_info.value.category == "invalid_success_response_structure"
 
+    def test_raise_on_empty_message_content(self) -> None:
+        mock_class, _ = _mock_client(_openai_envelope(""))
+        with patch("httpx.Client", mock_class):
+            with pytest.raises(LLMProviderError) as exc_info:
+                DeepSeekTextLLM(api_key="k", raise_on_error=True).generate_text("p")
+        assert exc_info.value.category == "empty_message_content"
+
+    def test_raise_on_tool_calls_without_content(self) -> None:
+        payload = {"choices": [{"message": {"content": "", "tool_calls": [{"id": "t"}]}}]}
+        mock_class, _ = _mock_client(payload)
+        with patch("httpx.Client", mock_class):
+            with pytest.raises(LLMProviderError) as exc_info:
+                DeepSeekTextLLM(api_key="k", raise_on_error=True).generate_text("p")
+        assert exc_info.value.category == "tool_call_instead_of_content"
+
     def test_json_response_adds_response_format_to_payload(self) -> None:
         mock_class, mock_instance = _mock_client(_openai_envelope('{"ok": true}'))
         with patch("httpx.Client", mock_class):
@@ -311,6 +330,40 @@ class TestDeepSeekTextLLM:
 
         payload = mock_instance.post.call_args.kwargs["json"]
         assert payload["response_format"] == {"type": "json_object"}
+
+    def test_default_thinking_mode_omits_request_parameter(self) -> None:
+        mock_class, mock_instance = _mock_client(_openai_envelope('{"ok": true}'))
+        with patch("httpx.Client", mock_class):
+            DeepSeekTextLLM(api_key="k", json_response=True).generate_text("p")
+
+        payload = mock_instance.post.call_args.kwargs["json"]
+        assert "thinking" not in payload
+        assert "extra_body" not in payload
+
+    def test_disabled_thinking_mode_is_top_level_direct_http_parameter(self) -> None:
+        mock_class, mock_instance = _mock_client(_openai_envelope('{"ok": true}'))
+        with patch("httpx.Client", mock_class):
+            DeepSeekTextLLM(
+                api_key="k",
+                json_response=True,
+                thinking=DeepSeekThinkingMode.DISABLED,
+            ).generate_text("p")
+
+        payload = mock_instance.post.call_args.kwargs["json"]
+        assert payload["thinking"] == {"type": "disabled"}
+        assert payload["response_format"] == {"type": "json_object"}
+        assert "extra_body" not in payload
+
+    def test_enabled_thinking_mode_is_typed_and_top_level(self) -> None:
+        mock_class, mock_instance = _mock_client(_openai_envelope('{"ok": true}'))
+        with patch("httpx.Client", mock_class):
+            DeepSeekTextLLM(
+                api_key="k",
+                thinking=DeepSeekThinkingMode.ENABLED,
+            ).generate_text("p")
+
+        payload = mock_instance.post.call_args.kwargs["json"]
+        assert payload["thinking"] == {"type": "enabled"}
 
     def test_never_raises(self) -> None:
         with patch("httpx.Client", _network_error_client()), patch("time.sleep"):
