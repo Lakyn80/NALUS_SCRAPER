@@ -54,6 +54,7 @@ from app.rag.legal_v2.retriever import (
     legal_v2_retriever_config_from_env,
 )
 from app.rag.legal_v2.verifier import DeepSeekSemanticVerifierProvider, SemanticVerifierProvider
+from app.rag.llm.providers.deepseek import DeepSeekThinkingMode
 from app.rag.orchestrator.orchestrator_service import OrchestratorResult, OrchestratorService
 from app.rag.planner.planner_service import MockPlannerLLM, PlannerService
 from app.rag.retrieval.constraint_config import (
@@ -370,6 +371,7 @@ class LegalV2VerifiedDocumentResult(BaseModel):
     document_id: str
     score: float
     status: str
+    relevance_classification: str = "unknown"
     metadata: dict[str, Any] = Field(default_factory=dict)
     evidence: list[LegalV2EvidenceResult]
     constraint_results: list[dict[str, Any]]
@@ -415,6 +417,7 @@ class LegalV2Runtime:
     query_provider: QuerySpecProvider
     verifier: SemanticVerifierProvider
     config: LegalV2RetrieverConfig
+    thinking_verifier: SemanticVerifierProvider | None = None
     search: LegalV2SearchCallable = search_legal_v2
 
 
@@ -540,12 +543,29 @@ def get_legal_v2_runtime() -> LegalV2Runtime:
         )
         embedder = BgeM3Embedder(prod_config)
         retriever = build_live_legal_v2_retriever(client, embedder, config)
-        query_provider = DeepSeekQuerySpecProvider(api_key)
-        verifier = DeepSeekSemanticVerifierProvider(api_key)
+        query_provider = DeepSeekQuerySpecProvider(
+            api_key,
+            thinking=DeepSeekThinkingMode.ENABLED,
+            timeout_seconds=float(os.getenv("NALUS_LEGAL_V2_QUERYSPEC_TIMEOUT_SECONDS", "120")),
+        )
+        verifier = DeepSeekSemanticVerifierProvider(
+            api_key,
+            thinking=DeepSeekThinkingMode.DISABLED,
+            timeout_seconds=float(os.getenv("NALUS_LEGAL_V2_VERIFIER_TIMEOUT_SECONDS", "30")),
+            max_tokens=1024,
+        )
+        thinking_verifier = DeepSeekSemanticVerifierProvider(
+            api_key,
+            thinking=DeepSeekThinkingMode.ENABLED,
+            timeout_seconds=float(
+                os.getenv("NALUS_LEGAL_V2_VERIFIER_THINKING_TIMEOUT_SECONDS", "120")
+            ),
+        )
         _legal_v2_runtime = LegalV2Runtime(
             retriever=retriever,
             query_provider=query_provider,
             verifier=verifier,
+            thinking_verifier=thinking_verifier,
             config=config,
         )
         return _legal_v2_runtime
@@ -923,6 +943,10 @@ def _legal_v2_document(document) -> LegalV2VerifiedDocumentResult:
         document_id=document.document_id,
         score=document.score,
         status=document.status,
+        relevance_classification=_bounded_safe_text(
+            getattr(document, "relevance_classification", "unknown") or "unknown",
+            limit=100,
+        ),
         metadata=_safe_metadata_payload(document.metadata),
         evidence=[
             LegalV2EvidenceResult(
@@ -1228,6 +1252,7 @@ def search_v2(
             query=req.query,
             retriever=runtime.retriever,
             verifier=runtime.verifier,
+            thinking_verifier=runtime.thinking_verifier,
             config=bounded_config,
             query_provider=runtime.query_provider,
             source_filter=requested_sources,

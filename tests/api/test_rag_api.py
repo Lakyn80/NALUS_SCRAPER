@@ -298,11 +298,13 @@ def _legal_v2_document(
     document_id: str = "ECLI:CZ:US:2026:3.US.446.26.1",
     *,
     status: str = "verified_match",
+    relevance_classification: str = "materially_relevant",
 ) -> LegalV2VerifiedDocument:
     return LegalV2VerifiedDocument(
         document_id=document_id,
         score=0.91,
         status=status,
+        relevance_classification=relevance_classification,
         metadata={
             "document_id": document_id,
             "ecli": document_id,
@@ -898,6 +900,7 @@ class TestLegalV2SearchEndpoint:
         assert payload["interpretation_status"] == "ok"
         assert payload["verified_documents"][0]["document_id"] == "ECLI:CZ:US:2026:3.US.446.26.1"
         assert payload["verified_documents"][0]["metadata"]["court_name"] == "Ústavní soud"
+        assert payload["verified_documents"][0]["relevance_classification"] == "materially_relevant"
         assert "paragraph_texts" not in payload["verified_documents"][0]["metadata"]
         assert payload["verified_documents"][0]["verification_reason"] == "ověřeno z odstavce soudu"
         assert payload["verified_documents"][0]["verifier_diagnostics"]["raw_provider_response"] == "[redacted]"
@@ -1183,8 +1186,8 @@ class TestLegalV2SearchEndpoint:
         monkeypatch.setenv("LLM_API_KEY", "valid-test-key")
         monkeypatch.setattr(rtr, "import_module", lambda name: SimpleNamespace(QdrantClient=FakeQdrantClient))
         monkeypatch.setattr(rtr, "BgeM3Embedder", lambda config: object())
-        monkeypatch.setattr(rtr, "DeepSeekQuerySpecProvider", lambda api_key: object())
-        monkeypatch.setattr(rtr, "DeepSeekSemanticVerifierProvider", lambda api_key: object())
+        monkeypatch.setattr(rtr, "DeepSeekQuerySpecProvider", lambda *args, **kwargs: object())
+        monkeypatch.setattr(rtr, "DeepSeekSemanticVerifierProvider", lambda *args, **kwargs: object())
 
         def fake_build_live_legal_v2_retriever(client, embedder, config):
             del client, embedder, config
