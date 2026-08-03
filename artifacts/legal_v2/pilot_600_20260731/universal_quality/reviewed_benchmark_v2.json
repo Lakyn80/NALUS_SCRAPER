@@ -118,7 +118,7 @@
     "paraphrases": 8,
     "ambiguous_queries": 8,
     "zero_result_queries": 8,
-    "hard_negative_pair_count": 93,
+    "hard_negative_pair_count": 92,
     "hard_negative_pairs": [
       {
         "benchmark_id": "uq_001",
@@ -678,9 +678,9 @@
       }
     ],
     "last_manual_correction": {
-      "at": "2026-08-02T15:03:39Z",
-      "query_id": "uq_028",
-      "change": "reclassify ECLI:CZ:US:2020:3.US.2419.20.1 hard_negative->strongly_relevant; broaden strong/material labels from canary review"
+      "at": "2026-08-02T19:29:38Z",
+      "query_id": "uq_031",
+      "change": "reclassify ECLI:CZ:US:2026:4.US.2338.25.1 hard_negative->strongly_relevant"
     }
   },
   "items": [
@@ -2622,19 +2622,19 @@
       "zero_result_expected": false,
       "strongly_relevant_document_ids": [
         "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
-        "ECLI:CZ:NS:2024:4.TDO.1044.2024.1"
+        "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+        "ECLI:CZ:US:2026:4.US.2338.25.1"
       ],
       "materially_relevant_document_ids": [
-        "ECLI:CZ:NS:2025:11.TDO.75.2025.1"
+        "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+        "ECLI:CZ:US:2026:4.US.2338.25.1"
       ],
       "related_only_document_ids": [
         "ECLI:CZ:NS:2024:6.TDO.936.2024.1",
-        "ECLI:CZ:US:2026:4.US.2338.25.1",
         "ECLI:CZ:NS:2025:4.TDO.1056.2024.1"
       ],
       "explicit_hard_negative_document_ids": [
-        "ECLI:CZ:NS:2024:6.TDO.936.2024.1",
-        "ECLI:CZ:US:2026:4.US.2338.25.1"
+        "ECLI:CZ:NS:2024:6.TDO.936.2024.1"
       ],
       "evidence_passages": [
         {
@@ -2650,10 +2650,17 @@
           "section_type": "header",
           "quote": "17. Z obsahu dovolání podle ní vyplývá, že obviněný uplatňuje námitky skutkové a právní povahy, kdy velmi často směšuje argumentaci hmotněprávní a procesněprávní. Podle státní zástupkyně ovšem obviněný de facto setrvale prosazuje svoji verzi skutkového děje. Má za to, že pod zvolený dovolací důvod podle § 265b odst. 1 písm. g) tr. ř. lze formálně podřadit námitky stran tvrzeného zjevného rozporu příslušných skutkových zjištění s provedeným dokazováním ve smyslu první varianty tohoto zvoleného dovolacího důvodu. Argumentaci obviněného je ovšem nutno vyhodnotit jako čistě skutkovou polemiku se závěry soudů nižších stupňů, nikoliv jako argumentaci projednatelnou v rozsahu první varianty dovolac",
           "review_note": "Evidence passage selected because it contains reviewed mandatory concept terms from the pilot text."
+        },
+        {
+          "document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+          "chunk_id": null,
+          "section_type": "operative_part",
+          "quote": "porušila stěžovatelovo základní právo na spravedlivý proces ... otázky, které se týkají dokazování v trestním řízení",
+          "review_note": "Benchmark correction 2026-08-02: direct fair-trial-in-evidence holding; not a hard negative for uq_031."
         }
       ],
-      "full_document_review_reason": "Reviewed against pilot BM25 text: selected strong documents contain the mandatory concept terms in judgment text; related documents contain lexical overlap but lack the complete reviewed intent.",
-      "reviewer_status": "reviewed_by_agent_from_pilot_text",
+      "full_document_review_reason": "2026-08-02 manual correction after 16-smoke: ECLI:CZ:US:2026:4.US.2338.25.1 was mislabeled hard_negative; operative holding I-II and paras 1-2 find fair-trial/dokazovani violations (immediacy/orality/contradictoriness of evidence assessment) and annul NS/KS decisions — moved to strongly_relevant.",
+      "reviewer_status": "reviewed_manual_correction_20260802_uq031",
       "benchmark_split": "diagnostic",
       "evaluable": true,
       "discovery_only": false
