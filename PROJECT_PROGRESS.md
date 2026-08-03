@@ -1,5 +1,199 @@
 # Project Progress
 
+## 2026-08-03 Europe/Moscow - Task: Retrieval enterprise architecture document set
+
+- Created controlling architecture docs under `docs/retrieval-enterprise/` for the next retrieval modernization track:
+  - `README.md`
+  - `SYSTEM_ARCHITECTURE.md`
+  - `IMPLEMENTATION_ROADMAP.md`
+  - `PACKAGE_BOUNDARIES.md`
+  - `CONTRACTS.md`
+  - `DATA_AND_INDEX_LIFECYCLE.md`
+  - `EVALUATION_PROTOCOL.md`
+  - `SECURITY_AND_OPERATIONS.md`
+  - `MIGRATION_AND_ROLLBACK.md`
+  - `adr/0001-enterprise-retrieval-governance.md`
+  - `adr/0002-phase-gated-additive-rollout.md`
+- Purpose:
+  Establish one shared enterprise specification before any new ColBERT, package-boundary, ingestion, profile, or Legal v2 integration work. Future implementation prompts must read and comply with this document set and accepted ADRs.
+- Scope:
+  Documentation only. No runtime code, frontend, Qdrant collection, BM25 sidecar, model/provider, benchmark gold data, package dependency, Docker, or environment setting was changed.
+- Current baseline captured:
+  Legal v2 remains the current isolated endpoint/pipeline with QuerySpec, BGE-M3 dense retrieval, BM25 sidecar, RRF, document aggregation, evidence selection, semantic verifier, and deterministic gate. Several top-level `app/rag/legal_v2/*.py` files are compatibility shims over the newer `ingest/`, `query/`, `retrieve/`, and `verify/` subpackages; future work should target the real subpackages.
+- Next recommended task:
+  Prompt 0 only: audit and definitive architecture validation against the real repository, without implementation, downloads, provider calls, new collections, commits, or pushes.
+
+## 2026-08-03 Europe/Moscow - Task: FE related-candidate display for Legal v2 no-verified results
+
+- Problem:
+  User-facing FE search at `http://localhost:3017/vyhledavani` showed "no results" for `Matka unesla dítě z česka do Ruska`, even though backend retrieval found relevant pilot candidates. Backend log showed the request reached `POST /api/rag/search-v2` and completed with `status=no_verified_results`, `interpretation=ok`, `verified=0`, `related=5`, collection `nalus_legal_paragraph_chunks_v2_pilot_600`.
+- Root cause:
+  This was not a FE network failure and not an empty index. The Legal v2 gate correctly refused to promote `related_only` to verified after the regression fix, but the FE v2 mapper still consumed only `verified_documents`. `related_documents` returned by the backend were dropped, so the UI entered `NoResultsState`.
+- FE change:
+  In `NalusFE`, `LegalV2SearchResponse` now accepts optional `related_documents`. `mapLegalV2SearchResponse()` keeps verified documents first; only when `verified_documents` is empty does it map `related_documents` into UI results with `matchKind="related"` and `relevanceClassification`.
+  `ResultList` labels all-related result sets as `Související rozhodnutí`, and `ResultCard` shows `Související kandidát` plus text that no fully verified match was found. This does not turn `related_only` into `verified_match`.
+- Runtime verification:
+  Rebuilt/recreated only the `NalusFE` frontend container. FE BFF `POST http://localhost:3017/api/retrieval/documents` for `Matka unesla dítě z česka do Ruska` returned `retrievalMode=v2`, `resultCount=5`. First result was `ECLI:CZ:US:2023:2.US.859.23.2`, `matchKind=related`, `relevanceClassification=related_only`.
+  Backend log for the same run remained truthful: `status=no_verified_results`, `verified=0`, `related=5`.
+- Validation:
+  `npm run typecheck` and `npm run lint` in `NalusFE/frontend` passed. Docker frontend build passed using cached `npm ci` layer and Next production build.
+- Safety:
+  Backend Stage A, verifier gate, embeddings, BGE-M3 cache, pilot Qdrant, BM25, production resources, aliases, provider/model, secrets, and committed defaults were not changed. FE local v2 mode remains an explicit local runtime configuration.
+- Remaining product work:
+  Backend recall is still conservative for abduction-style queries: results are now visible as related candidates, not verified authorities. To make them verified, continue backend evidence/verifier tuning without re-promoting `related_only`.
+
+## 2026-08-03 Europe/Moscow - Task: REGRESSION FIX — related_only must not verify
+
+- Bug: soft-gate mistakenly promoted `related_only` → `verified_match` / FE results for
+  „matka unesla dítě z Česka do Ruska“ (5 related_only docs counted as verified).
+- Fix:
+  1. `deterministic_verification_gate`: if classification=`related_only` → always `NOT_PROVEN`
+     (even when provider decision is verified_match / hard constraints proven).
+  2. Pipeline belt-and-suspenders: never append `related_only` into `verified_documents`.
+  3. New response field `related_documents` (top related_only/partial, always returned;
+     separate from verified). `rejected_documents` still debug-only.
+- Live recheck: `status=no_verified_results`, verified=0, related=5
+  (incl. `2.US.859.23.2`, `2.US.3057.25.1`, …). Log: `verified=0 related=5`.
+- Unit tests: verifier/query_spec/e2e suite green; added
+  `test_related_only_never_promoted_to_verified_match_by_gate`.
+- Kept from prior soft-slot work: origin/destination/actor/event as SOFT for retrieval;
+  legal_concept hard + lexical assist — but related_only can no longer pass the verify gate.
+- FE: still maps only `verified_documents` → correctly shows NoResults for this query until
+  optional related UI is wired.
+- Next: optional FE `related_results` section; FA smoke on non-abduction queries; commit when asked.
+
+## 2026-08-03 Europe/Moscow - Task: Soften abduction hard-gate (judgment-finder recall)
+
+- Problem: lay query „Matka unesla dítě z česka do Ruska“ retrieved gold docs but gate required proving origin/destination/parent/child/event/relation as HARD → empty FE.
+- Fix (code):
+  1. `query/query_spec.py`: structural fact slots (origin/destination/actor/object/event/relation) → **SOFT**; location canonicalization (`česka`→Česká republika, `ruska`→Ruská federace); `unesla` action extract; legal_concept value = label only; `demote_structural_fact_slot_constraints` after build/merge; missing polarity defaults to **SOFT**.
+  2. Interpreter prompt: soft for surface slots; hard reserved for dispositive legal requirements; merge also unions soft constraints.
+  3. `verify/verifier.py`: lexical prove assist for `legal_concept:*` from supplied evidence windows; gate accepts `related_only`/`partial_match` once all remaining hard constraints are court_finding PROVEN (confidence ≥0.45 for those classes).
+- Live `debug=true` after fix: **status=verified_match, verified=5, rejected=3** (~105s), including gold `ECLI:CZ:US:2023:2.US.859.23.2`.
+- Unit tests: `test_legal_v2_query_spec` + `test_legal_v2_verifier` + `test_legal_v2_end_to_end` → **64 passed**.
+- Risk: wider recall may raise FA on unrelated family-law docs labeled related_only — re-run 16-smoke / uq_001–003 / post-fix subset before committing policy as final.
+- Next: FE check same query; optional focused smoke; commit when asked.
+
+## 2026-08-03 Europe/Moscow - Task: COMPLETED — CZ→RU abduction empty-result root cause
+
+- Query: **"Matka unesla dítě z česka do Ruska"**
+- Verdict: **backend verifier fail-closed** — not FE bug, not empty index, not zero candidates.
+- Evidence (`debug=true` live `search-v2`, ~72s):
+  - Retrieval OK: dense 80 + bm25 80 → fused 120 → **40 candidate documents** on pilot_600.
+  - QuerySpec: `origin=česka`, `destination=Ruska` (hard) + LLM entity/event hard constraints; log merge `origin,destination,hard_constraints`.
+  - Verifier: **verified=0**, **rejected=8** (all `related_only` / `insufficient_evidence`); **0 hard constraints proven** on any candidate
+    (missing: `hc_entity_parent|child|event_abduction|relation_abduction|loc_origin|loc_destination` + origin/destination constraint hashes).
+  - Top rejected includes gold uq_001 docs: `2.US.859.23.2` (#1), `2.US.1626.22.1`.
+  - Why earlier `rejected=0`: pipeline returns `rejected_documents=[]` / empty diagnostics unless `debug=True` (`app/rag/legal_v2/pipeline.py`) → FE only sees empty verified → NoResultsState.
+- Corpus: `2.US.859.23.2` is closest hit (CZ↔Russia custody/jurisdiction, 12 rus* paragraphs; not a clean Hague „únos z ČR do Ruska“ narrative). Still fully rejected.
+- Same class as post-fix eval: `uq_001` / `uq_002` / `uq_003` all `no_verified_results` with rejected_count=8.
+- Artifacts:
+  - `.../thinking_ab_test/fe_query_child_abduction_cz_ru_debug_20260803.json`
+  - `.../thinking_ab_test/fe_query_child_abduction_cz_ru_root_cause_20260803.{json,md}`
+- Next recommended task:
+  Fix international-child-removal recall — why hard constraints stay not_proven on gold `2.US.859.23.2` (evidence windows / entity IDs / location genitive `česka`/`ruska` normalization). Optional: expose non-debug rejected/candidate counts to FE; do not treat this empty UI as connectivity failure.
+
+## 2026-08-03 Europe/Moscow - Task: Live FE no-results diagnosis + child-abduction query handoff
+
+- Product context (unchanged):
+  AI judgment finder (not Q&A): query → verified court judgments.
+  Pilot index `nalus_legal_paragraph_chunks_v2_pilot_600` + BM25 sidecar `nalus_legal_paragraph_bm25_v2_pilot_600`.
+  Hard constraints: do not change Stage A / BGE-M3 / pilot Qdrant-BM25; no `rag2` rename; cost-sensitive; commit/push only when asked.
+- Git audit (this handoff write):
+  Branch `main`, HEAD `01b1e8f81ccb83071c1e7b21de0535be6a56ba03`.
+  Dirty tree (pre-existing / in-progress, not overwritten): modified `.env.example`, `PROJECT_PROGRESS.md`, `app/api/rag_router.py`, interpreter/verifier packages, `reviewed_benchmark_v2.json`, verifier tests; large untracked `artifacts/` + dump/audit scripts. Do **not** commit `.env` secrets.
+- Already recorded earlier today / 2026-08-02 (not re-done here):
+  empty_message_content hardening (thinking retries default 3 + timeout bump; QuerySpec attempts default 3; `.env.example` knobs; unit tests).
+  Benchmark corrections: `uq_028` and `uq_031` hard-negatives → strongly_relevant in `reviewed_benchmark_v2.json`.
+  `hybrid_eval_59_post_fix.*`: 59/59, FA 0, FR 0 metric, cost ~$0.241; verified_match 15 / no_verified_results 44 (conservative fail-closed / recall).
+- Manual content-fit audit (15 verified_match queries from post-fix eval):
+  `artifacts/legal_v2/pilot_600_20260731/universal_quality/thinking_ab_test/manual_content_fit_audit_20260803.md` (+ `.json`).
+  Headline: no verified doc is a hard-negative; most content fits the question; weaker/partial on `uq_016` / `uq_033` / `uq_044`.
+- Full judgment dumps (BM25 sqlite, no LLM):
+  `scripts/legal_v2/dump_eval_full_documents_from_qdrant.py` →
+  `.../thinking_ab_test/document_reviews/*_full_documents.md` + `INDEX_from_bm25_dump.md`.
+- Live FE + API enablement (local only; supersedes the brief enable note below on timeouts):
+  Backend `.env`: `NALUS_LEGAL_V2_SEARCH_ENABLED=1`, pilot collection/BM25 paths, thinking hybrid + empty retries, `EMBEDDING_MODEL_NAME` = HF snapshot `5617a9f61b028005a4858fdac845db406aefb181`.
+  Caution: `.env` was accidentally truncated mid-task and rewritten; API key preserved — do not log secrets.
+  API container force-recreated; pilot verified (enabled, 13824 points, BM25 exists).
+  Frontend repo `C:\Users\lukas\Desktop\PYTHON_PROJECTS_DESKTOP\PYTHON_PROJECTS\NalusFE`:
+  - `.env` + `frontend/.env`: `NALUS_RETRIEVAL_MODE=v2`, `NEXT_PUBLIC_NALUS_RETRIEVAL_MODE=v2`, API `http://host.docker.internal:8029`
+  - Docker FE on http://localhost:3017 (`/vyhledavani`)
+  - V2 path: `documentSearchServer.ts` → `POST /api/rag/search-v2`; maps only `verified_documents` via `mapLegalV2SearchResponse`
+  - Timeout bumped 180s → **420s** (thinking often exceeds 3 min)
+  - Default filters `"all"`
+- Live smoke (nepřípustnost):
+  Query: „kdy Ústavní soud odmítne ústavní stížnost jako nepřípustnou“
+  Success ~215s: `verified_match`, 4 ECLIs initially; later re-runs often 3 verified docs
+  (e.g. `1.US.2639.24.1`, `3.US.931.21.1`, `2.US.1321.25.1`, `3.US.2419.20.1` / variants).
+- FE “no results” diagnosis (important):
+  User saw FE “nenašli dostatečně relevantní rozhodnutí” though judgments exist for some queries.
+  Findings:
+  1. FE Docker logs almost empty (Next Ready only).
+  2. API logs show FE/host `POST /api/rag/search-v2` → **200 OK** — FE reached API.
+  3. FE `NoResultsState` = successful response with `results.length === 0` i.e. empty `verified_documents` (or mapped empty). Not “FE never called API”.
+  4. Trace `api.legal_v2.search.done` existed but was DEBUG-only (`trace_event` gated by DEBUG) — hard to diagnose.
+  5. Added **INFO** log in `app/api/rag_router.py`:
+     `[api] legal_v2 search done status=… interpretation=… verified=… rejected=… collection=…`
+  6. FE route logging + `maxDuration=420` edits in NalusFE `frontend/src/app/api/retrieval/documents/route.ts` —
+     **production FE Docker image may not include these until rebuild** (`docker compose build/up` in NalusFE).
+  7. Reproduce (post-recreate):
+     - nepřípustnost via API: `verified_match`, verified=3 (~261s)
+     - nepřípustnost via FE BFF `http://localhost:3017/api/retrieval/documents`: **resultCount=3**, retrievalMode=v2 (~105s)
+     - So FE path itself works for that query.
+  8. Historical FE-era clue: QuerySpec merge `fields=origin,destination,hard_constraints` (child-abduction-style) + concurrent `empty_message_content` warnings → often `no_verified_results`.
+  9. Likely causes when UI shows empty: (A) different query / origin-destination QuerySpec fail-closed recall; (B) empty_message under load; (C) less likely filter wipe (defaults all); abort shows cancel/error path, not NoResults.
+- Exact user query they care about — **"Matka unesla dítě z česka do Ruska"** (reproduced 2026-08-03):
+  - API: `status=no_verified_results`, `interpretation=ok`, **verified=0**, **rejected=0**, ~81s
+  - FE BFF: **resultCount=0**, retrievalMode=v2, ~71s
+  - API log: `legal_v2.query_spec_merged fields=origin,destination,hard_constraints` then `legal_v2 search done status=no_verified_results … verified=0`
+  - Conclusion: FE is correct for this query under current gate; empty UI is backend fail-closed / recall (or no candidates surfaced into rejected list), NOT a FE wiring bug for this string.
+  - Slim artifact: `artifacts/legal_v2/pilot_600_20260731/universal_quality/thinking_ab_test/fe_query_child_abduction_cz_ru_20260803.json`
+    (present; fields: status, elapsed_s, verified/rejected counts/ids, interpretation_status; QuerySpec payload null / incomplete — do not treat as full diagnostic dump).
+- Ports / rollback:
+  - API: http://localhost:8029 (`/api/rag/search-v2`)
+  - FE: http://localhost:3017
+  - Rollback: `NALUS_LEGAL_V2_SEARCH_ENABLED=0`; FE `NALUS_RETRIEVAL_MODE=legacy`
+- Known limitations:
+  Conservative gate yields many `no_verified_results` (44/59 in post-fix eval). Empty UI for abduction-style queries can be correct fail-closed behavior. Rejected candidates are not surfaced in FE. FE Docker may lag source edits until rebuild.
+- Next recommended task:
+  Diagnose why "Matka unesla dítě z česka do Ruska" returns verified=0/rejected=0 (candidates? QuerySpec too hard? pilot corpus coverage? verifier?).
+  Optionally rebuild NalusFE for route INFO + maxDuration; product UX to surface rejected/diagnostics when verified empty; commit empty-retry / benchmark / progress / FE timeout only when user asks; never commit `.env` secrets.
+
+## 2026-08-03 Europe/Moscow - Task: Enable local FE+API Legal v2 pilot for live testing
+
+- Backend `.env`: `NALUS_LEGAL_V2_SEARCH_ENABLED=1` against pilot Qdrant/BM25
+  `nalus_legal_paragraph_chunks_v2_pilot_600` / `nalus_legal_paragraph_bm25_v2_pilot_600` (13824 points).
+- Thinking hybrid flags kept on; embedding path set to offline HF BGE-M3 snapshot.
+- API container recreated; FE (`NalusFE`) set `NALUS_RETRIEVAL_MODE=v2` + public notice, rebuilt, running on `:3017`.
+- Note: `search-v2` can exceed 180s on multi-candidate thinking path — FE timeout is 180s; expect long waits / occasional client timeout.
+- Next: manual FE testing at http://localhost:3017/vyhledavani against pilot corpus.
+
+## 2026-08-03 Europe/Moscow - Task: 59-eval post-fix completed + empty retries
+
+- `hybrid_eval_59_post_fix.*`: **59/59** (resume kept 16 / reran 43). Stop none. Cost **~$0.241**.
+- Quality vs prior `hybrid_eval_59_nonholdout`: FA **0 vs 14**; FR **0 vs 0**; verified_match **15 vs 26** (stricter gate / fewer approvals).
+- Smoke gate **failed** (exit 2): structural `verifier_document_id_mismatch` on `uq_031` fast path (plus one tolerated network empty on `uq_058`); not an FA regression.
+- Production hardening (working tree, uncommitted):
+  - Thinking verifier: up to **3** extra retries on `empty_message_content` + timeout bump; fast path **1**.
+  - QuerySpec default attempts **3** (`NALUS_LEGAL_V2_QUERYSPEC_MAX_PROVIDER_ATTEMPTS`).
+  - Unit tests empty-content fast+thinking: **passed**.
+- Next: optional mismatch hygiene; manual recall review of `no_verified_results`; commit empty-retry + `uq_031` benchmark correction when asked.
+- Note: `artifacts/.../thinking_ab_test/PAUSED_59_POST_FIX.md` (now completion note).
+
+## 2026-08-02 Europe/Moscow - Task: PAUSED — 16-smoke done, 59-eval mid-run
+
+- Safe stop at user request (leaving session).
+- 16-smoke `hybrid_smoke_16_post_uq028_fix.*`: **gate passed**, FA **0**, FR 0, interp 0, cost ~$0.102.
+  - Live FA=1 on `uq_031` was benchmark error (`4.US.2338.25.1` fair-trial nález) → relabeled strongly_relevant → FA recomputed to 0.
+- 59-eval `hybrid_eval_59_post_fix.*`: **paused at 16/59**, FA 0 so far, cost ~$0.101; fingerprint present for `--resume-json`.
+- Pause note: `artifacts/legal_v2/pilot_600_20260731/universal_quality/thinking_ab_test/PAUSED_59_POST_FIX.md`
+- Next step when back:
+  1. Resume 59 with `--resume-json .../hybrid_eval_59_post_fix.json` (same budget flags).
+  2. Compare FA/cost to prior `hybrid_eval_59_nonholdout`.
+  3. Harden production empty_message_content retries (thinking must not give up after one empty 200).
+  4. Commit `uq_031` benchmark correction if still uncommitted.
+
 ## 2026-08-02 Europe/Moscow - Task: uq_028 benchmark correction + incomplete-hard demote
 
 - Goal:
