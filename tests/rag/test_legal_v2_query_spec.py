@@ -44,14 +44,24 @@ def test_universal_query_spec_serializes_and_preserves_original_query() -> None:
     assert restored.retrieval_queries[0] == query
     assert restored.origin is not None
     assert restored.destination is not None
-    assert restored.origin.text == "Česka"
-    assert restored.destination.text == "Ruska"
+    assert restored.origin.text == "Česká republika"
+    assert restored.destination.text == "Ruská federace"
     assert restored.movement_direction == "origin_to_destination"
     assert any(entity.role == "mother" for entity in restored.entities)
     assert any(entity.role == "child" for entity in restored.entities)
     assert any(
         constraint.attribute == "actor_action_object"
         and constraint.category == ConstraintCategory.RELATION
+        and constraint.polarity.value == "soft"
+        for constraint in restored.soft_constraints
+    )
+    assert any(
+        (constraint.attribute or "").startswith("legal_concept:")
+        for constraint in restored.hard_constraints
+    )
+    assert not any(
+        constraint.attribute
+        in {"origin", "destination", "actor_role", "object_role", "action", "actor_action_object"}
         for constraint in restored.hard_constraints
     )
 
@@ -91,8 +101,8 @@ def test_query_spec_distinguishes_mother_and_father_roles() -> None:
     assert {entity.role for entity in mother.entities} >= {"mother", "child"}
     assert {entity.role for entity in father.entities} >= {"father", "child"}
     assert {
-        constraint.normalized_value for constraint in mother.hard_constraints
-    } != {constraint.normalized_value for constraint in father.hard_constraints}
+        constraint.normalized_value for constraint in mother.soft_constraints
+    } != {constraint.normalized_value for constraint in father.soft_constraints}
 
 
 def test_query_spec_preserves_negation_and_source_of_claim() -> None:
@@ -250,9 +260,23 @@ def test_constraint_from_dict_tolerates_missing_polarity_and_category() -> None:
 
     spec = QuerySpecV2.from_dict(payload)
     assert len(spec.hard_constraints) == 1
-    assert spec.hard_constraints[0].polarity.value == "hard"
+    assert spec.hard_constraints[0].polarity.value == "soft"
     assert spec.hard_constraints[0].category == ConstraintCategory.ENTITY
     assert spec.hard_constraints[0].constraint_id.startswith("constraint_llm_")
+
+
+def test_lay_abduction_route_keeps_locations_soft_and_legal_concept_hard() -> None:
+    spec = build_query_spec_v2("Matka unesla dítě z česka do Ruska")
+
+    hard_attrs = {constraint.attribute for constraint in spec.hard_constraints}
+    soft_attrs = {constraint.attribute for constraint in spec.soft_constraints}
+    assert soft_attrs >= {"origin", "destination", "actor_role", "object_role", "action"}
+    assert "legal_concept:international_child_removal" in hard_attrs
+    assert not hard_attrs.intersection(
+        {"origin", "destination", "actor_role", "object_role", "action", "actor_action_object"}
+    )
+    assert spec.origin is not None and spec.origin.text == "Česká republika"
+    assert spec.destination is not None and spec.destination.text == "Ruská federace"
 
 
 def test_interpret_merges_hard_constraints_lost_by_provider() -> None:

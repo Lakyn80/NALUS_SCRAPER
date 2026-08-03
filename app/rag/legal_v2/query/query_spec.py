@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 import unicodedata
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from enum import Enum
 from typing import Any
 
@@ -217,7 +217,17 @@ _LEGAL_CONCEPT_RULES: tuple[dict[str, Any], ...] = (
     {
         "name": "international_child_removal",
         "label": "mezinárodní únos dítěte",
-        "patterns": ("unos ditete", "neopravnene premisteni ditete", "premistila dite", "odvezla dite", "haagsk", "obvykle bydliste"),
+        "patterns": (
+            "unos ditete",
+            "unesla dite",
+            "unesl",
+            "unos",
+            "neopravnene premisteni ditete",
+            "premistila dite",
+            "odvezla dite",
+            "haagsk",
+            "obvykle bydliste",
+        ),
         "expansions": ("mezinárodní únos dítěte", "neoprávněné přemístění dítěte", "obvyklé bydliště dítěte", "Haagská úmluva"),
     },
     {
@@ -488,19 +498,21 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
             role="destination",
         )
         movement_direction = "origin_to_destination"
+        # Origin/destination are retrieval/ranking hints, not all-or-nothing
+        # verification requirements (lay "z X do Y" rarely appears as court_finding).
         _add_constraint(
-            hard_constraints,
+            soft_constraints,
             ConstraintCategory.LOCATION,
             origin.text,
-            ConstraintPolarity.HARD,
+            ConstraintPolarity.SOFT,
             attribute="origin",
             source_ids=[origin.entity_id],
         )
         _add_constraint(
-            hard_constraints,
+            soft_constraints,
             ConstraintCategory.LOCATION,
             destination.text,
-            ConstraintPolarity.HARD,
+            ConstraintPolarity.SOFT,
             attribute="destination",
             source_ids=[destination.entity_id],
         )
@@ -523,29 +535,31 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
             negated=bool(negations),
         )
         events.append(event)
+        # Structural fact-pattern slots (actor/object/event/relation) stay soft.
+        # Hard bar for abduction-like queries is the legal_concept constraint below.
         _add_constraint(
-            hard_constraints,
+            soft_constraints,
             ConstraintCategory.EVENT,
             action,
-            ConstraintPolarity.HARD,
+            ConstraintPolarity.SOFT,
             attribute="action",
             source_ids=[event.event_id],
         )
         if parent_entity is not None:
             _add_constraint(
-                hard_constraints,
+                soft_constraints,
                 ConstraintCategory.ENTITY,
                 parent_entity.role or parent_entity.normalized_text,
-                ConstraintPolarity.HARD,
+                ConstraintPolarity.SOFT,
                 attribute="actor_role",
                 source_ids=[parent_entity.entity_id],
             )
         if child_entity is not None:
             _add_constraint(
-                hard_constraints,
+                soft_constraints,
                 ConstraintCategory.ENTITY,
                 child_entity.role or child_entity.normalized_text,
-                ConstraintPolarity.HARD,
+                ConstraintPolarity.SOFT,
                 attribute="object_role",
                 source_ids=[child_entity.entity_id],
             )
@@ -565,10 +579,10 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
             )
             relations.append(relation)
             _add_constraint(
-                hard_constraints,
+                soft_constraints,
                 ConstraintCategory.RELATION,
                 f"{parent_entity.role}:{action}:{child_entity.role}",
-                ConstraintPolarity.HARD,
+                ConstraintPolarity.SOFT,
                 attribute="actor_action_object",
                 source_ids=[relation.relation_id],
             )
@@ -709,36 +723,38 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
             for concept in candidate_retrieval_concepts
         ],
     }
-    return QuerySpecV2(
-        original_query=original_query,
-        normalized_query=normalized_query,
-        structured_query=structured_query,
-        retrieval_queries=retrieval_queries,
-        intent=intent,
-        entities=entities,
-        events=events,
-        relations=relations,
-        locations=locations,
-        origin=origin,
-        destination=destination,
-        movement_direction=movement_direction,
-        date_ranges=date_ranges,
-        durations=durations,
-        legal_provisions=legal_provisions,
-        courts=courts,
-        document_types=document_types,
-        procedural_posture=procedural_posture,
-        decision_outcome=decision_outcome,
-        negations=negations,
-        modalities=modalities,
-        source_of_claims=source_of_claims,
-        cited_cases=cited_cases,
-        current_case_identifiers=current_cases,
-        hard_constraints=hard_constraints,
-        soft_constraints=soft_constraints,
-        negative_constraints=negative_constraints,
-        ambiguities=ambiguities,
-        requires_verification=bool(normalized_query),
+    return demote_structural_fact_slot_constraints(
+        QuerySpecV2(
+            original_query=original_query,
+            normalized_query=normalized_query,
+            structured_query=structured_query,
+            retrieval_queries=retrieval_queries,
+            intent=intent,
+            entities=entities,
+            events=events,
+            relations=relations,
+            locations=locations,
+            origin=origin,
+            destination=destination,
+            movement_direction=movement_direction,
+            date_ranges=date_ranges,
+            durations=durations,
+            legal_provisions=legal_provisions,
+            courts=courts,
+            document_types=document_types,
+            procedural_posture=procedural_posture,
+            decision_outcome=decision_outcome,
+            negations=negations,
+            modalities=modalities,
+            source_of_claims=source_of_claims,
+            cited_cases=cited_cases,
+            current_case_identifiers=current_cases,
+            hard_constraints=hard_constraints,
+            soft_constraints=soft_constraints,
+            negative_constraints=negative_constraints,
+            ambiguities=ambiguities,
+            requires_verification=bool(normalized_query),
+        )
     )
 
 
@@ -843,7 +859,8 @@ def _polarity_from_value(value: object) -> ConstraintPolarity:
     try:
         return ConstraintPolarity(str(value or "").strip().lower())
     except ValueError:
-        return ConstraintPolarity.HARD
+        # Unknown / missing polarity must not silently become a fail-closed hard bar.
+        return ConstraintPolarity.SOFT
 
 
 def _optional_entity(payload: object) -> QueryEntity | None:
@@ -952,9 +969,10 @@ def _extract_child_entity(
 
 
 def _extract_action(folded_query: str) -> str | None:
-    if "unos" in folded_query or "unest" in folded_query:
+    # Cover noun (únos) and verb forms (unést / unesla / unesl…).
+    if re.search(r"\b(unos|unest|unesl\w*)\b", folded_query) or "unos" in folded_query:
         return "abduction"
-    if "premist" in folded_query or "prevez" in folded_query:
+    if "premist" in folded_query or "prevez" in folded_query or "odvez" in folded_query:
         return "movement"
     if "navracen" in folded_query or "navrat" in folded_query:
         return "return"
@@ -971,7 +989,9 @@ def _extract_legal_concepts(folded_query: str) -> list[dict[str, Any]]:
 
 
 def _concept_constraint_value(concept: dict[str, Any]) -> str:
-    return " ".join([str(concept["label"]), *[str(item) for item in concept["expansions"]]])
+    # Keep the human label only — concatenating every expansion made lexical/LLM
+    # proof require dozens of tokens and fail-closed on relevant judgments.
+    return str(concept["label"])
 
 
 def _concept_affects_candidate_retrieval(concept: dict[str, Any]) -> bool:
@@ -1006,7 +1026,97 @@ def _add_constraint(
 
 
 def _clean_location(value: str) -> str:
-    return normalize_legal_text(value).strip(" ,.;:")
+    cleaned = normalize_legal_text(value).strip(" ,.;:")
+    folded = _fold_text(cleaned)
+    canonical = _LOCATION_CANONICAL.get(folded)
+    return canonical or cleaned
+
+
+_LOCATION_CANONICAL: dict[str, str] = {
+    "ceska": "Česká republika",
+    "cesko": "Česká republika",
+    "ceskou": "Česká republika",
+    "cr": "Česká republika",
+    "ceske republiky": "Česká republika",
+    "ceska republika": "Česká republika",
+    "ruska": "Ruská federace",
+    "rusko": "Ruská federace",
+    "ruskem": "Ruská federace",
+    "ruske federace": "Ruská federace",
+    "ruska federace": "Ruská federace",
+}
+
+
+_STRUCTURAL_FACT_SLOT_ATTRIBUTES = frozenset(
+    {
+        "origin",
+        "destination",
+        "action",
+        "actor_role",
+        "object_role",
+        "actor_action_object",
+    }
+)
+
+
+def is_structural_fact_slot_constraint(constraint: QueryConstraint) -> bool:
+    """Surface fact-pattern slots used for retrieval, not all-or-nothing proof.
+
+    Legal-concept / negation / case-id constraints stay eligible as hard.
+    """
+    attribute = (constraint.attribute or "").strip()
+    if attribute.startswith("legal_concept:"):
+        return False
+    if attribute in _STRUCTURAL_FACT_SLOT_ATTRIBUTES:
+        return True
+    if constraint.category == ConstraintCategory.LOCATION:
+        return True
+    if constraint.category in {
+        ConstraintCategory.ENTITY,
+        ConstraintCategory.EVENT,
+        ConstraintCategory.RELATION,
+    }:
+        return True
+    return False
+
+
+def demote_structural_fact_slot_constraints(spec: QuerySpecV2) -> QuerySpecV2:
+    """Move structural fact slots from hard → soft (idempotent)."""
+    kept_hard: list[QueryConstraint] = []
+    moved_soft: list[QueryConstraint] = []
+    for constraint in spec.hard_constraints:
+        if is_structural_fact_slot_constraint(constraint):
+            moved_soft.append(
+                QueryConstraint(
+                    constraint_id=constraint.constraint_id,
+                    category=constraint.category,
+                    value=constraint.value,
+                    normalized_value=constraint.normalized_value,
+                    polarity=ConstraintPolarity.SOFT,
+                    attribute=constraint.attribute,
+                    source_ids=list(constraint.source_ids),
+                )
+            )
+        else:
+            kept_hard.append(constraint)
+    if not moved_soft:
+        return spec
+    soft = _union_constraint_list(spec.soft_constraints, moved_soft)
+    return replace(spec, hard_constraints=kept_hard, soft_constraints=soft)
+
+
+def _union_constraint_list(
+    primary: list[QueryConstraint], extra: list[QueryConstraint]
+) -> list[QueryConstraint]:
+    seen = {(item.category, item.attribute, item.normalized_value) for item in primary}
+    result = list(primary)
+    for constraint in extra:
+        key = (constraint.category, constraint.attribute, constraint.normalized_value)
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(constraint)
+    return result
 
 
 def _extract_courts(folded_query: str) -> list[str]:

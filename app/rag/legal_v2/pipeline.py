@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import time
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from app.core.logging import get_logger
@@ -53,6 +53,7 @@ class LegalV2SearchResult:
     query_spec_summary: dict[str, Any] | None
     verified_documents: list[LegalV2VerifiedDocument]
     rejected_documents: list[LegalV2VerifiedDocument] = field(default_factory=list)
+    related_documents: list[LegalV2VerifiedDocument] = field(default_factory=list)
     rejection_counts: dict[str, int] = field(default_factory=dict)
     latency_ms_by_stage: dict[str, float] = field(default_factory=dict)
     provider: dict[str, Any] = field(default_factory=dict)
@@ -195,6 +196,12 @@ def search_legal_v2(
                 query_spec=spec,
             )
         decision = deterministic_verification_gate(query_spec=spec, verifier_result=verifier_result)
+        # Belt-and-suspenders: never treat related/partial as verified hits.
+        classification = str(
+            (verifier_result.raw_diagnostics or {}).get("classification") or ""
+        ).strip().lower()
+        if decision == VerificationDecision.VERIFIED_MATCH and classification == "related_only":
+            decision = VerificationDecision.NOT_PROVEN
         document_result = _document_result(
             candidate,
             decision,
@@ -216,6 +223,7 @@ def search_legal_v2(
             break
     latency["evidence_selection_and_verification"] = _elapsed_ms(evidence_started)
     latency["total"] = _elapsed_ms(started)
+    related = _related_documents_from_rejected(rejected)
     status = "verified_match" if verified else "no_verified_results"
     trace_event(
         logger,
@@ -223,6 +231,7 @@ def search_legal_v2(
         status=status,
         verified_count=len(verified),
         rejected_count=len(rejected),
+        related_count=len(related),
     )
     return LegalV2SearchResult(
         status=status,
@@ -230,6 +239,7 @@ def search_legal_v2(
         query_spec_summary=_safe_query_spec_summary(spec),
         verified_documents=verified,
         rejected_documents=rejected if debug else [],
+        related_documents=related,
         rejection_counts=rejection_counts,
         latency_ms_by_stage=latency,
         provider={
@@ -375,6 +385,21 @@ def _should_escalate_to_thinking_verifier(verifier_result: SemanticVerifierResul
     if classification in {"related_only", "not_relevant"} and missing and len(missing) <= 2:
         return True
     return False
+
+
+def _related_documents_from_rejected(
+    rejected: list[LegalV2VerifiedDocument],
+    *,
+    limit: int = 5,
+) -> list[LegalV2VerifiedDocument]:
+    """Surface related_only candidates separately — never as verified matches."""
+    related = [
+        document
+        for document in rejected
+        if str(document.relevance_classification or "").strip().lower()
+        in {"related_only", "partial_match"}
+    ]
+    return related[: max(0, limit)]
 
 
 def _relevance_classification(

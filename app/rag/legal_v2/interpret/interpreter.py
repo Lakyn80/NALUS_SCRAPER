@@ -7,7 +7,12 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
 from app.core.logging import get_logger
-from app.rag.legal_v2.query_spec import QueryConstraint, QuerySpecV2, build_query_spec_v2
+from app.rag.legal_v2.query_spec import (
+    QueryConstraint,
+    QuerySpecV2,
+    build_query_spec_v2,
+    demote_structural_fact_slot_constraints,
+)
 from app.rag.legal_v2.structured_output import extract_json_object
 from app.rag.legal_v2.eval_budget import BudgetOperation, budget_operation_context
 from app.rag.llm.config import effective_llm_config_from_env
@@ -129,7 +134,7 @@ def interpret_query_spec_v2(
     provider: QuerySpecProvider | None = None,
     timeout_seconds: float | None = None,
     allow_deterministic_fallback: bool = True,
-    max_provider_attempts: int = 2,
+    max_provider_attempts: int = 3,
 ) -> QueryInterpretation:
     started = time.perf_counter()
     provider = provider or _provider_from_env()
@@ -144,7 +149,14 @@ def interpret_query_spec_v2(
             provider_name="deterministic_fallback",
             latency_ms=_elapsed_ms(started),
         )
-    attempts = max(1, min(2, int(max_provider_attempts)))
+    configured = os.getenv("NALUS_LEGAL_V2_QUERYSPEC_MAX_PROVIDER_ATTEMPTS", "").strip()
+    if configured:
+        try:
+            max_provider_attempts = int(configured)
+        except ValueError:
+            pass
+    # Allow one extra attempt for empty/network flakes on the thinking QuerySpec path.
+    attempts = max(1, min(3, int(max_provider_attempts)))
     last_failure: QueryInterpretation | None = None
     for attempt in range(1, attempts + 1):
         interpretation = _interpret_once(
@@ -357,6 +369,13 @@ def _merge_deterministic_fallbacks(
             updates["hard_constraints"] = merged
             repaired.append("hard_constraints")
 
+    if deterministic.soft_constraints:
+        base_soft = list(updates.get("soft_constraints", spec.soft_constraints))
+        merged_soft = _union_constraints(base_soft, deterministic.soft_constraints)
+        if len(merged_soft) != len(spec.soft_constraints):
+            updates["soft_constraints"] = merged_soft
+            repaired.append("soft_constraints")
+
     if deterministic.negations and not spec.negations:
         updates["negations"] = list(deterministic.negations)
         repaired.append("negations")
@@ -372,8 +391,8 @@ def _merge_deterministic_fallbacks(
         repaired.append("entity_roles")
 
     if not updates:
-        return spec, []
-    return replace(spec, **updates), repaired
+        return demote_structural_fact_slot_constraints(spec), []
+    return demote_structural_fact_slot_constraints(replace(spec, **updates)), repaired
 
 
 def _union_constraints(
@@ -405,17 +424,26 @@ def _query_spec_prompt(original_query: str) -> str:
         "hard_constraints": [
             {
                 "category": (
-                    "entity|event|relation|location|date_range|duration|legal_provision|"
-                    "court|document_type|procedural_posture|decision_outcome|negation|"
-                    "modality|source_of_claim|cited_case|current_case"
+                    "legal_provision|negation|source_of_claim|cited_case|current_case|"
+                    "date_range|court|document_type|procedural_posture|decision_outcome"
                 ),
                 "value": "string",
                 "normalized_value": "string",
                 "polarity": "hard",
                 "constraint_id": "string",
+                "attribute": "legal_concept:optional_name",
             }
         ],
-        "soft_constraints": [],
+        "soft_constraints": [
+            {
+                "category": "entity|event|relation|location",
+                "value": "string",
+                "normalized_value": "string",
+                "polarity": "soft",
+                "constraint_id": "string",
+                "attribute": "origin|destination|actor_role|object_role|action|actor_action_object",
+            }
+        ],
         "negative_constraints": [],
         "retrieval_queries": [original_query],
         "requires_verification": True,
@@ -428,6 +456,9 @@ def _query_spec_prompt(original_query: str) -> str:
         "Extract a structured Legal Retrieval v2 QuerySpec JSON object for the user query. "
         "Preserve actors, countries, jurisdictions, and legal concepts. "
         "Do not invent unsupported facts. Keep the original query as the first retrieval query. "
+        "Put surface fact-pattern slots (actors, child, origin/destination countries, abduction "
+        "event/relation) into soft_constraints. Reserve hard_constraints for legal concepts and "
+        "other dispositive requirements that must be proven in the judgment holding. "
         "Use ambiguities when the query is underspecified; do not invent unsupported intents. "
         "Return JSON only.\n"
         f"Schema hint: {json.dumps(schema_hint, ensure_ascii=False)}\n"

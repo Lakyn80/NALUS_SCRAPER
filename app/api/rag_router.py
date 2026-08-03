@@ -387,6 +387,7 @@ class LegalV2SearchResponse(BaseModel):
     interpretation_status: str
     query_spec_summary: dict[str, Any] | None = None
     verified_documents: list[LegalV2VerifiedDocumentResult]
+    related_documents: list[LegalV2VerifiedDocumentResult] = Field(default_factory=list)
     rejected_documents: list[LegalV2VerifiedDocumentResult] = Field(default_factory=list)
     rejection_counts: dict[str, int] = Field(default_factory=dict)
     latency_ms_by_stage: dict[str, float] = Field(default_factory=dict)
@@ -929,6 +930,10 @@ def _to_legal_v2_search_response(result: RuntimeLegalV2SearchResult) -> LegalV2S
         interpretation_status=result.interpretation_status,
         query_spec_summary=_safe_payload(result.query_spec_summary),
         verified_documents=[_legal_v2_document(document) for document in result.verified_documents],
+        related_documents=[
+            _legal_v2_document(document)
+            for document in getattr(result, "related_documents", []) or []
+        ],
         rejected_documents=[_legal_v2_document(document) for document in result.rejected_documents],
         rejection_counts=_safe_payload(result.rejection_counts),
         latency_ms_by_stage=_safe_payload(result.latency_ms_by_stage),
@@ -1263,6 +1268,15 @@ def search_v2(
         record_request(endpoint=endpoint_label, status="error")
         raise HTTPException(status_code=503, detail="Legal Retrieval v2 search is temporarily unavailable.") from exc
     record_request(endpoint=endpoint_label, status=result.status)
+    logger.info(
+        "[api] legal_v2 search done status=%s interpretation=%s verified=%s related=%s rejected=%s collection=%s",
+        result.status,
+        result.interpretation_status,
+        len(result.verified_documents),
+        len(getattr(result, "related_documents", []) or []),
+        len(result.rejected_documents),
+        getattr(runtime.config, "qdrant_collection", None),
+    )
     trace_event(
         logger,
         "api.legal_v2.search.done",

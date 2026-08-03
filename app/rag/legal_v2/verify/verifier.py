@@ -321,9 +321,14 @@ class DeepSeekSemanticVerifierProvider:
         evidence_windows: list[EvidenceWindowForConstraint],
         timeout_seconds: float | None = None,
     ) -> dict[str, Any]:
+        effective_timeout = (
+            float(timeout_seconds)
+            if timeout_seconds is not None
+            else self._default_timeout_seconds
+        )
         llm = self._llm
         if timeout_seconds is not None:
-            llm = self._make_llm(timeout_seconds=timeout_seconds)
+            llm = self._make_llm(timeout_seconds=effective_timeout)
         prompt = _verifier_prompt(
             query_spec=query_spec,
             candidate_document=candidate_document,
@@ -334,16 +339,30 @@ class DeepSeekSemanticVerifierProvider:
             if self.thinking is DeepSeekThinkingMode.ENABLED
             else BudgetOperation.FAST_VERIFIER
         )
-        try:
-            with budget_operation_context(operation):
-                text = llm.generate_text(prompt)
-        except LLMProviderError as exc:
-            self.last_meta = getattr(llm, "last_meta", None)
-            if exc.category != "empty_message_content":
-                raise
-            self.empty_content_retries += 1
-            with budget_operation_context(operation):
-                text = llm.generate_text(prompt)
+        empty_retries = _empty_content_retry_limit(thinking=self.thinking)
+        attempts = 1 + empty_retries
+        text = ""
+        last_error: LLMProviderError | None = None
+        for attempt in range(attempts):
+            try:
+                with budget_operation_context(operation):
+                    text = llm.generate_text(prompt)
+                last_error = None
+                break
+            except LLMProviderError as exc:
+                self.last_meta = getattr(llm, "last_meta", None)
+                if exc.category != "empty_message_content":
+                    raise
+                self.empty_content_retries += 1
+                last_error = exc
+                if attempt + 1 >= attempts:
+                    break
+                # Thinking path: give the provider more wall-clock on retry.
+                if self.thinking is DeepSeekThinkingMode.ENABLED:
+                    effective_timeout = min(effective_timeout * 1.5, 300.0)
+                    llm = self._make_llm(timeout_seconds=effective_timeout)
+        if last_error is not None:
+            raise last_error
         self.last_meta = getattr(llm, "last_meta", None)
         payload = _json_payload(text)
         if payload is None:
@@ -584,6 +603,23 @@ def validate_verifier_payload(
             )
         )
 
+    parsed_results = _lexical_prove_legal_concept_constraints(
+        query_spec=query_spec,
+        evidence_windows=evidence_windows,
+        constraint_results=parsed_results,
+    )
+    hard_ids = {constraint.constraint_id for constraint in query_spec.hard_constraints}
+    hard_proven_ids = {
+        item.constraint_id
+        for item in parsed_results
+        if item.constraint_id in hard_ids
+        and item.status == ConstraintVerificationStatus.PROVEN
+        and item.source_of_claim == "court_finding"
+        and item.evidence_paragraph_ids
+    }
+    diagnostics_supported = sorted(hard_proven_ids)
+    diagnostics_missing = sorted(hard_ids.difference(hard_proven_ids))
+
     return SemanticVerifierResult(
         document_id=candidate_document.document_id,
         decision=decision,
@@ -613,12 +649,11 @@ def validate_verifier_payload(
             "missing_constraint_result_count": len(
                 allowed_constraint_ids.difference(seen_constraint_ids)
             ),
-            "mandatory_concepts_supported": _safe_string_list(
-                normalized_payload.get("mandatory_concepts_supported")
-            ),
-            "mandatory_concepts_missing": _safe_string_list(
-                normalized_payload.get("mandatory_concepts_missing")
-            ),
+            "mandatory_concepts_supported": diagnostics_supported
+            or _safe_string_list(normalized_payload.get("mandatory_concepts_supported")),
+            "mandatory_concepts_missing": diagnostics_missing
+            if hard_ids
+            else _safe_string_list(normalized_payload.get("mandatory_concepts_missing")),
             "contradictory_facts": _safe_string_list(
                 normalized_payload.get("contradictory_facts")
             ),
@@ -669,11 +704,17 @@ def deterministic_verification_gate(
     ):
         return VerificationDecision.NOT_PROVEN
 
-    # Provider classification/decision must still claim a verified match.
+    diagnostics = dict(verifier_result.raw_diagnostics or {})
+
+    classification = str(diagnostics.get("classification") or "").strip().lower()
+    # related_only must never become a verified hit, even if the provider
+    # mistakenly emits verified_match with that classification.
+    if classification == "related_only":
+        return VerificationDecision.NOT_PROVEN
+
     if verifier_result.decision != VerificationDecision.VERIFIED_MATCH:
         return verifier_result.decision
 
-    diagnostics = dict(verifier_result.raw_diagnostics or {})
     if diagnostics.get("jurisdiction_match") is False:
         return VerificationDecision.HARD_MISMATCH
     if diagnostics.get("holding_supports_query") is False:
@@ -685,6 +726,61 @@ def deterministic_verification_gate(
     if _safe_string_list(diagnostics.get("contradictory_facts")):
         return VerificationDecision.HARD_MISMATCH
     return VerificationDecision.VERIFIED_MATCH
+
+
+def _lexical_prove_legal_concept_constraints(
+    *,
+    query_spec: QuerySpecV2,
+    evidence_windows: list[EvidenceWindowForConstraint],
+    constraint_results: list[ConstraintVerificationResult],
+) -> list[ConstraintVerificationResult]:
+    """Upgrade legal_concept hard constraints using supplied evidence window text.
+
+    LLM verifiers often leave concept tags not_proven even when the judgment text
+    clearly discusses the legal issue. Lexical coverage on already-selected evidence
+    windows never invents paragraph IDs outside supplied windows.
+    """
+    by_id = {item.constraint_id: item for item in constraint_results}
+    windows_by_constraint = _windows_by_constraint(evidence_windows)
+    changed = False
+    for constraint in query_spec.hard_constraints:
+        attribute = (constraint.attribute or "").strip()
+        if not attribute.startswith("legal_concept:"):
+            continue
+        current = by_id.get(constraint.constraint_id)
+        if current is None or current.status == ConstraintVerificationStatus.PROVEN:
+            continue
+        if current.status == ConstraintVerificationStatus.CONTRADICTED:
+            continue
+        windows = windows_by_constraint.get(constraint.constraint_id, [])
+        if not windows:
+            windows = list(evidence_windows)
+        evidence_text = " ".join(window.text for window in windows)
+        if not _constraint_text_supported(
+            evidence_text,
+            str(constraint.normalized_value or constraint.value),
+            query_spec.retrieval_queries,
+        ):
+            continue
+        paragraph_ids = _dedupe_ids(
+            paragraph_id for window in windows for paragraph_id in window.paragraph_ids
+        )
+        if not paragraph_ids:
+            continue
+        by_id[constraint.constraint_id] = ConstraintVerificationResult(
+            constraint_id=constraint.constraint_id,
+            status=ConstraintVerificationStatus.PROVEN,
+            required_value=constraint.value,
+            detected_value=constraint.value,
+            evidence_paragraph_ids=list(paragraph_ids),
+            source_of_claim="court_finding",
+            reason="lexical_legal_concept_coverage_in_supplied_evidence",
+            confidence=max(float(current.confidence or 0.0), 0.75),
+        )
+        changed = True
+    if not changed:
+        return constraint_results
+    return [by_id.get(item.constraint_id, item) for item in constraint_results]
 
 
 def thinking_promotion_allows_verified_match(
@@ -1401,6 +1497,26 @@ def _bounded_prompt_text(value: str, limit: int) -> str:
     if len(collapsed) <= limit:
         return collapsed
     return collapsed[: limit - 3] + "..."
+
+
+def _empty_content_retry_limit(*, thinking: DeepSeekThinkingMode) -> int:
+    """How many *extra* attempts after the first empty_message_content failure.
+
+    Thinking mode defaults higher: empty 200s after long reasoning are common and
+    must not fail a legal verification after a single blank response.
+    """
+    if thinking is DeepSeekThinkingMode.ENABLED:
+        raw = os.getenv("NALUS_LEGAL_V2_VERIFIER_EMPTY_CONTENT_RETRIES", "3").strip()
+        default = 3
+    else:
+        raw = os.getenv("NALUS_LEGAL_V2_VERIFIER_EMPTY_CONTENT_RETRIES_FAST", "1").strip()
+        default = 1
+    if not raw:
+        return default
+    try:
+        return max(0, min(5, int(raw)))
+    except ValueError:
+        return default
 
 
 def _verifier_max_tokens(

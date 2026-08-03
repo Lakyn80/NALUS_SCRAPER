@@ -208,6 +208,7 @@ def test_deepseek_verifier_retries_empty_content_once_then_parses_json(
     monkeypatch.setenv("LLM_MODEL_DEEPSEEK", "deepseek-v4-flash")
     monkeypatch.setenv("LLM_TIMEOUT", "30")
     monkeypatch.setenv("LLM_RETRY", "0")
+    monkeypatch.delenv("NALUS_LEGAL_V2_VERIFIER_EMPTY_CONTENT_RETRIES_FAST", raising=False)
     query_spec = build_query_spec_v2("únos dítěte matkou z Česka do Ruska")
     candidate = _candidate()
     first_resp = MagicMock(spec=httpx.Response)
@@ -241,6 +242,56 @@ def test_deepseek_verifier_retries_empty_content_once_then_parses_json(
     assert mock_instance.post.call_count == 2
     for call in mock_instance.post.call_args_list:
         assert call.kwargs["json"]["thinking"] == {"type": "disabled"}
+
+
+def test_deepseek_thinking_verifier_retries_empty_content_multiple_times(
+    monkeypatch,
+) -> None:
+    from app.rag.llm.providers.deepseek import DeepSeekThinkingMode
+
+    monkeypatch.setenv("LLM_MODEL_DEEPSEEK", "deepseek-v4-flash")
+    monkeypatch.setenv("LLM_TIMEOUT", "30")
+    monkeypatch.setenv("LLM_RETRY", "0")
+    monkeypatch.setenv("NALUS_LEGAL_V2_VERIFIER_EMPTY_CONTENT_RETRIES", "3")
+    query_spec = build_query_spec_v2("únos dítěte matkou z Česka do Ruska")
+    candidate = _candidate()
+
+    def _empty() -> MagicMock:
+        resp = MagicMock(spec=httpx.Response)
+        resp.status_code = 200
+        resp.text = json.dumps(_openai_envelope(""))
+        resp.json.return_value = _openai_envelope("")
+        resp.headers = {}
+        resp.raise_for_status.return_value = None
+        return resp
+
+    ok_body = _openai_envelope(_compact_verifier_response(candidate))
+    ok_resp = MagicMock(spec=httpx.Response)
+    ok_resp.status_code = 200
+    ok_resp.text = json.dumps(ok_body)
+    ok_resp.json.return_value = ok_body
+    ok_resp.headers = {}
+    ok_resp.raise_for_status.return_value = None
+    mock_instance = MagicMock()
+    mock_instance.post.side_effect = [_empty(), _empty(), _empty(), ok_resp]
+    mock_class = MagicMock(return_value=mock_instance)
+
+    with patch("httpx.Client", mock_class):
+        provider = DeepSeekSemanticVerifierProvider(
+            api_key="k",
+            thinking=DeepSeekThinkingMode.ENABLED,
+            timeout_seconds=120,
+        )
+        payload = provider.verify(
+            query_spec=query_spec,
+            candidate_document=candidate,
+            evidence_windows=_evidence(candidate, query_spec.hard_constraints[0].constraint_id),
+            timeout_seconds=120,
+        )
+
+    assert payload["classification"] == RelevanceClassification.STRONG_MATCH.value
+    assert provider.empty_content_retries == 3
+    assert mock_instance.post.call_count == 4
 
 
 def test_invalid_llm_output_fails_closed() -> None:
@@ -915,6 +966,33 @@ def test_partial_match_with_all_hard_proven_is_not_verified_by_gate() -> None:
     assert (
         deterministic_verification_gate(query_spec=spec, verifier_result=result)
         == VerificationDecision.AMBIGUOUS
+    )
+    query = "únos dítěte matkou z Česka do Ruska"
+    spec = build_query_spec_v2(query)
+    candidate = _candidate()
+    # Even with all hard constraints proven, related_only must not verify.
+    provider = DeterministicFakeVerifier(
+        _compact_all_hard_supported_payload(
+            candidate=candidate,
+            spec=spec,
+            classification=RelevanceClassification.RELATED_ONLY.value,
+            confidence=0.95,
+            jurisdiction_match=True,
+            reason_code="related_only",
+        )
+    )
+
+    result = run_semantic_verifier(
+        provider=provider,
+        query_spec=spec,
+        candidate_document=candidate,
+        evidence_windows=_windows_for_all_hard(candidate, spec),
+    )
+
+    assert str((result.raw_diagnostics or {}).get("classification") or "").lower() == "related_only"
+    assert (
+        deterministic_verification_gate(query_spec=spec, verifier_result=result)
+        == VerificationDecision.NOT_PROVEN
     )
 
 
