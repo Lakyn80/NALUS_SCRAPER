@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NALUS Parser Review</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <aside>
+    <h1>NALUS Parser Review</h1>
+    <div id="progress"></div>
+    <ol id="documents"></ol>
+  </aside>
+  <main>
+    <header>
+      <div>
+        <h2 id="documentTitle">Select a document</h2>
+        <p id="documentMeta"></p>
+      </div>
+      <label>View
+        <select id="mode">
+          <option value="lines">Lines</option>
+          <option value="boundaries">Boundaries</option>
+          <option value="parser-v6-changes">Changed by parser v6</option>
+          <option value="problems">Problems</option>
+          <option value="progress">Progress</option>
+          <option value="assisted">Assisted Review</option>
+        </select>
+      </label>
+    </header>
+    <section id="work"></section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

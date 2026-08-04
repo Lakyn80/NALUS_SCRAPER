@@ -1,5 +1,26 @@
 # Project Progress
 
+## 2026-08-04 Europe/Moscow - Task: Constitutional Court parser v5 from completed review document 2
+
+- Goal:
+  Convert the completed manual review of visual parser-review document 2 (`doc-b73cac9b3dfc8a42`, source `1-3299-24_1`) into bounded deterministic Constitutional Court parser rules, then reparse the 10 Constitutional Court design documents and expose the changed review queue.
+- Scope:
+  Parser/profile, parser-review snapshot, audit artifacts, frontend review UI/API, and focused tests in `fix/legal-paragraph-parser`. No Qdrant, BM25, embeddings, providers/models, Docker, Redis, Celery, commits, pushes, or High Court parser generalization.
+- Implementation:
+  Parser profile is now `legal-decision-parser.cz-courts.v5`. `app/rag/legal_v2/ingest/parser.py` adds a court-scoped Constitutional Court line profile for NALUS headers, case/date metadata, state identifier, decision type + court title merge, decision formula ending `takto:`, operative text, reasoning heading/body, `Poučení:`, Brno closing date, and signature name + judicial role merge. `scripts/legal_v2/parser_review/snapshot.py` maps those parser-derived structures to review line classes without letting inline citations override the primary class.
+- Snapshot and migration:
+  Rebuilt the visual parser-review snapshot with v5 parser-derived data. High Court Prague and High Court Olomouc parser-derived snapshot subsets remained byte-identical by subset checksum. Existing document-2 manual decisions were preserved by appending 25 parser-profile migration revisions with the same manual values and `interface=parser_profile_migration`; no decisions were created for other documents and no assisted batches were applied.
+- Audit result:
+  Local artifacts under `artifacts/legal_v2/constitutional_parser_v5/` show 10 Constitutional Court documents parsed with exceptions 0, conservation failures 0, duplication failures 0, ordering failures 0, suspicious overmerges 0, suspicious undersplits 0. Document 2 Current Parser now has 11 blocks with ranges `1-1`, `2-2`, `3-3`, `4-5`, `6-6`, `7-7`, `8-8`, `9-9`, `10-10`, `11-11`, `12-13`. Corpus delta is 252 old blocks to 300 new blocks, 68 changed boundaries, and 148 changed line classes.
+- Frontend:
+  Added a read-only `Changed by parser v5` view backed by `/api/parser-v5/changes`, while existing Lines, Boundaries, Assisted Review, and Progress views remain available.
+- Documentation:
+  Added `docs/retrieval-enterprise/LEGAL_DECISION_PARSER_V5.md`.
+- Known limitations:
+  The remaining nine Constitutional Court design documents are not manually approved; their v5 deltas are a review queue, not correctness proof. Three pre-existing non-document-2 manual test decisions remain stale against parser profile v5 by design.
+- Next recommended task:
+  Review the `Changed by parser v5` queue, starting with the 68 boundary changes, then manually validate additional Constitutional Court documents before any broader indexing or retrieval rollout.
+
 ## 2026-08-04 Europe/Moscow - Task: Czech court format study and parser v4
 
 - Goal:
@@ -2035,3 +2056,39 @@
   Pilot Qdrant points remained 13,824; pilot BM25 rows remained 13,824; pilot BM25 checksum remained `85ceb99dfc9bbf682d59628d6efdb861b61ce96dac3e9946583f7eb4f7de816f`. No production Qdrant, aliases, production BM25, Stage A retrieval, dense retrieval, BM25, RRF, embeddings, frontend, Redis behavior, GPU/CUDA path, model download, or package download changed.
 - Remaining blocker:
   The verifier non-thinking path now works on one reviewed case, but the required 2+2 structural gate is blocked by QuerySpec reliability under the current 30-second provider timeout. Do not run the 16-query smoke, full 64, HTTP gate, frontend validation, commit, or push until a 2 QuerySpec + 2 verifier gate passes.
+
+## 2026-08-04 20:xx Europe/Moscow — Task: Legal decision parser generalization v6
+
+- Goal:
+  Generalize the deterministic Legal v2 parser from Constitutional Court v5 to a bounded v6 profile covering corrected golden decisions for Constitutional Court, High Court Prague, and High Court Olomouc.
+- Worktree:
+  Work stayed in `nalus-scraper-parser-fix` on `fix/legal-paragraph-parser`, HEAD `14c1e300c46872640ebebfb84cf6e8d6686dec7b`. No commit, push, merge, stash, reset, clean, or checkout was performed.
+- Parser:
+  Bumped parser profile to `legal-decision-parser.cz-courts.v6`. Added court-specific deterministic line grouping for Constitutional Court title/Roman heading blocks, High Court Prague opening and nested statutory lists, and High Court Olomouc reasoning-state numbering with nested list/table rejection. Inline citations remain secondary and no golden line uses primary `citation_continuation`.
+- Golden audit:
+  `scripts/legal_v2/audit_parser_v6.py` generated audit artifacts under `artifacts/legal_v2/parser_v6_audit/`. Final audit status was `pass` for 20 design documents with 0 conservation failures, 0 duplication failures, 0 ordering failures, 0 parser exceptions, 0 primary citation classifications, 542 changed line classes, 66 changed boundaries, and 427 changed block ranges versus the saved v5 snapshot baseline.
+- Golden fixtures:
+  Constitutional Court exact 54 classes, 53 boundaries, and 46 block ranges passed. High Court Prague exact 57 classes, 56 boundaries, and 39 block ranges passed. High Court Olomouc validated the complete 698-line fixture, exact 74 top-level reasoning starts, paragraph sequence 1..74, false starts 182 and 296-301 rejected, nested/table rows recognized, and text conservation preserved.
+- Review snapshot:
+  A temporary v6 parser-derived snapshot rebuild passed for 20 documents, 1407 lines, and 1387 boundaries. The real parser-derived review snapshot was then rebuilt with parser profile v6 while preserving raw line order, manual decisions, and manual history.
+- Manual review:
+  Valid document-2 v5 decisions were migrated append-only to v6 using `parser_profile_migration`: 13 line decisions and 12 boundary decisions. Document 2 remains complete at 13/13 lines and 12/12 boundaries with 0 unresolved. No pending items were automatically approved and no Assisted Review batch was applied. The validator still reports the expected incomplete corpus state: 19 incomplete documents and 3 pre-existing stale parser-profile decisions.
+- Frontend/API:
+  Added `/api/parser-v6/changes` and updated the review UI to show `Changed by parser v6` with separate Changed Lines / Classes, Changed Boundaries, and Changed Blocks sections. Lines, Boundaries, Progress, and Assisted Review views remain present.
+- Documentation:
+  Added `docs/retrieval-enterprise/LEGAL_DECISION_PARSER_V6.md` documenting shared core behavior, court profiles, hierarchy/table handling, audit artifacts, retained v5 behavior, and known limitations.
+
+## 2026-08-05 00:xx Europe/Moscow — Task: Parser review status and UX redesign
+
+- Goal:
+  Separate automatic parser validation status from human manual-review status in the local parser-review UI/API so passing parser v6/golden output is not presented as ambiguous `pending` or `unresolved` manual state.
+- Status model:
+  Added explicit parser-validation statuses `AUTO_VALIDATED_GOLDEN`, `PARSER_VALIDATED`, `PARSER_CHANGED_NEEDS_REVIEW`, `PARSER_CONFLICT`, and `PARSER_UNVALIDATED`, plus manual-review statuses `NOT_MANUALLY_REVIEWED`, `MANUALLY_ACCEPTED`, `MANUALLY_OVERRIDDEN`, `MANUAL_DECISION_STALE`, and `MANUAL_CONFLICT`. Legacy `pending` and `unresolved` remain internal/backward-compatible values only.
+- API:
+  Added deterministic status derivation from the v6 review manifest, golden spec/checksums, v6 audit artifacts, current parser-derived snapshot, and manual decision store. API responses for documents, lines, boundaries, boundary cards, progress, problems, and parser-v6 change queues now expose separate `parser_validation_*` and `manual_review_*` fields.
+- UI:
+  Updated navigation, document header, Lines, Boundaries, Changed by parser v6, Problems, and Progress views. Parser validation badges are primary; manual review controls are secondary and collapsed by default. Progress now separates parser validation from manual review.
+- Data safety:
+  No manual decisions or history were written. Manual store stayed `31002` bytes with SHA-256 `F98CD519CCF28310706F70B0D65F2F15FDFC28CC530304CD4FF79890219A28FB`; history stayed `98322` bytes with SHA-256 `5E0E86E5A2210800A514341E6A7A87210EBC2EC7504D379BA6DB2542EB82FACD`. Document 2 remains manually complete at 13/13 lines and 12/12 boundaries with 0 unresolved.
+- Validation:
+  Focused visual-review and parser tests passed: 77 tests. HTTP smoke on a temporary loopback port passed for documents, progress, lines, boundary cards, v6 changes, problems, assisted summary, and static assets. Document 11 shows `GOLDEN PASS`; line 36 shows `AUTO-VALIDATED · GOLDEN v6` and `list_or_table`; boundary L35 -> L36 shows `MERGE`; boundary L42 -> L43 shows `SPLIT`.

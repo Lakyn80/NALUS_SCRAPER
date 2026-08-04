@@ -106,6 +106,26 @@ _CITATION_RE = re.compile(
     r"(\bsp\.\s*zn\.|\bč\.\s*j\.|\bECLI:|§\s*\d+|čl\.\s*\d+|Sb\.|ÚS\s*\d+/\d+)",
     re.IGNORECASE,
 )
+_NALUS_US_HEADER_RE = re.compile(r"^NALUS\s*-\s*databáze rozhodnutí Ústavního soudu$", re.IGNORECASE)
+_US_CASE_DATE_RE = re.compile(
+    r"^[IVXLCDM]+\.?\s*ÚS\s+\d+/\d+\s+ze dne\s+\d{1,2}\.\s*\d{1,2}\.\s*\d{4}$",
+    re.IGNORECASE,
+)
+_US_STATE_RE = re.compile(r"^Česká republika$", re.IGNORECASE)
+_US_DECISION_TYPE_RE = re.compile(r"^(?:USNESENÍ|NÁLEZ)$", re.IGNORECASE)
+_US_COURT_TITLE_RE = re.compile(r"^Ústavního soudu$", re.IGNORECASE)
+_US_DECISION_FORMULA_RE = re.compile(r"^Ústavní soud rozhodl\b.*takto:\s*$", re.IGNORECASE)
+_US_DECISION_FORMULA_START_RE = re.compile(r"^Ústavní soud rozhodl\b", re.IGNORECASE)
+_REASONING_HEADING_RE = re.compile(r"^Odůvodnění:?\s*$", re.IGNORECASE)
+_INSTRUCTION_START_RE = re.compile(r"^Poučení:\s+", re.IGNORECASE)
+_BRNO_DATE_RE = re.compile(r"^V Brně dne\s+\d{1,2}\.\s*\d{1,2}\.\s*\d{4}$", re.IGNORECASE)
+_SIGNATURE_ROLE_RE = re.compile(r"^(?:soudce zpravodaj|soudkyně zpravodajka|předseda senátu|předsedkyně senátu)$", re.IGNORECASE)
+_SIGNATURE_NAME_RE = re.compile(r"\bv\.\s*r\.\s*$", re.IGNORECASE)
+_REPUBLIC_TITLE_RE = re.compile(r"^Jménem republiky$", re.IGNORECASE)
+_SIMPLE_HEADING_RE = re.compile(r"^(?:Výrok|Odůvodnění|Odůvodnění:|Poučení)$", re.IGNORECASE)
+_DASH_BULLET_RE = re.compile(r"^-+\)")
+_LETTER_ITEM_RE = re.compile(r"^[a-z]\)")
+_SEMICOLON_TABLE_RE = re.compile(r";")
 
 
 @dataclass(frozen=True)
@@ -141,7 +161,8 @@ def parse_legal_document(
         document_version=(metadata or {}).get("document_version"),
         source_url=(metadata or {}).get("source_url") or (metadata or {}).get("text_url"),
     )
-    candidates = _paragraph_candidates(normalized_source)
+    court = str((metadata or {}).get("court") or "")
+    candidates = _paragraph_candidates(normalized_source, court=court)
     fallback_count = 0
     if not candidates and normalized_source.strip():
         candidates = _fallback_candidates(normalized_source)
@@ -171,7 +192,10 @@ def parse_legal_document(
             current_section = _section_from_heading(normalized_text)
             section_type = current_section
         else:
-            inferred = _section_from_text(normalized_text, current_section)
+            if court == "constitutional_court":
+                inferred = _constitutional_section_from_text(normalized_text, current_section)
+            else:
+                inferred = _section_from_text(normalized_text, current_section)
             if inferred != SectionType.OTHER:
                 current_section = inferred
             section_type = current_section
@@ -240,11 +264,237 @@ def _normalize_line_endings(text: str) -> str:
     return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
-def _paragraph_candidates(text: str) -> list[_ParagraphCandidate]:
-    line_candidates = _line_based_candidates(text)
+def _paragraph_candidates(text: str, *, court: str = "") -> list[_ParagraphCandidate]:
+    if court == "constitutional_court":
+        line_candidates = _constitutional_court_line_candidates(text)
+    elif court == "high_court_prague":
+        line_candidates = _high_court_prague_line_candidates(text)
+    elif court == "high_court_olomouc":
+        line_candidates = _high_court_olomouc_line_candidates(text)
+    else:
+        line_candidates = _line_based_candidates(text)
     if len(line_candidates) >= 2:
         return line_candidates
     return _fallback_candidates(text)
+
+
+def _constitutional_court_line_candidates(text: str) -> list[_ParagraphCandidate]:
+    entries = _line_entries(text)
+    candidates: list[_ParagraphCandidate] = []
+    i = 0
+    while i < len(entries):
+        stripped = entries[i][0]
+        if _US_DECISION_TYPE_RE.match(stripped) and i + 1 < len(entries) and _US_COURT_TITLE_RE.match(entries[i + 1][0]):
+            end_index = i + 2
+            if end_index < len(entries) and _REPUBLIC_TITLE_RE.match(entries[end_index][0]):
+                end_index += 1
+            candidates.append(_candidate_from_entries(entries[i:end_index], heading=True))
+            i = end_index
+            continue
+        if _ROMAN_ONLY_RE.match(stripped) and i + 1 < len(entries) and _looks_like_section_caption(entries[i + 1][0]):
+            candidates.append(_candidate_from_entries(entries[i : i + 2], heading=True))
+            i += 2
+            continue
+        if _is_constitutional_singleton(stripped):
+            candidates.append(_candidate_from_entries(entries[i : i + 1], heading=_is_constitutional_heading(stripped)))
+            i += 1
+            continue
+        if _US_DECISION_FORMULA_START_RE.match(stripped):
+            end_index = i + 1
+            while end_index < len(entries) and not _US_DECISION_FORMULA_RE.match(" ".join(entry[0] for entry in entries[i:end_index])):
+                next_text = entries[end_index][0]
+                if _is_constitutional_singleton(next_text) or _NUMBERED_RE.match(next_text):
+                    break
+                end_index += 1
+            candidates.append(_candidate_from_entries(entries[i:end_index], heading=False))
+            i = end_index
+            continue
+        if _SIGNATURE_NAME_RE.search(stripped) and i + 1 < len(entries) and _SIGNATURE_ROLE_RE.match(entries[i + 1][0]):
+            candidates.append(_candidate_from_entries(entries[i : i + 2], heading=False))
+            i += 2
+            continue
+        if _NUMBERED_RE.match(stripped):
+            end_index = i + 1
+            while end_index < len(entries):
+                next_text = entries[end_index][0]
+                if _NUMBERED_RE.match(next_text) or _is_constitutional_singleton(next_text) or _is_heading(next_text):
+                    break
+                end_index += 1
+            candidates.append(_candidate_from_entries(entries[i:end_index], heading=False))
+            i = end_index
+            continue
+        kind = _classify_line(stripped, active_numbering=None)
+        if kind in {_LineKind.ROMAN_BOUNDARY, _LineKind.ROMAN_SECTION_MARKER, _LineKind.HEADING}:
+            candidates.append(_candidate_from_entries(entries[i : i + 1], heading=True))
+        else:
+            candidates.append(_candidate_from_entries(entries[i : i + 1], heading=False))
+        i += 1
+    return candidates
+
+
+def _high_court_prague_line_candidates(text: str) -> list[_ParagraphCandidate]:
+    entries = _line_entries(text)
+    candidates: list[_ParagraphCandidate] = []
+    i = 0
+    if entries and entries[0][0].casefold().startswith("vrchní soud v praze jako soud odvolací"):
+        end_index = 1
+        while end_index < len(entries) and not _SIMPLE_HEADING_RE.match(entries[end_index][0]):
+            end_index += 1
+        candidates.append(_candidate_from_entries(entries[:end_index], heading=False))
+        i = end_index
+    while i < len(entries):
+        stripped = entries[i][0]
+        if _SIMPLE_HEADING_RE.match(stripped):
+            candidates.append(_candidate_from_entries(entries[i : i + 1], heading=True))
+            i += 1
+            continue
+        if _NUMBERED_RE.match(stripped):
+            end_index = i + 1
+            expected_nested = 1
+            while end_index < len(entries):
+                next_text = entries[end_index][0]
+                if _SIMPLE_HEADING_RE.match(next_text):
+                    break
+                next_number = _leading_arabic_number(next_text)
+                if next_number is not None:
+                    if next_number == expected_nested and _opens_nested_list(stripped):
+                        expected_nested += 1
+                        end_index += 1
+                        continue
+                    break
+                end_index += 1
+            candidates.append(_candidate_from_entries(entries[i:end_index], heading=False))
+            i = end_index
+            continue
+        candidates.append(_candidate_from_entries(entries[i : i + 1], heading=False))
+        i += 1
+    return candidates
+
+
+def _high_court_olomouc_line_candidates(text: str) -> list[_ParagraphCandidate]:
+    entries = _line_entries(text)
+    candidates: list[_ParagraphCandidate] = []
+    reasoning_index = next((idx for idx, entry in enumerate(entries) if entry[0].casefold() == "odůvodnění"), len(entries))
+    i = 0
+    while i < reasoning_index:
+        stripped = entries[i][0]
+        if _SIMPLE_HEADING_RE.match(stripped) or _ROMAN_ONLY_RE.match(stripped):
+            candidates.append(_candidate_from_entries(entries[i : i + 1], heading=True))
+            i += 1
+            continue
+        end_index = i + 1
+        while end_index < reasoning_index:
+            next_text = entries[end_index][0]
+            if _SIMPLE_HEADING_RE.match(next_text) or _ROMAN_ONLY_RE.match(next_text):
+                break
+            if _DASH_BULLET_RE.match(next_text) or _leading_arabic_number(next_text) is not None:
+                break
+            end_index += 1
+        candidates.append(_candidate_from_entries(entries[i:end_index], heading=False))
+        i = end_index
+    if i < len(entries) and i == reasoning_index:
+        candidates.append(_candidate_from_entries(entries[i : i + 1], heading=True))
+        i += 1
+    expected = 1
+    while i < len(entries):
+        stripped = entries[i][0]
+        if _olomouc_top_level_reasoning_start(stripped, expected):
+            end_index = i + 1
+            expected += 1
+            while end_index < len(entries):
+                if _olomouc_top_level_reasoning_start(entries[end_index][0], expected):
+                    break
+                end_index += 1
+            candidates.append(_candidate_from_entries(entries[i:end_index], heading=False))
+            i = end_index
+            continue
+        candidates.append(_candidate_from_entries(entries[i : i + 1], heading=False))
+        i += 1
+    return candidates
+
+
+def _line_entries(text: str) -> list[tuple[str, int, int]]:
+    entries: list[tuple[str, int, int]] = []
+    offset = 0
+    for line in text.splitlines(keepends=True):
+        raw = line.rstrip("\n")
+        stripped = raw.strip()
+        line_start = offset
+        line_end = offset + len(raw)
+        offset += len(line)
+        if stripped:
+            entries.append((stripped, line_start, line_end))
+    return entries
+
+
+def _candidate_from_entries(entries: list[tuple[str, int, int]], *, heading: bool) -> _ParagraphCandidate:
+    text = " ".join(entry[0] for entry in entries).strip()
+    return _ParagraphCandidate(
+        text=text,
+        start=entries[0][1],
+        end=entries[-1][2],
+        numbering=_extract_numbering(text),
+        heading=heading,
+    )
+
+
+def _is_constitutional_singleton(text: str) -> bool:
+    return any(
+        pattern.match(text)
+        for pattern in (
+            _NALUS_US_HEADER_RE,
+            _US_CASE_DATE_RE,
+            _US_STATE_RE,
+            _US_DECISION_TYPE_RE,
+            _REASONING_HEADING_RE,
+            _INSTRUCTION_START_RE,
+            _BRNO_DATE_RE,
+            _SIGNATURE_ROLE_RE,
+        )
+    )
+
+
+def _is_constitutional_heading(text: str) -> bool:
+    return bool(_US_DECISION_TYPE_RE.match(text) or _US_COURT_TITLE_RE.match(text) or _REASONING_HEADING_RE.match(text))
+
+
+def _looks_like_section_caption(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped or _NUMBERED_RE.match(stripped):
+        return False
+    if len(stripped.split()) > 12:
+        return False
+    return bool(stripped[0].isupper())
+
+
+def _leading_arabic_number(text: str) -> int | None:
+    match = _NUMBERED_RE.match(text)
+    if not match:
+        return None
+    value = next((group for group in match.groups() if group), None)
+    return int(value) if value is not None else None
+
+
+def _opens_nested_list(text: str) -> bool:
+    stripped = text.strip()
+    return stripped.endswith(":") or stripped.endswith("že") or "obsahuje:" in stripped.casefold()
+
+
+def _olomouc_top_level_reasoning_start(text: str, expected_number: int) -> bool:
+    match = _NUMBERED_RE.match(text)
+    if not match:
+        return False
+    value = next((group for group in match.groups() if group), None)
+    if value is None or int(value) != expected_number:
+        return False
+    rest = text[match.end() :].strip()
+    if not rest or not rest[0].isupper():
+        return False
+    if _DASH_BULLET_RE.match(rest) or _LETTER_ITEM_RE.match(rest):
+        return False
+    if _SEMICOLON_TABLE_RE.search(text) and text.count(";") >= 2:
+        return False
+    return True
 
 
 def _line_based_candidates(text: str) -> list[_ParagraphCandidate]:
@@ -418,6 +668,28 @@ def _section_from_text(text: str, current: SectionType) -> SectionType:
         if any(keyword in lowered for keyword in keywords):
             return section
     return current
+
+
+def _constitutional_section_from_text(text: str, current: SectionType) -> SectionType:
+    if _US_DECISION_FORMULA_START_RE.match(text):
+        return SectionType.OPERATIVE_PART
+    if current == SectionType.OPERATIVE_PART:
+        if _REASONING_HEADING_RE.match(text):
+            return SectionType.COURT_REASONING
+        return SectionType.OPERATIVE_PART
+    if current == SectionType.COURT_REASONING:
+        if _INSTRUCTION_START_RE.match(text):
+            return SectionType.INSTRUCTION
+        if _BRNO_DATE_RE.match(text) or _SIGNATURE_NAME_RE.search(text) or _SIGNATURE_ROLE_RE.match(text):
+            return SectionType.HEADER
+        return SectionType.COURT_REASONING
+    if _INSTRUCTION_START_RE.match(text):
+        return SectionType.INSTRUCTION
+    if _BRNO_DATE_RE.match(text) or _SIGNATURE_NAME_RE.search(text) or _SIGNATURE_ROLE_RE.match(text):
+        return SectionType.HEADER
+    if _NALUS_US_HEADER_RE.match(text) or _US_CASE_DATE_RE.match(text) or _US_STATE_RE.match(text):
+        return SectionType.HEADER
+    return _section_from_text(text, current)
 
 
 def _is_citation_block(text: str) -> bool:
