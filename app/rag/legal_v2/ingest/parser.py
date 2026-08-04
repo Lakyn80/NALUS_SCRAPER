@@ -17,6 +17,7 @@ from app.rag.legal_v2.models import (
 
 _NUMBERED_RE = re.compile(r"^\s*(?:\[(\d{1,4})\]|(\d{1,4})[.)])\s+")
 _ROMAN_RE = re.compile(r"^\s*(I{1,3}|IV|V|VI{0,3}|IX|X)[.)]\s+")
+_ROMAN_ONLY_RE = re.compile(r"^\s*(I{1,3}|IV|V|VI{0,3}|IX|X)[.)]?\s*$", re.IGNORECASE)
 _HEADING_RE = re.compile(r"^\s*(I{1,3}|IV|V|VI{0,3}|IX|X)?\.?\s*([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ\s]{3,})\s*$")
 _HEADING_PREFIX_RE = re.compile(r"^\s*(?:(?:I{1,3}|IV|V|VI{0,3}|IX|X)[.)]\s+)?(.+?)\s*:?\s*$", re.IGNORECASE)
 _SENTENCE_BOUNDARY_RE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0-9])")
@@ -46,10 +47,39 @@ _HEADING_SECTION_HINTS: tuple[tuple[SectionType, tuple[str, ...]], ...] = (
     (SectionType.INSTRUCTION, ("poučení",)),
 )
 _EXACT_HEADING_TITLES: tuple[tuple[SectionType, tuple[str, ...]], ...] = (
+    (
+        SectionType.HEADER,
+        (
+            "česká republika",
+            "ústavní soud",
+            "vrchní soud v praze",
+            "vrchní soud v olomouci",
+            "nález",
+            "usnesení",
+            "rozsudek",
+            "jménem republiky",
+            "rozsudek jménem republiky",
+        ),
+    ),
     (SectionType.PARTICIPANTS, ("účastníci řízení", "účastníci", "účastníků řízení")),
-    (SectionType.PROCEDURAL_HISTORY, ("průběh řízení", "dosavadní průběh řízení")),
-    (SectionType.FACTS, ("skutkový stav", "skutková zjištění")),
-    (SectionType.PARTY_ARGUMENTS, ("argumentace", "námitky", "vyjádření")),
+    (
+        SectionType.PROCEDURAL_HISTORY,
+        (
+            "průběh řízení",
+            "dosavadní průběh řízení",
+            "procesní předpoklady řízení před ústavním soudem",
+            "průběh řízení před ústavním soudem",
+        ),
+    ),
+    (
+        SectionType.FACTS,
+        (
+            "skutkový stav",
+            "skutková zjištění",
+            "vymezení věci a obsah napadeného rozhodnutí",
+        ),
+    ),
+    (SectionType.PARTY_ARGUMENTS, ("argumentace", "argumentace stěžovatele", "námitky", "vyjádření")),
     (SectionType.LEGAL_FRAMEWORK, ("právní úprava", "relevantní právo")),
     (SectionType.CITED_CASE, ("judikatura", "citovaná judikatura")),
     (
@@ -57,9 +87,11 @@ _EXACT_HEADING_TITLES: tuple[tuple[SectionType, tuple[str, ...]], ...] = (
         (
             "odůvodnění",
             "posouzení",
+            "posouzení důvodnosti ústavní stížnosti",
             "posouzení ústavního soudu",
             "právní posouzení",
             "hodnocení",
+            "závěr",
         ),
     ),
     (SectionType.OPERATIVE_PART, ("výrok", "takto")),
@@ -88,6 +120,7 @@ class _ParagraphCandidate:
 class _LineKind(str, Enum):
     NUMBERED_PARAGRAPH_START = "numbered_paragraph_start"
     ROMAN_BOUNDARY = "roman_boundary"
+    ROMAN_SECTION_MARKER = "roman_section_marker"
     NUMBERED_PARAGRAPH_CONTINUATION = "numbered_paragraph_continuation"
     HEADING = "heading"
     PROSE = "prose"
@@ -237,6 +270,7 @@ def _line_based_candidates(text: str) -> list[_ParagraphCandidate]:
         starts_new = kind in {
             _LineKind.NUMBERED_PARAGRAPH_START,
             _LineKind.ROMAN_BOUNDARY,
+            _LineKind.ROMAN_SECTION_MARKER,
             _LineKind.HEADING,
         }
         if starts_new and current:
@@ -250,7 +284,11 @@ def _line_based_candidates(text: str) -> list[_ParagraphCandidate]:
         current_end = line_end
         if kind is _LineKind.NUMBERED_PARAGRAPH_START:
             current_numbering = _extract_numbering(stripped)
-        elif kind in {_LineKind.HEADING, _LineKind.ROMAN_BOUNDARY}:
+        elif kind in {
+            _LineKind.HEADING,
+            _LineKind.ROMAN_BOUNDARY,
+            _LineKind.ROMAN_SECTION_MARKER,
+        }:
             _flush_candidate(candidates, current, current_start, current_end)
             current = []
             current_start = None
@@ -328,6 +366,8 @@ def _classify_line(text: str, *, active_numbering: str | None) -> _LineKind:
         if _is_heading(text):
             return _LineKind.HEADING
         return _LineKind.NUMBERED_PARAGRAPH_CONTINUATION
+    if _ROMAN_ONLY_RE.match(text):
+        return _LineKind.ROMAN_SECTION_MARKER
     if _ROMAN_RE.match(text):
         return _LineKind.ROMAN_BOUNDARY
     if _is_heading(text):
@@ -343,6 +383,8 @@ def _is_heading(text: str) -> bool:
         return False
     if stripped.endswith(".") and len(stripped.split()) > 3:
         return False
+    if _ROMAN_ONLY_RE.match(stripped):
+        return True
     if _HEADING_RE.match(stripped):
         return True
     return _heading_section_from_text(stripped) is not None

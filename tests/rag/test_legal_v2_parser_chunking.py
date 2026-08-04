@@ -232,7 +232,68 @@ def test_parser_preserves_stable_paragraph_ids_and_damaged_formatting() -> None:
 def test_parser_profile_version_identifies_corrected_paragraph_parser() -> None:
     from app.rag.legal_v2.audit import PARSER_VERSION
 
-    assert PARSER_VERSION == "legal-paragraph-parser.v3"
+    assert PARSER_VERSION == "legal-decision-parser.cz-courts.v4"
+
+
+def test_parser_preserves_roman_only_section_markers_from_constitutional_court() -> None:
+    text = "\n".join(
+        [
+            "Odůvodnění:",
+            "I.",
+            "Vymezení věci a obsah napadeného rozhodnutí",
+            "1. Ústavní soud posoudil napadené rozhodnutí.",
+            "II.",
+            "Argumentace stěžovatele",
+            "2. Stěžovatel namítá porušení práva na soudní ochranu.",
+        ]
+    )
+
+    parsed = parse_legal_document(document_id="DOC-ROMAN-US", text=text)
+
+    assert [paragraph.original_text for paragraph in parsed.paragraphs] == [
+        "Odůvodnění:",
+        "I.",
+        "Vymezení věci a obsah napadeného rozhodnutí",
+        "1. Ústavní soud posoudil napadené rozhodnutí.",
+        "II.",
+        "Argumentace stěžovatele",
+        "2. Stěžovatel namítá porušení práva na soudní ochranu.",
+    ]
+    assert parsed.diagnostics.heading_count >= 5
+    assert [paragraph.numbering for paragraph in parsed.paragraphs if paragraph.numbering] == ["1", "2"]
+
+
+def test_parser_recognizes_high_court_whole_line_decision_headings() -> None:
+    text = "\n".join(
+        [
+            "Vrchní soud v Praze",
+            "ROZSUDEK JMÉNEM REPUBLIKY",
+            "Výrok",
+            "1. Rozsudek soudu prvního stupně se potvrzuje.",
+            "Odůvodnění",
+            "2. Odvolací soud přezkoumal napadené rozhodnutí.",
+            "Poučení",
+            "Proti tomuto rozhodnutí není dovolání přípustné.",
+        ]
+    )
+
+    parsed = parse_legal_document(document_id="DOC-VSPH", text=text)
+
+    assert [paragraph.original_text for paragraph in parsed.paragraphs] == [
+        "Vrchní soud v Praze",
+        "ROZSUDEK JMÉNEM REPUBLIKY",
+        "Výrok",
+        "1. Rozsudek soudu prvního stupně se potvrzuje.",
+        "Odůvodnění",
+        "2. Odvolací soud přezkoumal napadené rozhodnutí.",
+        "Poučení",
+        "Proti tomuto rozhodnutí není dovolání přípustné.",
+    ]
+    assert parsed.diagnostics.heading_count >= 5
+    assert parsed.paragraphs[0].section_type == SectionType.HEADER
+    assert parsed.paragraphs[2].section_type == SectionType.OPERATIVE_PART
+    assert parsed.paragraphs[4].section_type == SectionType.COURT_REASONING
+    assert parsed.paragraphs[6].section_type == SectionType.INSTRUCTION
 
 
 def test_chunking_merges_splits_overlaps_and_preserves_reconstruction() -> None:

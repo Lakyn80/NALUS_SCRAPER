@@ -1,5 +1,23 @@
 # Project Progress
 
+## 2026-08-04 Europe/Moscow - Task: Czech court format study and parser v4
+
+- Goal:
+  Build a reproducible raw/faithful-source format study for 10 Constitutional Court, 5 High Court Prague, and 5 High Court Olomouc design decisions plus a non-overlapping 10/5/5 holdout; generalize the Legal v2 parser only where the study provides structural evidence.
+- Scope:
+  Parser-format study in `fix/legal-paragraph-parser`. No `main` worktree edit, retrieval-core edit, Qdrant/BM25 access, index rebuild, embeddings, provider/model call, Docker, frontend, API, QuerySpec, verifier, or retrieval ranking change.
+- Implementation:
+  Added `scripts/legal_v2/court_format_study.py` to acquire official NALUS and Justice Open Data sources into ignored artifacts, create sample manifests, line and boundary annotations, taxonomy, evidence matrix, design/holdout validation, and acceptance reports. Parser profile is now `legal-decision-parser.cz-courts.v4`.
+  `app/rag/legal_v2/ingest/parser.py` now recognizes standalone Roman section markers and bounded whole-line Czech court headings observed in the study while preserving the v3 invariant that numbered paragraphs cannot be overridden by keyword substring heading detection.
+- Study result:
+  Latest ignored artifacts under `artifacts/legal_v2/court_format_study/` recorded candidate population 93, design 20/20 with 10/5/5 court split, holdout 20/20 with 10/5/5 court split, no design/holdout overlap, design result pass, holdout result pass, parser exceptions 0, conservation failures 0, duplicate-text failures 0, ordering failures 0, orphan `sp. zn.` 0, orphan `č. j.` 0.
+- Documentation:
+  Added `docs/retrieval-enterprise/CZECH_COURT_FORMAT_STUDY.md` and linked it from the v3 parser note. Raw downloaded decisions remain ignored and are not committed.
+- Known limitations:
+  This is a bounded parser-format study for three court families, not universal Czech-court support and not retrieval-quality proof. Existing v2/v3 indexes and manifests were not modified.
+- Next recommended task:
+  Review the v4 study artifacts and, if approved, run a separate controlled task to rebuild an isolated v4 pilot index and measure chunk-boundary/retrieval impact.
+
 ## 2026-08-04 Europe/Moscow - Task: Legal paragraph parser v3 multiline numbered paragraphs
 
 - Goal:

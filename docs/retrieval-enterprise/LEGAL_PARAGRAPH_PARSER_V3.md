@@ -1,6 +1,7 @@
 # Legal Paragraph Parser V3
 
-Status: parser-boundary fix only. No index has been rebuilt from this profile.
+Status: superseded by `legal-decision-parser.cz-courts.v4` for the sampled
+Czech-court format study. No index has been rebuilt from either profile.
 
 ## Root Cause
 
@@ -97,6 +98,12 @@ nalus_legal_paragraph_bm25_v3_pilot_600
 ```
 
 This task does not create those resources.
+
+The follow-up format study is documented in:
+
+```text
+docs/retrieval-enterprise/CZECH_COURT_FORMAT_STUDY.md
+```
 
 ## Audit
 
