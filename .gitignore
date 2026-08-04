@@ -22,6 +22,11 @@ run*.log
 report.html
 test_results.txt
 vsledky_vyhledavani.txt
+# Generated evaluation, build, and runtime reports. Tracked artifact fixtures
+# remain versioned; intentionally new durable artifacts require explicit force-add.
+artifacts/
+app/artifacts/
+test-results/
 artifacts/rag_eval/client_longform_v1/logs/
 artifacts/rag_eval/client_longform_v1/out_*/
 artifacts/rag_eval/client_longform_v1/ranking.json
