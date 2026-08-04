@@ -342,6 +342,40 @@ dd {
 .occurrence.excluded {
   opacity: 0.72;
 }
+.full-corpus-view .export-links {
+  margin: 0.75rem 0 1.25rem;
+}
+.full-corpus-view .export-links a {
+  color: #16324f;
+  font-weight: 600;
+}
+.corpus-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-bottom: 1.5rem;
+}
+.corpus-card {
+  border: 1px solid #d6dae0;
+  padding: 12px;
+  background: #fbfcfd;
+}
+.corpus-card.golden {
+  border-left: 4px solid #1f7a4c;
+}
+.corpus-card.remaining {
+  border-left: 4px solid #9a6b12;
+}
+.corpus-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+#copyDocumentReview {
+  margin-left: 8px;
+}
 @media (max-width: 1100px) {
   body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   aside {

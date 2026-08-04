@@ -8,11 +8,16 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from .full_export import DEFAULT_OUTPUT_DIR, JSON_NAME, MARKDOWN_NAME
 from .models import DEFAULT_REVIEW_DIR
 from .security import assert_local_bind
 from .web_api import ReviewApi
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+EXPORT_FILES = {
+    f"/exports/{JSON_NAME}": (DEFAULT_OUTPUT_DIR / JSON_NAME, "application/json; charset=utf-8"),
+    f"/exports/{MARKDOWN_NAME}": (DEFAULT_OUTPUT_DIR / MARKDOWN_NAME, "text/markdown; charset=utf-8"),
+}
 
 
 class ReviewRequestHandler(SimpleHTTPRequestHandler):
@@ -25,6 +30,9 @@ class ReviewRequestHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path.startswith("/api/"):
             self._send_api(lambda: self.api.get(parsed.path, parse_qs(parsed.query)))
+            return
+        if parsed.path in EXPORT_FILES:
+            self._send_export(parsed.path)
             return
         if parsed.path == "/":
             self.path = "/index.html"
@@ -48,6 +56,19 @@ class ReviewRequestHandler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_export(self, path: str) -> None:
+        file_path, content_type = EXPORT_FILES[path]
+        if not file_path.exists():
+            self.send_error(404, "Export file not found. Generate it with export_parser_v6_full_review.py")
+            return
+        body = file_path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Disposition", f'attachment; filename="{file_path.name}"')
         self.end_headers()
         self.wfile.write(body)
 

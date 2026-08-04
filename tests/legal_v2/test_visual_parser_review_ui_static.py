@@ -92,3 +92,21 @@ def test_review_ui_separates_parser_validation_from_manual_review() -> None:
     assert ".status-badge.success" in css
     assert ".status-badge.review" in css
     assert ".status-badge.manual" in css
+
+
+def test_review_ui_exposes_full_corpus_v6_view_and_exports() -> None:
+    html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    css = (STATIC_DIR / "styles.css").read_text(encoding="utf-8")
+    js = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+
+    assert '<option value="full-corpus-v6">Full corpus v6 review</option>' in html
+    assert 'id="copyDocumentReview"' in html
+    assert "renderFullCorpusV6" in js
+    assert "/api/full-corpus-v6" in js
+    assert "/api/full-corpus-v6/document-markdown" in js
+    assert "Download complete JSON" in js
+    assert "Download complete Markdown" in js
+    assert "Copy document review" in js
+    assert ".full-corpus-view" in css
+    assert ".corpus-card.golden" in css
+    assert ".corpus-card.remaining" in css

@@ -1,5 +1,22 @@
 # Project Progress
 
+## 2026-08-05 Europe/Moscow — Task: Commit parser v6 + full corpus review export
+
+- Goal:
+  Commit the completed Czech courts parser v6 and validation UX, then produce a complete offline JSON/Markdown review export for the 17 non-golden review documents and expose it in the local HTML review application.
+- Worktree:
+  `nalus-scraper-parser-fix` on `fix/legal-paragraph-parser`. Starting HEAD was `14c1e300c46872640ebebfb84cf6e8d6686dec7b`. First commit: `feat(parser): add Czech courts parser v6 and validation UX`. Second commit: `feat(parser-review): add full corpus v6 audit export`. No push.
+- Parser/corpus:
+  Profile remained `legal-decision-parser.cz-courts.v6`. All 20 review documents were reparsed into a temporary snapshot, validated, then promoted into the real parser-derived review snapshot. Golden documents 05/11/16 remained exact GOLDEN PASS. Audit: conservation 0, duplication 0, ordering 0, parser exceptions 0.
+- Export:
+  Added `scripts/legal_v2/export_parser_v6_full_review.py` and `scripts/legal_v2/parser_review/full_export.py`. Generated ignored artifacts `artifacts/legal_v2/parser_v6_full_review/parser_v6_remaining_17_full.json` and `.md` with complete lines/boundaries/blocks for the 17 remaining documents. Statuses remain truthful automatic labels only (`PARSER_VALIDATED` / `PARSER_CHANGED_NEEDS_REVIEW`); no manual approvals were created.
+- HTML/API:
+  Added `Full corpus v6 review` view, JSON/Markdown download routes under `/exports/`, and `Copy document review` for complete per-document Markdown. Existing Lines, Boundaries, Changed by parser v6, Problems, Progress, and Assisted Review views remain available.
+- Manual-review safety:
+  Decision store stayed SHA-256 `F98CD519CCF28310706F70B0D65F2F15FDFC28CC530304CD4FF79890219A28FB`; history stayed `5E0E86E5A2210800A514341E6A7A87210EBC2EC7504D379BA6DB2542EB82FACD`. Document 2 remains 13/13 lines and 12/12 boundaries. Assisted batches applied: 0.
+- Next recommended task:
+  Human review of the 17-document export queue, starting with changed headings, numbered paragraphs, nested lists/tables, and possible overmerge/undersplit candidates, without treating automatic parser validation as manual approval.
+
 ## 2026-08-04 Europe/Moscow - Task: Constitutional Court parser v5 from completed review document 2
 
 - Goal:

@@ -71,6 +71,7 @@ async function render() {
   if (mode === "parser-v6-changes") return renderParserV6Changes();
   if (mode === "problems") return renderProblems();
   if (mode === "progress") return renderProgressView();
+  if (mode === "full-corpus-v6") return renderFullCorpusV6();
   if (mode === "boundaries") return renderBoundaries();
   return renderLines();
 }
@@ -364,6 +365,50 @@ async function renderProgressView() {
   </section>`;
 }
 
+async function renderFullCorpusV6() {
+  const data = await getJson("/api/full-corpus-v6");
+  const renderDoc = (doc, golden) => `<article class="corpus-card ${golden ? "golden" : "remaining"}">
+    <header>
+      <h3>${String(doc.review_number).padStart(2, "0")} · ${escapeHtml(doc.court)} · ${escapeHtml(doc.case_number || doc.source_id)}</h3>
+      <span class="status-badge ${parserStatusClass(doc.parser_validation_status)}">${escapeHtml(doc.display_parser_label)}</span>
+    </header>
+    <p><strong>Document ID:</strong> ${escapeHtml(doc.document_id)} · <strong>Source:</strong> ${escapeHtml(doc.source_id)}</p>
+    <p><strong>Exact golden:</strong> ${doc.exact_golden_coverage ? "yes" : "no"}</p>
+    <p><strong>Changed:</strong> lines ${doc.changed_line_count}, boundaries ${doc.changed_boundary_count}, blocks ${doc.changed_block_count}</p>
+    <p><strong>Hierarchy:</strong> blocks ${doc.hierarchy_summary.block_count}, numbered ${doc.hierarchy_summary.numbered_paragraph_count}, lists/tables ${doc.hierarchy_summary.list_or_table_count}, headings ${doc.hierarchy_summary.heading_count}</p>
+    <p><strong>Manual review:</strong> ${doc.manual_line_reviewed}/${doc.manual_line_total} lines · ${doc.manual_boundary_reviewed}/${doc.manual_boundary_total} boundaries</p>
+    <p><strong>Potential review candidates:</strong> ${doc.potential_review_candidates.review_recommended ? "review recommended" : "no parser-change review queue"}</p>
+    ${golden ? "" : `<button type="button" onclick="copyDocumentReviewById('${doc.document_id}')">Copy document review</button>`}
+  </article>`;
+  document.getElementById("work").innerHTML = `<section class="full-corpus-view">
+    <h3>Full corpus v6 review</h3>
+    <p>All 20 documents with golden / non-golden separation. Exact GOLDEN PASS is reserved for documents 05, 11 and 16.</p>
+    <p class="export-links">
+      <a href="${data.exports.json_url}" ${data.exports.json_exists ? "" : 'aria-disabled="true"'}>Download complete JSON</a>
+      ·
+      <a href="${data.exports.markdown_url}" ${data.exports.markdown_exists ? "" : 'aria-disabled="true"'}>Download complete Markdown</a>
+    </p>
+    <h4>Golden documents</h4>
+    <div class="corpus-grid">${data.golden_documents.map(doc => renderDoc(doc, true)).join("")}</div>
+    <h4>Remaining non-golden documents</h4>
+    <div class="corpus-grid">${data.remaining_documents.map(doc => renderDoc(doc, false)).join("")}</div>
+  </section>`;
+}
+
+async function copyDocumentReviewById(documentId) {
+  const data = await getJson(`/api/full-corpus-v6/document-markdown?document_id=${encodeURIComponent(documentId)}`);
+  await navigator.clipboard.writeText(data.markdown);
+  const meta = document.getElementById("documentMeta");
+  if (meta) {
+    meta.innerHTML += `<span class="pill">Copied complete Markdown for document ${data.review_number}</span>`;
+  }
+}
+
+async function copyDocumentReview() {
+  if (!current) return;
+  await copyDocumentReviewById(current.document_id);
+}
+
 function renderParserBadge(item) {
   return `<span class="status-badge ${parserStatusClass(item.parser_validation_status)}">Parser validation: ${escapeHtml(item.parser_validation_label || "PARSER NOT VALIDATED")}</span>`;
 }
@@ -456,4 +501,9 @@ function safeId(value) {
 }
 
 document.getElementById("mode").onchange = render;
+document.getElementById("copyDocumentReview").onclick = () => {
+  copyDocumentReview().catch(err => {
+    document.getElementById("work").textContent = err.message;
+  });
+};
 load().catch(err => { document.getElementById("work").textContent = err.message; });

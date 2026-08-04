@@ -4,11 +4,20 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .full_export import (
+    DEFAULT_OUTPUT_DIR,
+    JSON_NAME,
+    MARKDOWN_NAME,
+    GOLDEN_DOCUMENT_IDS,
+    GOLDEN_REVIEW_NUMBERS,
+    build_export_payload,
+    document_markdown_section,
+)
 from .models import PROJECT_ROOT, REVIEW_SCHEMA_VERSION, read_jsonl
 from .progress import apply_manual_status, compute_progress
 from .assisted import build_assisted_review, load_assisted_artifacts, occurrences_for_rule
 from .batches import apply_batch, revert_batch
-from .status import ReviewStatusBuilder
+from .status import ReviewStatusBuilder, block_ranges_for_lines
 from .store import append_decision
 
 
@@ -63,6 +72,14 @@ class ReviewApi:
         if path == "/api/parser-v6/changes":
             document_id = _optional_param(params, "document_id")
             return 200, {"schema_version": REVIEW_SCHEMA_VERSION, **self._parser_v6_changes(document_id)}
+        if path == "/api/full-corpus-v6":
+            return 200, {"schema_version": REVIEW_SCHEMA_VERSION, **self._full_corpus_v6()}
+        if path == "/api/full-corpus-v6/document-markdown":
+            document_id = _param(params, "document_id")
+            return 200, {
+                "schema_version": REVIEW_SCHEMA_VERSION,
+                **self._document_review_markdown(document_id),
+            }
         if path.startswith("/api/assisted/rules/"):
             parts = [part for part in path.split("/") if part]
             if len(parts) >= 4:
@@ -195,6 +212,96 @@ class ReviewApi:
 
     def _status_builder(self) -> ReviewStatusBuilder:
         return ReviewStatusBuilder(self.review_dir)
+
+    def _full_corpus_v6(self) -> dict[str, Any]:
+        builder = self._status_builder()
+        documents = read_jsonl(self.review_dir / "review_documents.jsonl")
+        enriched = []
+        for row in documents:
+            status = builder.document_status(row)
+            review_number = int(row["review_number"])
+            is_golden = review_number in GOLDEN_REVIEW_NUMBERS or str(row["document_id"]) in GOLDEN_DOCUMENT_IDS
+            lines = [line for line in builder.lines if line["document_id"] == row["document_id"]]
+            boundaries = [boundary for boundary in builder.boundaries if boundary["document_id"] == row["document_id"]]
+            changed_lines = sum(
+                1
+                for line in lines
+                if (str(row["document_id"]), int(line["raw_line_number"])) in builder._changed_class_keys
+            )
+            changed_boundaries = sum(
+                1
+                for boundary in boundaries
+                if (str(row["document_id"]), int(boundary["previous_line_number"])) in builder._changed_boundary_keys
+            )
+            block_ranges = block_ranges_for_lines(lines)
+            changed_blocks = sum(
+                1
+                for line_range in block_ranges
+                if (str(row["document_id"]), (int(line_range[0]), int(line_range[1]))) in builder._changed_block_keys
+            )
+            enriched.append(
+                {
+                    **row,
+                    **status,
+                    "exact_golden_coverage": is_golden,
+                    "corpus_group": "golden" if is_golden else "remaining",
+                    "changed_line_count": changed_lines,
+                    "changed_boundary_count": changed_boundaries,
+                    "changed_block_count": changed_blocks,
+                    "hierarchy_summary": {
+                        "block_count": len(block_ranges),
+                        "numbered_paragraph_count": sum(
+                            1 for line in lines if line.get("parser_proposed_line_class") == "numbered_paragraph_start"
+                        ),
+                        "list_or_table_count": sum(
+                            1 for line in lines if line.get("parser_proposed_line_class") == "list_or_table"
+                        ),
+                        "heading_count": sum(1 for line in lines if line.get("parser_proposed_line_class") == "heading"),
+                    },
+                    "potential_review_candidates": {
+                        "changed_lines": changed_lines,
+                        "changed_boundaries": changed_boundaries,
+                        "changed_blocks": changed_blocks,
+                        "review_recommended": status["parser_validation_status"] == "PARSER_CHANGED_NEEDS_REVIEW",
+                    },
+                    "display_parser_label": "GOLDEN PASS"
+                    if is_golden and status["parser_validation_label"] == "GOLDEN PASS"
+                    else (
+                        "REVIEW RECOMMENDED"
+                        if status["parser_validation_status"] == "PARSER_CHANGED_NEEDS_REVIEW"
+                        else status["parser_validation_label"]
+                    ),
+                }
+            )
+        json_path = DEFAULT_OUTPUT_DIR / JSON_NAME
+        md_path = DEFAULT_OUTPUT_DIR / MARKDOWN_NAME
+        return {
+            "documents": enriched,
+            "golden_documents": [row for row in enriched if row["corpus_group"] == "golden"],
+            "remaining_documents": [row for row in enriched if row["corpus_group"] == "remaining"],
+            "exports": {
+                "json_path": str(json_path.relative_to(PROJECT_ROOT)) if json_path.exists() else None,
+                "markdown_path": str(md_path.relative_to(PROJECT_ROOT)) if md_path.exists() else None,
+                "json_url": f"/exports/{JSON_NAME}",
+                "markdown_url": f"/exports/{MARKDOWN_NAME}",
+                "json_exists": json_path.exists(),
+                "markdown_exists": md_path.exists(),
+            },
+        }
+
+    def _document_review_markdown(self, document_id: str) -> dict[str, Any]:
+        document = self._document(document_id)
+        export_path = DEFAULT_OUTPUT_DIR / JSON_NAME
+        if export_path.exists():
+            payload = json.loads(export_path.read_text(encoding="utf-8"))
+        else:
+            payload = build_export_payload(snapshot_dir=self.review_dir)
+        markdown = document_markdown_section(payload, str(document["document_id"]))
+        return {
+            "document_id": document["document_id"],
+            "review_number": document["review_number"],
+            "markdown": markdown,
+        }
 
 
 def _param(params: dict[str, list[str]], name: str) -> str:

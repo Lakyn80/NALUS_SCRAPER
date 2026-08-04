@@ -61,6 +61,23 @@ artifacts/legal_v2/parser_v6_audit/
 
 They include golden input checksums, v5-vs-v6 comparison outputs, changed line/boundary/block queues, hierarchy/table audits, corpus acceptance summaries, and the document-2 parser-profile migration record.
 
+## Full-corpus review export
+
+The reusable offline exporter is:
+
+```text
+scripts/legal_v2/export_parser_v6_full_review.py
+```
+
+Default outputs (ignored artifacts):
+
+```text
+artifacts/legal_v2/parser_v6_full_review/parser_v6_remaining_17_full.json
+artifacts/legal_v2/parser_v6_full_review/parser_v6_remaining_17_full.md
+```
+
+The export covers every line, boundary, and parser block for the 17 non-golden review documents, plus concise GOLDEN PASS summaries for documents 05, 11, and 16. Non-golden documents are never marked exact golden or manually approved by the exporter. The local review UI exposes a `Full corpus v6 review` view with JSON/Markdown download links and a per-document copy action.
+
 ## Known Limitations
 
-The profile is deterministic and bounded to the observed Czech court structures. It does not claim full support for every future court format, damaged OCR layout, scanned tables without textual delimiters, or courts outside the three profiled families. Unsupported structures should be added through new golden evidence and court-profile tests rather than broad citation or date heuristics.
+The profile is deterministic and bounded to the observed Czech court structures. It does not claim full support for every future court format, damaged OCR layout, scanned tables without textual delimiters, or courts outside the three profiled families. Unsupported structures should be added through new golden evidence and court-profile tests rather than broad citation or date heuristics. The 17 non-golden review documents remain a review queue, not correctness proof.
