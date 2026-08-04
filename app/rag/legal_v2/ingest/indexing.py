@@ -4,7 +4,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from app.rag.legal_v2.chunking import RetrievalChildChunk
+from app.rag.legal_v2.audit import PARSER_VERSION
+from app.rag.legal_v2.ingest.chunking import RetrievalChildChunk
 from app.rag.retrieval.provenance import build_embedding_provenance, content_checksum
 from app.rag.retrieval.production_profile import RetrievalProfile
 
@@ -78,7 +79,7 @@ def payload_for_child_chunk(
         "document_type": metadata.get("document_type"),
         "is_boilerplate": metadata.get("is_boilerplate", False),
         "is_citation_block": metadata.get("is_citation_block", False),
-        "parser_version": metadata.get("parser_version", "legal_v2_parser_adapter_registry_v1"),
+        "parser_version": metadata.get("parser_version", PARSER_VERSION),
         "chunker_version": metadata.get("chunker_version", "legal_v2_hierarchical_chunker_v1"),
         "document_content_hash": metadata.get("document_content_hash"),
         "retrieval_profile": LEGAL_V2_PROFILE.name,

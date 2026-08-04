@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from app.rag.legal_v2.adapters import LegalAdapterRegistry, LegalSourceDocument
-from app.rag.legal_v2.chunking import HierarchicalChunkConfig, build_hierarchical_chunks
+from app.rag.legal_v2.ingest.adapters import LegalAdapterRegistry, LegalSourceDocument
+from app.rag.legal_v2.ingest.chunking import HierarchicalChunkConfig, build_hierarchical_chunks
 
-PARSER_VERSION = "legal_v2_parser_adapter_registry_v1"
+PARSER_VERSION = "legal-paragraph-parser.v3"
 CHUNKER_VERSION = "legal_v2_hierarchical_chunker_v1"
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
 from app.rag.legal_v2.models import (
@@ -17,6 +18,7 @@ from app.rag.legal_v2.models import (
 _NUMBERED_RE = re.compile(r"^\s*(?:\[(\d{1,4})\]|(\d{1,4})[.)])\s+")
 _ROMAN_RE = re.compile(r"^\s*(I{1,3}|IV|V|VI{0,3}|IX|X)[.)]\s+")
 _HEADING_RE = re.compile(r"^\s*(I{1,3}|IV|V|VI{0,3}|IX|X)?\.?\s*([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ\s]{3,})\s*$")
+_HEADING_PREFIX_RE = re.compile(r"^\s*(?:(?:I{1,3}|IV|V|VI{0,3}|IX|X)[.)]\s+)?(.+?)\s*:?\s*$", re.IGNORECASE)
 _SENTENCE_BOUNDARY_RE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0-9])")
 
 _SECTION_KEYWORDS: tuple[tuple[SectionType, tuple[str, ...]], ...] = (
@@ -43,6 +45,26 @@ _HEADING_SECTION_HINTS: tuple[tuple[SectionType, tuple[str, ...]], ...] = (
     (SectionType.OPERATIVE_PART, ("výrok", "takto")),
     (SectionType.INSTRUCTION, ("poučení",)),
 )
+_EXACT_HEADING_TITLES: tuple[tuple[SectionType, tuple[str, ...]], ...] = (
+    (SectionType.PARTICIPANTS, ("účastníci řízení", "účastníci", "účastníků řízení")),
+    (SectionType.PROCEDURAL_HISTORY, ("průběh řízení", "dosavadní průběh řízení")),
+    (SectionType.FACTS, ("skutkový stav", "skutková zjištění")),
+    (SectionType.PARTY_ARGUMENTS, ("argumentace", "námitky", "vyjádření")),
+    (SectionType.LEGAL_FRAMEWORK, ("právní úprava", "relevantní právo")),
+    (SectionType.CITED_CASE, ("judikatura", "citovaná judikatura")),
+    (
+        SectionType.COURT_REASONING,
+        (
+            "odůvodnění",
+            "posouzení",
+            "posouzení ústavního soudu",
+            "právní posouzení",
+            "hodnocení",
+        ),
+    ),
+    (SectionType.OPERATIVE_PART, ("výrok", "takto")),
+    (SectionType.INSTRUCTION, ("poučení",)),
+)
 
 _BOILERPLATE_RE = re.compile(
     r"(ústavní soud rozhodl|takto:|odůvodnění:|poučení:|za účasti|soudce zpravodaj)",
@@ -61,6 +83,14 @@ class _ParagraphCandidate:
     end: int
     numbering: str | None = None
     heading: bool = False
+
+
+class _LineKind(str, Enum):
+    NUMBERED_PARAGRAPH_START = "numbered_paragraph_start"
+    ROMAN_BOUNDARY = "roman_boundary"
+    NUMBERED_PARAGRAPH_CONTINUATION = "numbered_paragraph_continuation"
+    HEADING = "heading"
+    PROSE = "prose"
 
 
 def parse_legal_document(
@@ -189,6 +219,7 @@ def _line_based_candidates(text: str) -> list[_ParagraphCandidate]:
     current: list[str] = []
     current_start: int | None = None
     current_end = 0
+    current_numbering: str | None = None
     offset = 0
     for line in text.splitlines(keepends=True):
         raw = line.rstrip("\n")
@@ -200,20 +231,30 @@ def _line_based_candidates(text: str) -> list[_ParagraphCandidate]:
             _flush_candidate(candidates, current, current_start, current_end)
             current = []
             current_start = None
+            current_numbering = None
             continue
-        starts_new = bool(_NUMBERED_RE.match(stripped) or _ROMAN_RE.match(stripped) or _is_heading(stripped))
+        kind = _classify_line(stripped, active_numbering=current_numbering)
+        starts_new = kind in {
+            _LineKind.NUMBERED_PARAGRAPH_START,
+            _LineKind.ROMAN_BOUNDARY,
+            _LineKind.HEADING,
+        }
         if starts_new and current:
             _flush_candidate(candidates, current, current_start, current_end)
             current = []
             current_start = None
+            current_numbering = None
         if current_start is None:
             current_start = line_start
         current.append(stripped)
         current_end = line_end
-        if _is_heading(stripped):
+        if kind is _LineKind.NUMBERED_PARAGRAPH_START:
+            current_numbering = _extract_numbering(stripped)
+        elif kind in {_LineKind.HEADING, _LineKind.ROMAN_BOUNDARY}:
             _flush_candidate(candidates, current, current_start, current_end)
             current = []
             current_start = None
+            current_numbering = None
     _flush_candidate(candidates, current, current_start, current_end)
     return candidates
 
@@ -280,24 +321,53 @@ def _extract_numbering(text: str) -> str | None:
     return roman_match.group(1) if roman_match else None
 
 
+def _classify_line(text: str, *, active_numbering: str | None) -> _LineKind:
+    if _NUMBERED_RE.match(text):
+        return _LineKind.NUMBERED_PARAGRAPH_START
+    if active_numbering is not None:
+        if _is_heading(text):
+            return _LineKind.HEADING
+        return _LineKind.NUMBERED_PARAGRAPH_CONTINUATION
+    if _ROMAN_RE.match(text):
+        return _LineKind.ROMAN_BOUNDARY
+    if _is_heading(text):
+        return _LineKind.HEADING
+    return _LineKind.PROSE
+
+
 def _is_heading(text: str) -> bool:
     stripped = text.strip()
+    if _NUMBERED_RE.match(stripped):
+        return False
     if len(stripped) > 120 or len(stripped.split()) > 10:
         return False
     if stripped.endswith(".") and len(stripped.split()) > 3:
         return False
     if _HEADING_RE.match(stripped):
         return True
-    lowered = stripped.lower()
-    return any(keyword in lowered for _, keywords in _HEADING_SECTION_HINTS for keyword in keywords)
+    return _heading_section_from_text(stripped) is not None
 
 
 def _section_from_heading(text: str) -> SectionType:
     lowered = text.lower()
+    exact = _heading_section_from_text(text)
+    if exact is not None:
+        return exact
     for section, keywords in _HEADING_SECTION_HINTS:
         if any(keyword in lowered for keyword in keywords):
             return section
     return SectionType.HEADER if "soud" in lowered else SectionType.OTHER
+
+
+def _heading_section_from_text(text: str) -> SectionType | None:
+    match = _HEADING_PREFIX_RE.match(text)
+    if not match:
+        return None
+    title = normalize_legal_text(match.group(1)).casefold()
+    for section, titles in _EXACT_HEADING_TITLES:
+        if title in titles:
+            return section
+    return None
 
 
 def _section_from_text(text: str, current: SectionType) -> SectionType:

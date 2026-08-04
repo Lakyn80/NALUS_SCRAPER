@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from app.rag.legal_v2.chunking import (
     HierarchicalChunkConfig,
     build_hierarchical_chunks,
@@ -7,6 +9,191 @@ from app.rag.legal_v2.chunking import (
 )
 from app.rag.legal_v2.models import MetadataProvenance, SectionType
 from app.rag.legal_v2.parser import parse_legal_document
+
+
+def test_parser_preserves_multiline_numbered_paragraph_28_with_spisova_znacka() -> None:
+    text = "\n".join(
+        [
+            "28. Ve věci řešené v řízení",
+            "sp. zn. IV. ÚS 1038/25",
+            "zrušil služební orgán napadené rozhodnutí.",
+        ]
+    )
+
+    parsed = parse_legal_document(document_id="DOC-P28", text=text)
+
+    assert parsed.diagnostics.paragraph_count == 1
+    paragraph = parsed.paragraphs[0]
+    assert paragraph.numbering == "28"
+    assert paragraph.section_type != SectionType.HEADER
+    assert "28. Ve věci řešené v řízení" in paragraph.original_text
+    assert "sp. zn. IV. ÚS 1038/25" in paragraph.original_text
+    assert "zrušil služební orgán napadené rozhodnutí." in paragraph.original_text
+    assert parsed.diagnostics.heading_count == 0
+    assert parsed.diagnostics.numbered_paragraph_count == 1
+
+
+def test_parser_preserves_multiline_numbered_paragraph_43_with_cislo_jednaci() -> None:
+    text = "\n".join(
+        [
+            "43. V navazujícím posouzení soud připomněl, že v řízení",
+            "č. j. 12 A 34/2024-56",
+            "Nejvyšší správní soud navázal na předchozí závěry.",
+        ]
+    )
+
+    parsed = parse_legal_document(document_id="DOC-P43", text=text)
+
+    assert parsed.diagnostics.paragraph_count == 1
+    paragraph = parsed.paragraphs[0]
+    assert paragraph.numbering == "43"
+    assert paragraph.section_type != SectionType.HEADER
+    assert "č. j. 12 A 34/2024-56" in paragraph.original_text
+    assert "Nejvyšší správní soud navázal" in paragraph.original_text
+
+
+def test_numbered_paragraph_keywords_do_not_override_numbered_structure() -> None:
+    keywords = ("řízení", "nález", "odůvodnění", "posouzení")
+    for index, keyword in enumerate(keywords, start=1):
+        parsed = parse_legal_document(
+            document_id=f"DOC-KEY-{index}",
+            text=f"{index}. Krátký právní odstavec obsahuje slovo {keyword}\n"
+            "sp. zn. IV. ÚS 1038/25\n"
+            "a pokračuje v téže právní větě.",
+        )
+
+        assert parsed.diagnostics.paragraph_count == 1
+        assert parsed.paragraphs[0].numbering == str(index)
+        assert parsed.diagnostics.heading_count == 0
+
+
+def test_short_prose_with_heading_keywords_is_not_heading() -> None:
+    for keyword in ("řízení", "nález", "odůvodnění", "posouzení"):
+        parsed = parse_legal_document(
+            document_id=f"DOC-PROSE-{keyword}",
+            text=f"Soud pokračoval v {keyword} a provedl další dokazování.",
+        )
+
+        assert parsed.diagnostics.paragraph_count == 1
+        assert parsed.diagnostics.heading_count == 0
+        assert parsed.paragraphs[0].section_type != SectionType.HEADER
+
+
+def test_genuine_headings_and_numbered_boundaries_are_preserved() -> None:
+    text = "\n".join(
+        [
+            "Výrok",
+            "1. Návrh se odmítá.",
+            "2. Náklady řízení se nepřiznávají.",
+            "Odůvodnění",
+            "3. Ústavní soud posoudil věc samostatně.",
+            "Posouzení Ústavního soudu",
+            "4. Navazující odstavec zůstává číslovaný.",
+        ]
+    )
+
+    parsed = parse_legal_document(document_id="DOC-HEADINGS", text=text)
+    paragraphs = parsed.paragraphs
+
+    assert [paragraph.original_text for paragraph in paragraphs] == [
+        "Výrok",
+        "1. Návrh se odmítá.",
+        "2. Náklady řízení se nepřiznávají.",
+        "Odůvodnění",
+        "3. Ústavní soud posoudil věc samostatně.",
+        "Posouzení Ústavního soudu",
+        "4. Navazující odstavec zůstává číslovaný.",
+    ]
+    assert [paragraph.numbering for paragraph in paragraphs] == [
+        None,
+        "1",
+        "2",
+        None,
+        "3",
+        None,
+        "4",
+    ]
+    assert parsed.diagnostics.heading_count == 3
+    assert parsed.diagnostics.numbered_paragraph_count == 4
+    assert paragraphs[0].section_type == SectionType.OPERATIVE_PART
+    assert paragraphs[3].section_type == SectionType.COURT_REASONING
+    assert paragraphs[5].section_type == SectionType.COURT_REASONING
+
+
+def test_numbered_paragraph_followed_by_heading_and_heading_followed_by_numbered_paragraph() -> None:
+    text = "\n".join(
+        [
+            "1. První odstavec pokračuje přes",
+            "sp. zn. I. ÚS 1/24",
+            "Výrok",
+            "2. Druhý odstavec navazuje po nadpisu.",
+        ]
+    )
+
+    parsed = parse_legal_document(document_id="DOC-BOUNDARY", text=text)
+
+    assert [paragraph.original_text for paragraph in parsed.paragraphs] == [
+        "1. První odstavec pokračuje přes sp. zn. I. ÚS 1/24",
+        "Výrok",
+        "2. Druhý odstavec navazuje po nadpisu.",
+    ]
+    assert [paragraph.numbering for paragraph in parsed.paragraphs] == ["1", None, "2"]
+    assert parsed.paragraphs[1].section_type == SectionType.OPERATIVE_PART
+
+
+def test_parser_emits_no_empty_or_orphan_citation_candidate_for_confirmed_example() -> None:
+    text = "\n".join(
+        [
+            "28. Ve věci řešené v řízení",
+            "sp. zn. IV. ÚS 1038/25",
+            "zrušil služební orgán napadené rozhodnutí.",
+            "",
+            "43. V dalším odůvodnění soud odkázal na",
+            "č. j. 12 A 34/2024-56",
+            "a zachoval původní právní názor.",
+        ]
+    )
+
+    parsed = parse_legal_document(document_id="DOC-NO-ORPHAN", text=text)
+
+    assert len(parsed.paragraphs) == 2
+    assert all(paragraph.original_text.strip() for paragraph in parsed.paragraphs)
+    assert not any(
+        paragraph.original_text.lower().startswith(("sp. zn.", "č. j."))
+        for paragraph in parsed.paragraphs
+    )
+
+
+def test_parser_conserves_text_order_and_non_whitespace_content() -> None:
+    text = "\n".join(
+        [
+            "Výrok",
+            "1. Ve věci řešené v řízení",
+            "sp. zn. IV. ÚS 1038/25",
+            "zrušil služební orgán napadené rozhodnutí.",
+            "2. Napadený nález byl následně zrušen.",
+            "Odůvodnění",
+            "3. Soud pokračoval v řízení a provedl dokazování.",
+        ]
+    )
+
+    first = parse_legal_document(document_id="DOC-CONSERVE", text=text)
+    second = parse_legal_document(document_id="DOC-CONSERVE", text=text)
+
+    assert _non_whitespace(first.reconstruct_text()) == _non_whitespace(text)
+    assert [paragraph.original_text for paragraph in first.paragraphs] == [
+        "Výrok",
+        "1. Ve věci řešené v řízení sp. zn. IV. ÚS 1038/25 zrušil služební orgán napadené rozhodnutí.",
+        "2. Napadený nález byl následně zrušen.",
+        "Odůvodnění",
+        "3. Soud pokračoval v řízení a provedl dokazování.",
+    ]
+    assert [paragraph.paragraph_id for paragraph in first.paragraphs] == [
+        paragraph.paragraph_id for paragraph in second.paragraphs
+    ]
+    assert [paragraph.start_offset for paragraph in first.paragraphs] == sorted(
+        paragraph.start_offset for paragraph in first.paragraphs
+    )
 
 
 def test_parser_preserves_stable_paragraph_ids_and_damaged_formatting() -> None:
@@ -40,6 +227,12 @@ def test_parser_preserves_stable_paragraph_ids_and_damaged_formatting() -> None:
     assert any(p.is_citation_block for p in first.paragraphs)
     assert first.paragraphs[2].numbering == "1"
     assert first.reconstruct_text()
+
+
+def test_parser_profile_version_identifies_corrected_paragraph_parser() -> None:
+    from app.rag.legal_v2.audit import PARSER_VERSION
+
+    assert PARSER_VERSION == "legal-paragraph-parser.v3"
 
 
 def test_chunking_merges_splits_overlaps_and_preserves_reconstruction() -> None:
@@ -191,3 +384,7 @@ def test_chunking_never_crosses_incompatible_sections() -> None:
             document.paragraphs[span.paragraph_index].section_type
             for span in chunk.source_spans
         } == {chunk.section_type}
+
+
+def _non_whitespace(value: str) -> str:
+    return re.sub(r"\s+", "", value)

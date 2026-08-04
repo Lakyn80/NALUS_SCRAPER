@@ -1,5 +1,24 @@
 # Project Progress
 
+## 2026-08-04 Europe/Moscow - Task: Legal paragraph parser v3 multiline numbered paragraphs
+
+- Goal:
+  Fix the Legal v2 parser so layout-wrapped numbered legal paragraphs remain one paragraph when continuation lines contain `sp. zn.`, `č. j.`, court names, or heading-like words such as `řízení`, `nález`, `odůvodnění`, and `posouzení`.
+- Scope:
+  Parser-only change in the dedicated `fix/legal-paragraph-parser` worktree. No `main` worktree change, retrieval-core worktree change, Qdrant/BM25 access, index rebuild, embeddings, provider calls, Docker, frontend, QuerySpec, verifier, or retrieval ranking change.
+- Implementation:
+  `app/rag/legal_v2/ingest/parser.py` now classifies line boundaries with explicit precedence: blank boundary, new numbered paragraph, verified genuine heading, active-numbered continuation, then prose. Numbered legal paragraph starts (`[N]`, `N.`, `N)`) cannot be headings merely because they contain heading keywords. Genuine whole-line headings remain preserved.
+  Parser profile/version is now `legal-paragraph-parser.v3`; existing v2 indexes/manifests remain historical and were not modified.
+- Tests and audit:
+  Added regression coverage for confirmed paragraph 28 and paragraph 43 shapes, heading keyword false positives, `sp. zn.`/`č. j.` continuations, genuine headings, consecutive numbered paragraphs, heading/paragraph boundaries, text conservation, ordering, determinism, and parser profile version.
+  Added read-only audit runner `scripts/legal_v2/audit_parser_fix.py`; generated parser-fix audit artifacts are local under ignored `artifacts/legal_v2/parser_fix/` and are not committed.
+- Documentation:
+  Added `docs/retrieval-enterprise/LEGAL_PARAGRAPH_PARSER_V3.md` documenting the root cause, corrected precedence, v3 profile, audit command, and future v3 index identifiers.
+- Known limitations:
+  This does not create `nalus_legal_paragraph_chunks_v3_pilot_600` or `nalus_legal_paragraph_bm25_v3_pilot_600`, and it does not prove retrieval-quality improvement. A later task must rebuild and validate an isolated v3 pilot before any benchmark or rollout claim.
+- Next recommended task:
+  Review the parser-fix audit and chunk-boundary delta, then use a separate controlled prompt to cherry-pick the single parser-fix commit into `main` and any approved downstream worktree.
+
 ## 2026-08-03 Europe/Moscow - Task: Retrieval enterprise architecture document set
 
 - Created controlling architecture docs under `docs/retrieval-enterprise/` for the next retrieval modernization track:
