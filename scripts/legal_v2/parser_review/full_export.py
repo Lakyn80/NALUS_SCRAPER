@@ -28,11 +28,18 @@ from .status import (
     ParserValidationStatus,
 )
 
-EXPORT_SCHEMA_VERSION = "parser-v6-full-review.v1"
-EXPORT_SCRIPT_VERSION = "export-parser-v6-full-review.v1"
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "artifacts" / "legal_v2" / "parser_v6_full_review"
-JSON_NAME = "parser_v6_remaining_17_full.json"
-MARKDOWN_NAME = "parser_v6_remaining_17_full.md"
+EXPORT_SCHEMA_VERSION = "parser-v7-full-review.v1"
+EXPORT_SCRIPT_VERSION = "export-parser-v7-full-review.v1"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "artifacts" / "legal_v2" / "parser_v7_full_review"
+JSON_NAME = "parser_v7_remaining_17_full.json"
+MARKDOWN_NAME = "parser_v7_remaining_17_full.md"
+V6_OUTPUT_DIR = PROJECT_ROOT / "artifacts" / "legal_v2" / "parser_v6_full_review"
+V6_JSON_NAME = "parser_v6_remaining_17_full.json"
+V6_MARKDOWN_NAME = "parser_v6_remaining_17_full.md"
+OPENING_FORMULA_START_RE = re.compile(
+    r"^Vrchní soud v (?:Praze|Olomouci)\b.*\brozhodl\b|^Vrchní soud v Praze jako soud odvolací\b",
+    re.IGNORECASE,
+)
 GOLDEN_REVIEW_NUMBERS = {5, 11, 16}
 GOLDEN_DOCUMENT_IDS = {
     "doc-e5ac4b1fcd075062",
@@ -229,7 +236,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
     repo = payload["repository"]
     commits = payload["commits"]
     lines: list[str] = [
-        "# NALUS Parser v6 — Remaining 17 Documents Full Review",
+        "# NALUS Parser v7 — Remaining 17 Documents Full Review",
         "",
         "## Reproduction metadata",
         "",
@@ -417,8 +424,9 @@ def validate_export_payload(payload: dict[str, Any]) -> None:
 
 
 def validate_markdown(markdown: str, payload: dict[str, Any]) -> None:
-    if "# NALUS Parser v6 — Remaining 17 Documents Full Review" not in markdown:
+    if "# NALUS Parser v7 — Remaining 17 Documents Full Review" not in markdown:
         raise FullExportError("Markdown missing top-level title")
+    _validate_conflict_category_consistency(payload)
     if "# Cross-document review candidates" not in markdown:
         raise FullExportError("Markdown missing cross-document review section")
     for document in payload["remaining_documents"]:
@@ -506,11 +514,14 @@ def _document_record(
         for row in changed_boundaries
         if str(row["document_id"]) == doc_id
     }
-    block_change_map = {
-        tuple(row.get("v6_range") or []): row
-        for row in changed_blocks
-        if str(row["document_id"]) == doc_id
-    }
+    block_change_map: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for row in changed_blocks:
+        if str(row["document_id"]) != doc_id:
+            continue
+        current_range = row.get("v7_range")
+        if current_range is None:
+            current_range = row.get("v6_range") or []
+        block_change_map[tuple(current_range)] = row
     enriched_lines = [status_builder.enrich_line(row) for row in lines]
     enriched_boundaries = [status_builder.enrich_boundary(row) for row in boundaries]
     block_ranges = block_ranges_for_lines(enriched_lines)
@@ -767,10 +778,12 @@ def _export_block(
         "change_type": None if change_row is None else change_row.get("reason") or "range_or_class_change",
         "validation_status": status["parser_validation_status"],
         "manual_coverage": manual_coverage,
-        "suspicious_overmerge_flag": bool(
-            change_row and "overmerge" in str(change_row.get("reason") or "").lower()
-        )
-        or (len(lines) >= 12 and primary_role in {"prose_start", "numbered_paragraph_start", "metadata"}),
+        "suspicious_overmerge_flag": _suspicious_overmerge_flag(
+            lines=lines,
+            primary_role=primary_role,
+            change_row=change_row,
+            document=document,
+        ),
         "suspicious_undersplit_flag": bool(
             change_row and "undersplit" in str(change_row.get("reason") or "").lower()
         )
@@ -918,10 +931,34 @@ def _corpus_summary(
         "golden_conflicts": sum(
             1 for row in golden_regressions if row.get("verdict") != "GOLDEN PASS"
         ),
-        "parser_manual_conflicts": manual_counts["conflicts"],
+        "parser_manual_conflicts": sum(
+            1
+            for document in remaining_records
+            for line in document["lines"]
+            if line.get("manual_review_status") == "MANUAL_CONFLICT"
+            or line.get("parser_validation_status") == "PARSER_CONFLICT"
+        )
+        + sum(
+            1
+            for document in remaining_records
+            for boundary in document["boundaries"]
+            if boundary.get("manual_review_status") == "MANUAL_CONFLICT"
+            or boundary.get("parser_validation_status") == "PARSER_CONFLICT"
+        ),
         "manually_reviewed_items": manual_counts["reviewed_lines"] + manual_counts["reviewed_boundaries"],
         "not_manually_reviewed_items": manual_counts["not_reviewed"],
-        "stale_manual_decisions": manual_counts["stale"],
+        "stale_manual_decisions": sum(
+            1
+            for document in remaining_records
+            for line in document["lines"]
+            if line.get("manual_review_status") == "MANUAL_DECISION_STALE" or line.get("stale_decision_flag")
+        )
+        + sum(
+            1
+            for document in remaining_records
+            for boundary in document["boundaries"]
+            if boundary.get("manual_review_status") == "MANUAL_DECISION_STALE" or boundary.get("stale_decision_flag")
+        ),
         "validation_status_counts": dict(sorted(status_counts.items())),
         "snapshot_line_total": len(lines),
         "snapshot_boundary_total": len(boundaries),
@@ -1086,6 +1123,7 @@ def _cross_document_candidates(documents: list[dict[str, Any]]) -> dict[str, lis
         "possible_undersplits": [],
         "numbering_discontinuities": [],
         "parser_manual_conflicts": [],
+        "stale_manual_decisions": [],
     }
     for document in documents:
         idx = int(document["review_index"])
@@ -1115,11 +1153,29 @@ def _cross_document_candidates(documents: list[dict[str, Any]]) -> dict[str, lis
                 categories["closing_metadata"].append(item)
             if SIGNATURE_RE.search(line["raw_text"] or "") or line["current_parser_class"] == "signature":
                 categories["signatures"].append(item)
-            if line.get("manual_review_status") in {"MANUAL_CONFLICT", "MANUAL_DECISION_STALE"} or line.get(
-                "parser_validation_status"
-            ) == "PARSER_CONFLICT":
+            if line.get("manual_review_status") == "MANUAL_DECISION_STALE" or line.get("stale_decision_flag"):
+                categories["stale_manual_decisions"].append(item)
+            elif (
+                line.get("manual_review_status") == "MANUAL_CONFLICT"
+                or line.get("parser_validation_status") == "PARSER_CONFLICT"
+            ):
                 categories["parser_manual_conflicts"].append(item)
         for boundary in document["boundaries"]:
+            boundary_item = {
+                "review_index": idx,
+                "locator": (
+                    f"boundary {boundary['boundary_index']} "
+                    f"L{boundary['before_line_number']}->L{boundary['after_line_number']}"
+                ),
+                "detail": f"{boundary.get('parser_v6_decision')}: {str(boundary.get('full_text_before') or '')[:80]}",
+            }
+            if boundary.get("manual_review_status") == "MANUAL_DECISION_STALE" or boundary.get("stale_decision_flag"):
+                categories["stale_manual_decisions"].append(boundary_item)
+            elif (
+                boundary.get("manual_review_status") == "MANUAL_CONFLICT"
+                or boundary.get("parser_validation_status") == "PARSER_CONFLICT"
+            ):
+                categories["parser_manual_conflicts"].append(boundary_item)
             if boundary["changed_from_v5"] and boundary["parser_v6_decision"] == "MERGE":
                 categories["possible_overmerges"].append(
                     {
@@ -1407,10 +1463,76 @@ def _document_verdict(
 
 def _court_profile(court: str) -> str:
     return {
-        "constitutional_court": "constitutional_court.v6",
-        "high_court_prague": "high_court_prague.v6",
-        "high_court_olomouc": "high_court_olomouc.v6",
-    }.get(court, f"{court}.v6")
+        "constitutional_court": "constitutional_court.v7",
+        "high_court_prague": "high_court_prague.v7",
+        "high_court_olomouc": "high_court_olomouc.v7",
+    }.get(court, f"{court}.v7")
+
+
+def _suspicious_overmerge_flag(
+    *,
+    lines: list[dict[str, Any]],
+    primary_role: str,
+    change_row: dict[str, Any] | None,
+    document: dict[str, Any],
+) -> bool:
+    if change_row and "overmerge" in str(change_row.get("reason") or "").lower():
+        return True
+    if len(lines) < 12 or primary_role not in {"prose_start", "numbered_paragraph_start", "metadata"}:
+        return False
+    if _is_legitimate_opening_formula_block(lines, document):
+        return False
+    return True
+
+
+def _is_legitimate_opening_formula_block(lines: list[dict[str, Any]], document: dict[str, Any]) -> bool:
+    if not lines:
+        return False
+    first = str(lines[0].get("raw_text") or "")
+    if not OPENING_FORMULA_START_RE.search(first):
+        return False
+    first_line_number = int(lines[0].get("line_number") or lines[0].get("raw_line_number") or 0)
+    if first_line_number != 1:
+        return False
+    if any(str(row.get("raw_text") or "").strip() == "Výrok" for row in lines):
+        return False
+
+    def _line_class(row: dict[str, Any]) -> str:
+        return str(
+            row.get("current_parser_class")
+            or row.get("parser_proposed_line_class")
+            or ""
+        )
+
+    if not all(_line_class(row) in {"prose_start", "prose_continuation", "metadata"} for row in lines):
+        return False
+    if document.get("text_conservation") is False:
+        return False
+    if int(document.get("duplication_count") or 0) != 0:
+        return False
+    if int(document.get("ordering_failures") or 0) != 0:
+        return False
+    return len(lines) >= 2
+
+
+def _validate_conflict_category_consistency(payload: dict[str, Any]) -> None:
+    candidates = payload.get("cross_document_review_candidates") or {}
+    conflict_rows = candidates.get("parser_manual_conflicts") or []
+    stale_rows = candidates.get("stale_manual_decisions") or []
+    summary = payload.get("corpus_summary") or {}
+    if int(summary.get("parser_manual_conflicts") or 0) != len(conflict_rows):
+        raise FullExportError(
+            f"Conflict summary/count mismatch: summary={summary.get('parser_manual_conflicts')} list={len(conflict_rows)}"
+        )
+    if int(summary.get("stale_manual_decisions") or 0) != len(stale_rows):
+        raise FullExportError(
+            f"Stale summary/count mismatch: summary={summary.get('stale_manual_decisions')} list={len(stale_rows)}"
+        )
+    conflict_keys = {(row.get("review_index"), row.get("locator")) for row in conflict_rows}
+    stale_keys = {(row.get("review_index"), row.get("locator")) for row in stale_rows}
+    overlap = conflict_keys & stale_keys
+    if overlap:
+        raise FullExportError(f"Items present in both conflict and stale categories: {sorted(overlap)[:5]}")
 
 
 def _estimate_tokens(text: str) -> int:

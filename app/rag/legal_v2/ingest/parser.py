@@ -124,8 +124,21 @@ _SIGNATURE_NAME_RE = re.compile(r"\bv\.\s*r\.\s*$", re.IGNORECASE)
 _REPUBLIC_TITLE_RE = re.compile(r"^Jménem republiky$", re.IGNORECASE)
 _SIMPLE_HEADING_RE = re.compile(r"^(?:Výrok|Odůvodnění|Odůvodnění:|Poučení)$", re.IGNORECASE)
 _DASH_BULLET_RE = re.compile(r"^-+\)")
+_PLAIN_DASH_BULLET_RE = re.compile(r"^[-–—]\s+\S")
 _LETTER_ITEM_RE = re.compile(r"^[a-z]\)")
 _SEMICOLON_TABLE_RE = re.compile(r";")
+_CONSTITUTIONAL_COMPACT_HEADING_RE = re.compile(
+    r"^\s*(?:I{1,3}|IV|V|VI{0,3}|IX|X)(?:\.\d+)?[.)]?\s+"
+    r"([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][\wÁČĎÉĚÍŇÓŘŠŤÚŮÝŽáčďéěíňóřšťúůýž\s,\-]{1,90})$",
+    re.UNICODE,
+)
+_PRAGUE_OPENING_START_RE = re.compile(
+    r"^Vrchní soud v Praze(?:\s+jako soud odvolací)?\s+rozhodl\b|^Vrchní soud v Praze jako soud odvolací\b",
+    re.IGNORECASE,
+)
+_OLOMOUC_OPENING_START_RE = re.compile(r"^Vrchní soud v Olomouci\b.*\brozhodl\b", re.IGNORECASE)
+_CIVIL_CASE_CUE_RE = re.compile(r"\b\d+\s*co\s+\d+|\bo\.\s*s\.\s*ř|\bosř\b", re.IGNORECASE)
+_CRIMINAL_CASE_CUE_RE = re.compile(r"\b(?:to|tmo|nt)\s+\d+|\btr\.\s*ř|\btrestn", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -295,6 +308,10 @@ def _constitutional_court_line_candidates(text: str) -> list[_ParagraphCandidate
             candidates.append(_candidate_from_entries(entries[i : i + 2], heading=True))
             i += 2
             continue
+        if _is_constitutional_compact_heading(stripped):
+            candidates.append(_candidate_from_entries(entries[i : i + 1], heading=True))
+            i += 1
+            continue
         if _is_constitutional_singleton(stripped):
             candidates.append(_candidate_from_entries(entries[i : i + 1], heading=_is_constitutional_heading(stripped)))
             i += 1
@@ -303,7 +320,11 @@ def _constitutional_court_line_candidates(text: str) -> list[_ParagraphCandidate
             end_index = i + 1
             while end_index < len(entries) and not _US_DECISION_FORMULA_RE.match(" ".join(entry[0] for entry in entries[i:end_index])):
                 next_text = entries[end_index][0]
-                if _is_constitutional_singleton(next_text) or _NUMBERED_RE.match(next_text):
+                if (
+                    _is_constitutional_singleton(next_text)
+                    or _NUMBERED_RE.match(next_text)
+                    or _is_constitutional_compact_heading(next_text)
+                ):
                     break
                 end_index += 1
             candidates.append(_candidate_from_entries(entries[i:end_index], heading=False))
@@ -317,7 +338,13 @@ def _constitutional_court_line_candidates(text: str) -> list[_ParagraphCandidate
             end_index = i + 1
             while end_index < len(entries):
                 next_text = entries[end_index][0]
-                if _NUMBERED_RE.match(next_text) or _is_constitutional_singleton(next_text) or _is_heading(next_text):
+                if (
+                    _NUMBERED_RE.match(next_text)
+                    or _is_constitutional_singleton(next_text)
+                    or _is_heading(next_text)
+                    or _is_constitutional_compact_heading(next_text)
+                    or (_ROMAN_ONLY_RE.match(next_text) and end_index + 1 < len(entries) and _looks_like_section_caption(entries[end_index + 1][0]))
+                ):
                     break
                 end_index += 1
             candidates.append(_candidate_from_entries(entries[i:end_index], heading=False))
@@ -336,7 +363,7 @@ def _high_court_prague_line_candidates(text: str) -> list[_ParagraphCandidate]:
     entries = _line_entries(text)
     candidates: list[_ParagraphCandidate] = []
     i = 0
-    if entries and entries[0][0].casefold().startswith("vrchní soud v praze jako soud odvolací"):
+    if entries and _PRAGUE_OPENING_START_RE.match(entries[0][0]):
         end_index = 1
         while end_index < len(entries) and not _SIMPLE_HEADING_RE.match(entries[end_index][0]):
             end_index += 1
@@ -373,8 +400,17 @@ def _high_court_prague_line_candidates(text: str) -> list[_ParagraphCandidate]:
 
 def _high_court_olomouc_line_candidates(text: str) -> list[_ParagraphCandidate]:
     entries = _line_entries(text)
-    candidates: list[_ParagraphCandidate] = []
     reasoning_index = next((idx for idx, entry in enumerate(entries) if entry[0].casefold() == "odůvodnění"), len(entries))
+    if _olomouc_is_civil_structure(entries, reasoning_index):
+        return _olomouc_civil_line_candidates(entries, reasoning_index)
+    return _olomouc_criminal_line_candidates(entries, reasoning_index)
+
+
+def _olomouc_criminal_line_candidates(
+    entries: list[tuple[str, int, int]],
+    reasoning_index: int,
+) -> list[_ParagraphCandidate]:
+    candidates: list[_ParagraphCandidate] = []
     i = 0
     while i < reasoning_index:
         stripped = entries[i][0]
@@ -398,11 +434,64 @@ def _high_court_olomouc_line_candidates(text: str) -> list[_ParagraphCandidate]:
     expected = 1
     while i < len(entries):
         stripped = entries[i][0]
-        if _olomouc_top_level_reasoning_start(stripped, expected):
+        if _olomouc_top_level_reasoning_start(stripped, expected, civil=False):
             end_index = i + 1
             expected += 1
             while end_index < len(entries):
-                if _olomouc_top_level_reasoning_start(entries[end_index][0], expected):
+                if _olomouc_top_level_reasoning_start(entries[end_index][0], expected, civil=False):
+                    break
+                end_index += 1
+            candidates.append(_candidate_from_entries(entries[i:end_index], heading=False))
+            i = end_index
+            continue
+        candidates.append(_candidate_from_entries(entries[i : i + 1], heading=False))
+        i += 1
+    return candidates
+
+
+def _olomouc_civil_line_candidates(
+    entries: list[tuple[str, int, int]],
+    reasoning_index: int,
+) -> list[_ParagraphCandidate]:
+    candidates: list[_ParagraphCandidate] = []
+    i = 0
+    if entries and _OLOMOUC_OPENING_START_RE.match(entries[0][0]):
+        end_index = 1
+        while end_index < reasoning_index and not _SIMPLE_HEADING_RE.match(entries[end_index][0]):
+            end_index += 1
+        candidates.append(_candidate_from_entries(entries[:end_index], heading=False))
+        i = end_index
+    while i < reasoning_index:
+        stripped = entries[i][0]
+        if _SIMPLE_HEADING_RE.match(stripped):
+            candidates.append(_candidate_from_entries(entries[i : i + 1], heading=True))
+            i += 1
+            continue
+        if _ROMAN_RE.match(stripped) or _ROMAN_ONLY_RE.match(stripped):
+            # Civil operative Roman clauses are independent blocks, not nested lists.
+            candidates.append(_candidate_from_entries(entries[i : i + 1], heading=False))
+            i += 1
+            continue
+        end_index = i + 1
+        while end_index < reasoning_index:
+            next_text = entries[end_index][0]
+            if _SIMPLE_HEADING_RE.match(next_text) or _ROMAN_RE.match(next_text) or _ROMAN_ONLY_RE.match(next_text):
+                break
+            end_index += 1
+        candidates.append(_candidate_from_entries(entries[i:end_index], heading=False))
+        i = end_index
+    if i < len(entries) and i == reasoning_index:
+        candidates.append(_candidate_from_entries(entries[i : i + 1], heading=True))
+        i += 1
+    expected = 1
+    while i < len(entries):
+        stripped = entries[i][0]
+        if _olomouc_top_level_reasoning_start(stripped, expected, civil=True):
+            end_index = i + 1
+            expected += 1
+            while end_index < len(entries):
+                next_text = entries[end_index][0]
+                if _olomouc_top_level_reasoning_start(next_text, expected, civil=True):
                     break
                 end_index += 1
             candidates.append(_candidate_from_entries(entries[i:end_index], heading=False))
@@ -480,7 +569,51 @@ def _opens_nested_list(text: str) -> bool:
     return stripped.endswith(":") or stripped.endswith("že") or "obsahuje:" in stripped.casefold()
 
 
-def _olomouc_top_level_reasoning_start(text: str, expected_number: int) -> bool:
+def _is_constitutional_compact_heading(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped or len(stripped) > 120:
+        return False
+    if stripped.endswith((".", ",", ";")):
+        return False
+    if _NUMBERED_RE.match(stripped) or _ROMAN_ONLY_RE.match(stripped):
+        return False
+    match = _CONSTITUTIONAL_COMPACT_HEADING_RE.match(stripped)
+    if not match:
+        return False
+    caption = match.group(1).strip()
+    if len(caption.split()) > 12:
+        return False
+    # Reject operative-style Roman clauses and long sentence continuations.
+    if re.search(r"\b(?:se |je |bylo |byly |byl |byla )\b", caption.casefold()):
+        return False
+    if re.match(
+        r"^(?:Usnesením|Rozsudkem|Rozsudek|Návrh|Žalob|Ústavní stížnost)\b",
+        caption,
+    ):
+        return False
+    return True
+
+
+def _olomouc_is_civil_structure(entries: list[tuple[str, int, int]], reasoning_index: int) -> bool:
+    vyrok_index = next((idx for idx, entry in enumerate(entries) if entry[0].casefold() == "výrok"), None)
+    if vyrok_index is None or reasoning_index <= vyrok_index:
+        return False
+    between = entries[vyrok_index + 1 : reasoning_index]
+    if not between or len(between) > 8:
+        return False
+    roman_text_clauses = [entry for entry in between if _ROMAN_RE.match(entry[0])]
+    if not roman_text_clauses or len(roman_text_clauses) != len(between):
+        return False
+    opening = " ".join(entry[0] for entry in entries[:vyrok_index])
+    if _CRIMINAL_CASE_CUE_RE.search(opening) and not _CIVIL_CASE_CUE_RE.search(opening):
+        return False
+    if _CIVIL_CASE_CUE_RE.search(opening):
+        return True
+    # Compact Roman+text operative block between Výrok and Odůvodnění is the civil shape.
+    return all(len(entry[0]) < 600 for entry in roman_text_clauses)
+
+
+def _olomouc_top_level_reasoning_start(text: str, expected_number: int, *, civil: bool = False) -> bool:
     match = _NUMBERED_RE.match(text)
     if not match:
         return False
@@ -490,9 +623,11 @@ def _olomouc_top_level_reasoning_start(text: str, expected_number: int) -> bool:
     rest = text[match.end() :].strip()
     if not rest or not rest[0].isupper():
         return False
-    if _DASH_BULLET_RE.match(rest) or _LETTER_ITEM_RE.match(rest):
+    if _DASH_BULLET_RE.match(rest) or _PLAIN_DASH_BULLET_RE.match(rest) or _LETTER_ITEM_RE.match(rest):
         return False
-    if _SEMICOLON_TABLE_RE.search(text) and text.count(";") >= 2:
+    # Criminal nested/table rows may use semicolon-delimited cells; civil statutory paragraphs
+    # can contain multiple semicolons without being tables.
+    if not civil and _SEMICOLON_TABLE_RE.search(text) and text.count(";") >= 2:
         return False
     return True
 

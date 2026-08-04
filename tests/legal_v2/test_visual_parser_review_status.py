@@ -22,7 +22,7 @@ def test_parser_and_manual_statuses_are_separate_for_golden_line() -> None:
     assert status == 200
     line36 = next(row for row in payload["lines"] if row["raw_line_number"] == 36)
     assert line36["parser_validation_status"] == ParserValidationStatus.AUTO_VALIDATED_GOLDEN.value
-    assert line36["parser_validation_label"] == "AUTO-VALIDATED · GOLDEN v6"
+    assert line36["parser_validation_label"] == "AUTO-VALIDATED · GOLDEN v7"
     assert line36["parser_proposed_line_class"] == "list_or_table"
     assert line36["manual_review_status"] == ManualReviewStatus.NOT_MANUALLY_REVIEWED.value
     assert line36["manual_review_label"] == "Manual review: not performed"
@@ -83,7 +83,8 @@ def test_manual_statuses_and_document2_completion_are_preserved() -> None:
     assert doc2["line_unresolved"] == 0
     assert doc2["boundary_unresolved"] == 0
     assert progress["manual_review"]["overridden"] >= 25
-    assert progress["manual_review"]["stale"] == 3
+    # Two pre-existing v4 line decisions remain stale; preserve_parser boundaries stay active across profile upgrades.
+    assert progress["manual_review"]["stale"] == 2
 
 
 def test_status_generation_does_not_modify_manual_stores() -> None:

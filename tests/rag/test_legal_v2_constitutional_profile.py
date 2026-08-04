@@ -125,7 +125,7 @@ def test_constitutional_profile_does_not_apply_to_high_court_title_pattern() -> 
 def test_parser_profile_version_identifies_czech_courts_v6() -> None:
     from app.rag.legal_v2.audit import PARSER_VERSION
 
-    assert PARSER_VERSION == "legal-decision-parser.cz-courts.v6"
+    assert PARSER_VERSION == "legal-decision-parser.cz-courts.v7"
 
 
 def _non_whitespace(value: str) -> str:

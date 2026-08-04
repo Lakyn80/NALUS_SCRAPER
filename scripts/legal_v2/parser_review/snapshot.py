@@ -40,8 +40,14 @@ SIMPLE_HEADING_RE = re.compile(r"^(?:Výrok|Odůvodnění|Odůvodnění:|Poučen
 ARABIC_NUMBER_RE = re.compile(r"^\s*(\d{1,4})[.)]\s+")
 ROMAN_NUMBER_RE = re.compile(r"^\s*(?:I{1,3}|IV|V|VI{0,3}|IX|X)[.)]?\s*")
 DASH_BULLET_RE = re.compile(r"^-+\)")
+PLAIN_DASH_BULLET_RE = re.compile(r"^[-–—]\s+\S")
 LETTER_ITEM_RE = re.compile(r"^[a-z]\)")
 SEMICOLON_TABLE_RE = re.compile(r";")
+CONSTITUTIONAL_COMPACT_HEADING_RE = re.compile(
+    r"^\s*(?:I{1,3}|IV|V|VI{0,3}|IX|X)(?:\.\d+)?[.)]?\s+"
+    r"([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][\wÁČĎÉĚÍŇÓŘŠŤÚŮÝŽáčďéěíňóřšťúůýž\s,\-]{1,90})$",
+    re.UNICODE,
+)
 
 
 def build_snapshot(
@@ -193,9 +199,9 @@ def _line_class(raw_line: str, paragraph: Any | None, parsed: Any, line_number: 
         if constitutional_class:
             return constitutional_class
     if court == "high_court_prague":
-        return _prague_line_class(raw_line, is_first)
+        return _prague_line_class(raw_line, is_first, line_number, block_for_line, parsed)
     if court == "high_court_olomouc":
-        return _olomouc_line_class(raw_line, line_number, is_first)
+        return _olomouc_line_class(raw_line, paragraph, is_first, line_number, block_for_line, parsed)
     if paragraph.numbering:
         if is_first:
             return "numbered_paragraph_start"
@@ -224,6 +230,8 @@ def _constitutional_line_class(raw_line: str, paragraph: Any, is_first: bool) ->
         return "instruction"
     if SIGNATURE_NAME_RE.search(stripped) or SIGNATURE_ROLE_RE.match(stripped):
         return "signature"
+    if _is_constitutional_compact_heading(stripped):
+        return "heading"
     if _is_roman_section_line(stripped) or (
         paragraph.normalized_text in paragraph.heading_context and _looks_like_short_caption(stripped)
     ):
@@ -239,10 +247,19 @@ def _constitutional_line_class(raw_line: str, paragraph: Any, is_first: bool) ->
     return None
 
 
-def _prague_line_class(raw_line: str, is_first: bool) -> str:
+def _prague_line_class(
+    raw_line: str,
+    is_first: bool,
+    line_number: int,
+    block_for_line: list[Any | None],
+    parsed: Any,
+) -> str:
     stripped = _normalize(raw_line)
     if SIMPLE_HEADING_RE.match(stripped):
         return "heading"
+    # Participant numbers inside the case-opening formula remain prose, not nested lists.
+    if _prague_in_opening(line_number, block_for_line, parsed):
+        return "prose_start" if is_first else "prose_continuation"
     if _is_nested_or_table(stripped):
         return "list_or_table"
     if _is_numbered_or_roman_item(stripped):
@@ -250,19 +267,86 @@ def _prague_line_class(raw_line: str, is_first: bool) -> str:
     return "prose_start" if is_first else "prose_continuation"
 
 
-def _olomouc_line_class(raw_line: str, line_number: int, is_first: bool) -> str:
+def _prague_in_opening(line_number: int, block_for_line: list[Any | None], parsed: Any) -> bool:
+    current = block_for_line[line_number - 1] if 0 <= line_number - 1 < len(block_for_line) else None
+    if current is None:
+        return False
+    for paragraph in parsed.paragraphs:
+        if str(paragraph.normalized_text or "").strip().casefold() == "výrok":
+            return int(current.start_offset) < int(paragraph.start_offset)
+    return False
+
+
+_MONTH_CONTINUATION_RE = re.compile(
+    r"^(?:ledna|února|března|dubna|května|června|července|srpna|září|října|listopadu|prosince)\b",
+    re.IGNORECASE,
+)
+
+
+def _olomouc_line_class(
+    raw_line: str,
+    paragraph: Any,
+    is_first: bool,
+    line_number: int,
+    block_for_line: list[Any | None],
+    parsed: Any,
+) -> str:
     stripped = _normalize(raw_line)
     if SIMPLE_HEADING_RE.match(stripped) or _is_roman_section_line(stripped):
         return "heading"
+    in_reasoning = _olomouc_in_reasoning(line_number, block_for_line, parsed)
+    if in_reasoning:
+        if is_first:
+            return "numbered_paragraph_start"
+        if _is_nested_or_table(stripped) or _is_genuine_nested_marker(stripped):
+            return "list_or_table"
+        return "numbered_paragraph_continuation"
+    # Pre-reasoning.
     if _is_nested_or_table(stripped):
         return "list_or_table"
-    if line_number >= 174:
-        if _is_numbered_or_roman_item(stripped) and not is_first:
-            return "list_or_table"
-        return "numbered_paragraph_start" if is_first else "numbered_paragraph_continuation"
     if _is_numbered_or_roman_item(stripped):
+        # Civil Roman operative clauses are independent numbered blocks.
+        if is_first and paragraph.numbering and re.fullmatch(
+            r"(?:I{1,3}|IV|V|VI{0,3}|IX|X)",
+            str(paragraph.numbering),
+            flags=re.IGNORECASE,
+        ):
+            return "numbered_paragraph_start"
         return "list_or_table"
     return "prose_start" if is_first else "prose_continuation"
+
+
+def _olomouc_in_reasoning(line_number: int, block_for_line: list[Any | None], parsed: Any) -> bool:
+    current = block_for_line[line_number - 1] if 0 <= line_number - 1 < len(block_for_line) else None
+    if current is None:
+        return False
+    for paragraph in parsed.paragraphs:
+        normalized = str(paragraph.normalized_text or "").strip().casefold()
+        if normalized == "odůvodnění":
+            return int(current.start_offset) > int(paragraph.start_offset)
+    return False
+
+
+def _is_constitutional_compact_heading(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped or len(stripped) > 120 or ARABIC_NUMBER_RE.match(stripped) or _is_roman_section_line(stripped):
+        return False
+    if stripped.endswith((".", ",", ";")):
+        return False
+    match = CONSTITUTIONAL_COMPACT_HEADING_RE.match(stripped)
+    if not match:
+        return False
+    caption = match.group(1).strip()
+    if len(caption.split()) > 12:
+        return False
+    if re.search(r"\b(?:se |je |bylo |byly |byl |byla )\b", caption.casefold()):
+        return False
+    if re.match(
+        r"^(?:Usnesením|Rozsudkem|Rozsudek|Návrh|Žalob|Ústavní stížnost)\b",
+        caption,
+    ):
+        return False
+    return True
 
 
 def _is_numbered_or_roman_item(text: str) -> bool:
@@ -278,13 +362,32 @@ def _looks_like_short_caption(text: str) -> bool:
 
 
 def _is_nested_or_table(text: str) -> bool:
-    if DASH_BULLET_RE.match(text) or LETTER_ITEM_RE.match(text):
+    if DASH_BULLET_RE.match(text) or PLAIN_DASH_BULLET_RE.match(text) or LETTER_ITEM_RE.match(text):
         return True
     if SEMICOLON_TABLE_RE.search(text) and text.count(";") >= 2:
         return True
     if text.casefold().startswith(("celkem", "; celkem")):
         return True
     return False
+
+
+def _is_genuine_nested_marker(text: str) -> bool:
+    if _is_nested_or_table(text):
+        return True
+    match = ARABIC_NUMBER_RE.match(text) or re.match(
+        r"^\s*(?:I{1,3}|IV|V|VI{0,3}|IX|X)[.)]\s+",
+        text,
+        re.IGNORECASE,
+    )
+    if not match:
+        return False
+    rest = text[match.end() :].strip()
+    if not rest:
+        return False
+    # Date-like continuation such as "1. července 2014..." remains a paragraph continuation.
+    if _MONTH_CONTINUATION_RE.match(rest):
+        return False
+    return True
 
 
 def _boundary_before(line_number: int, block_for_line: list[Any | None]) -> bool:

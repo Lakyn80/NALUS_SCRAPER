@@ -59,7 +59,7 @@ async function selectDoc(id) {
   document.getElementById("documentMeta").innerHTML = `
     <span class="status-badge ${parserStatusClass(current.parser_validation_status)}">${escapeHtml(current.parser_validation_label)}</span>
     <span>${escapeHtml(current.court)} · ${escapeHtml(current.decision_date || "")} · ${escapeHtml(current.document_id)}</span>
-    <span>Parser v6: ${current.parser_line_validated}/${current.parser_line_total} lines · ${current.parser_boundary_validated}/${current.parser_boundary_total} boundaries · ${current.parser_block_validated}/${current.parser_block_total} blocks</span>
+    <span>Parser v7: ${current.parser_line_validated}/${current.parser_line_total} lines · ${current.parser_boundary_validated}/${current.parser_boundary_total} boundaries · ${current.parser_block_validated}/${current.parser_block_total} blocks</span>
     <span>Manual review: ${current.manual_line_reviewed}/${current.manual_line_total} lines · ${current.manual_boundary_reviewed}/${current.manual_boundary_total} boundaries</span>`;
   await render();
 }
@@ -68,9 +68,11 @@ async function render() {
   if (!current) return;
   const mode = document.getElementById("mode").value;
   if (mode === "assisted") return renderAssisted();
+  if (mode === "parser-v7-changes") return renderParserV7Changes();
   if (mode === "parser-v6-changes") return renderParserV6Changes();
   if (mode === "problems") return renderProblems();
   if (mode === "progress") return renderProgressView();
+  if (mode === "full-corpus-v7") return renderFullCorpusV7();
   if (mode === "full-corpus-v6") return renderFullCorpusV6();
   if (mode === "boundaries") return renderBoundaries();
   return renderLines();
@@ -90,7 +92,7 @@ function renderLineCard(line) {
     </header>
     <h3>Line ${line.raw_line_number}</h3>
     <dl>
-      <dt>Parser v6 result</dt><dd>${escapeHtml(line.parser_proposed_line_class)}</dd>
+      <dt>Parser v7 result</dt><dd>${escapeHtml(line.parser_proposed_line_class)}</dd>
       <dt>Reason</dt><dd>${escapeHtml(line.parser_validation_reason || line.parser_reason_code || "")}</dd>
     </dl>
     <p class="raw-line">${escapeHtml(line.raw_text)}</p>
@@ -123,7 +125,7 @@ function renderBoundaryCard(card) {
         <p>${renderParserBadge(card)} ${renderManualBadge(card)}</p>
       </div>
       <div class="decision-badges" aria-label="Boundary decisions">
-        <span class="decision-badge parser">PARSER v6: ${parserDisplay}</span>
+        <span class="decision-badge parser">PARSER v7: ${parserDisplay}</span>
         <span class="decision-badge previous">PREVIOUS: ${card.previous_boundary.display}</span>
       </div>
     </header>
@@ -144,8 +146,8 @@ function renderBoundaryCard(card) {
 
     <section class="decision-panel">
       <div>
-        <h4>Parser v6 result</h4>
-        <p><strong>PARSER v6: ${parserDisplay}</strong></p>
+        <h4>Parser v7 result</h4>
+        <p><strong>PARSER v7: ${parserDisplay}</strong></p>
         <p>${escapeHtml(boundaryExplanation(card.parser_boundary, card.before.line_number, card.after.line_number))}</p>
         <p>${escapeHtml(card.parser_block_context)}</p>
       </div>
@@ -263,17 +265,32 @@ async function renderAssisted() {
   <div class="assisted-rules">` + data.rules.map(rule => renderAssistedRule(rule, batchesByRule.get(rule.rule_id))).join("") + "</div>";
 }
 
+async function renderParserV7Changes() {
+  const data = await getJson(`/api/parser-v7/changes?document_id=${encodeURIComponent(current.document_id)}`);
+  const total = data.class_count + data.boundary_count + data.block_count;
+  document.getElementById("work").innerHTML = `<section class="change-summary">
+    <h3>Changed by parser v7</h3>
+    <p>Changed lines/classes: ${data.class_count}; changed boundaries: ${data.boundary_count}; changed blocks: ${data.block_count}</p>
+  </section>
+  <div class="change-queue">
+    ${renderChangeSection("Changed Lines / Classes", data.changed_classes, (row) => renderClassChange(row, "v6", "v7"))}
+    ${renderChangeSection("Changed Boundaries", data.changed_boundaries, (row) => renderBoundaryChange(row, "v6", "v7"))}
+    ${renderChangeSection("Changed Blocks", data.changed_blocks, (row) => renderBlockChange(row, "v6", "v7"))}
+    ${total === 0 ? "<p>No parser v7 changes for this document.</p>" : ""}
+  </div>`;
+}
+
 async function renderParserV6Changes() {
   const data = await getJson(`/api/parser-v6/changes?document_id=${encodeURIComponent(current.document_id)}`);
   const total = data.class_count + data.boundary_count + data.block_count;
   document.getElementById("work").innerHTML = `<section class="change-summary">
-    <h3>Changed by parser v6</h3>
+    <h3>Changed by parser v6 (historical)</h3>
     <p>Changed lines/classes: ${data.class_count}; changed boundaries: ${data.boundary_count}; changed blocks: ${data.block_count}</p>
   </section>
   <div class="change-queue">
-    ${renderChangeSection("Changed Lines / Classes", data.changed_classes, renderClassChange)}
-    ${renderChangeSection("Changed Boundaries", data.changed_boundaries, renderBoundaryChange)}
-    ${renderChangeSection("Changed Blocks", data.changed_blocks, renderBlockChange)}
+    ${renderChangeSection("Changed Lines / Classes", data.changed_classes, (row) => renderClassChange(row, "v5", "v6"))}
+    ${renderChangeSection("Changed Boundaries", data.changed_boundaries, (row) => renderBoundaryChange(row, "v5", "v6"))}
+    ${renderChangeSection("Changed Blocks", data.changed_blocks, (row) => renderBlockChange(row, "v5", "v6"))}
     ${total === 0 ? "<p>No parser v6 changes for this document.</p>" : ""}
   </div>`;
 }
@@ -285,37 +302,45 @@ function renderChangeSection(title, rows, renderer) {
   </section>`;
 }
 
-function renderBoundaryChange(change) {
+function renderBoundaryChange(change, beforeKey = "v5", afterKey = "v6") {
+  const before = change[`${beforeKey}_boundary`] || "";
+  const after = change[`${afterKey}_boundary`] || "";
   return `<article class="change-card">
     <h3>Boundary L${change.before_line} -> L${change.after_line}</h3>
     <p>${renderParserBadge(change)} ${renderManualBadge(change)}</p>
     <p><strong>${escapeHtml(change.court || "")}</strong> · ${escapeHtml(change.document_id || "")} · ${escapeHtml(change.source_id || "")}</p>
-    <p><strong>v5:</strong> ${escapeHtml(change.v5_boundary || "")} · <strong>v6:</strong> ${escapeHtml(change.v6_boundary || "")}</p>
+    <p><strong>${beforeKey}:</strong> ${escapeHtml(before)} · <strong>${afterKey}:</strong> ${escapeHtml(after)}</p>
     <p><strong>Impact:</strong> ${escapeHtml(change.block_impact || "")} · <strong>Reason:</strong> ${escapeHtml(change.reason || "")}</p>
     <p class="raw-line"><strong>Before:</strong> ${escapeHtml(change.before_text || "")}</p>
     <p class="raw-line"><strong>After:</strong> ${escapeHtml(change.after_text || "")}</p>
   </article>`;
 }
 
-function renderClassChange(change) {
+function renderClassChange(change, beforeKey = "v5", afterKey = "v6") {
+  const before = change[`${beforeKey}_class`] || "";
+  const after = change[`${afterKey}_class`] || "";
   return `<article class="change-card">
     <h3>Line ${change.line}</h3>
     <p>${renderParserBadge(change)} ${renderManualBadge(change)}</p>
     <p><strong>${escapeHtml(change.court || "")}</strong> · ${escapeHtml(change.document_id || "")} · ${escapeHtml(change.source_id || "")}</p>
-    <p><strong>v5:</strong> ${escapeHtml(change.v5_class || "")} · <strong>v6:</strong> ${escapeHtml(change.v6_class || "")}</p>
+    <p><strong>${beforeKey}:</strong> ${escapeHtml(before)} · <strong>${afterKey}:</strong> ${escapeHtml(after)}</p>
     <p><strong>Reason:</strong> ${escapeHtml(change.reason || "")}</p>
     <p class="raw-line">${escapeHtml(change.text || "")}</p>
   </article>`;
 }
 
-function renderBlockChange(change) {
+function renderBlockChange(change, beforeKey = "v5", afterKey = "v6") {
+  const beforeRange = change[`${beforeKey}_range`];
+  const afterRange = change[`${afterKey}_range`];
+  const beforeClasses = change[`${beforeKey}_classes`] || [];
+  const afterClasses = change[`${afterKey}_classes`] || [];
   return `<article class="change-card">
     <h3>Block ${change.block_index}</h3>
     <p>${renderParserBadge(change)}</p>
     <p><strong>${escapeHtml(change.court || "")}</strong> · ${escapeHtml(change.document_id || "")} · ${escapeHtml(change.source_id || "")}</p>
-    <p><strong>v5 range:</strong> ${escapeHtml(formatRange(change.v5_range))} · <strong>v6 range:</strong> ${escapeHtml(formatRange(change.v6_range))}</p>
-    <p><strong>v5 classes:</strong> ${escapeHtml((change.v5_classes || []).join(", "))}</p>
-    <p><strong>v6 classes:</strong> ${escapeHtml((change.v6_classes || []).join(", "))}</p>
+    <p><strong>${beforeKey} range:</strong> ${escapeHtml(formatRange(beforeRange))} · <strong>${afterKey} range:</strong> ${escapeHtml(formatRange(afterRange))}</p>
+    <p><strong>${beforeKey} classes:</strong> ${escapeHtml(beforeClasses.join(", "))}</p>
+    <p><strong>${afterKey} classes:</strong> ${escapeHtml(afterClasses.join(", "))}</p>
     <p><strong>Reason:</strong> ${escapeHtml(change.reason || "")}</p>
   </article>`;
 }
@@ -365,8 +390,7 @@ async function renderProgressView() {
   </section>`;
 }
 
-async function renderFullCorpusV6() {
-  const data = await getJson("/api/full-corpus-v6");
+function renderFullCorpusView(data, title, apiPrefix) {
   const renderDoc = (doc, golden) => `<article class="corpus-card ${golden ? "golden" : "remaining"}">
     <header>
       <h3>${String(doc.review_number).padStart(2, "0")} · ${escapeHtml(doc.court)} · ${escapeHtml(doc.case_number || doc.source_id)}</h3>
@@ -378,11 +402,11 @@ async function renderFullCorpusV6() {
     <p><strong>Hierarchy:</strong> blocks ${doc.hierarchy_summary.block_count}, numbered ${doc.hierarchy_summary.numbered_paragraph_count}, lists/tables ${doc.hierarchy_summary.list_or_table_count}, headings ${doc.hierarchy_summary.heading_count}</p>
     <p><strong>Manual review:</strong> ${doc.manual_line_reviewed}/${doc.manual_line_total} lines · ${doc.manual_boundary_reviewed}/${doc.manual_boundary_total} boundaries</p>
     <p><strong>Potential review candidates:</strong> ${doc.potential_review_candidates.review_recommended ? "review recommended" : "no parser-change review queue"}</p>
-    ${golden ? "" : `<button type="button" onclick="copyDocumentReviewById('${doc.document_id}')">Copy document review</button>`}
+    ${golden ? "" : `<button type="button" onclick="copyDocumentReviewById('${doc.document_id}', '${apiPrefix}')">Copy document review</button>`}
   </article>`;
   document.getElementById("work").innerHTML = `<section class="full-corpus-view">
-    <h3>Full corpus v6 review</h3>
-    <p>All 20 documents with golden / non-golden separation. Exact GOLDEN PASS is reserved for documents 05, 11 and 16.</p>
+    <h3>${title}</h3>
+    <p>All 20 documents with golden / non-golden separation. Exact GOLDEN PASS is reserved for documents 05, 11 and 16. Targeted structural regressions display TARGETED REGRESSION PASS separately.</p>
     <p class="export-links">
       <a href="${data.exports.json_url}" ${data.exports.json_exists ? "" : 'aria-disabled="true"'}>Download complete JSON</a>
       ·
@@ -395,8 +419,18 @@ async function renderFullCorpusV6() {
   </section>`;
 }
 
-async function copyDocumentReviewById(documentId) {
-  const data = await getJson(`/api/full-corpus-v6/document-markdown?document_id=${encodeURIComponent(documentId)}`);
+async function renderFullCorpusV7() {
+  const data = await getJson("/api/full-corpus-v7");
+  renderFullCorpusView(data, "Full corpus v7 review", "full-corpus-v7");
+}
+
+async function renderFullCorpusV6() {
+  const data = await getJson("/api/full-corpus-v6");
+  renderFullCorpusView(data, "Full corpus v6 review (historical)", "full-corpus-v6");
+}
+
+async function copyDocumentReviewById(documentId, apiPrefix = "full-corpus-v7") {
+  const data = await getJson(`/api/${apiPrefix}/document-markdown?document_id=${encodeURIComponent(documentId)}`);
   await navigator.clipboard.writeText(data.markdown);
   const meta = document.getElementById("documentMeta");
   if (meta) {

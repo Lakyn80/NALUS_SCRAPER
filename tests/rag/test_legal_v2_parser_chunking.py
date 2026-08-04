@@ -232,7 +232,7 @@ def test_parser_preserves_stable_paragraph_ids_and_damaged_formatting() -> None:
 def test_parser_profile_version_identifies_corrected_paragraph_parser() -> None:
     from app.rag.legal_v2.audit import PARSER_VERSION
 
-    assert PARSER_VERSION == "legal-decision-parser.cz-courts.v6"
+    assert PARSER_VERSION == "legal-decision-parser.cz-courts.v7"
 
 
 def test_parser_preserves_roman_only_section_markers_from_constitutional_court() -> None:

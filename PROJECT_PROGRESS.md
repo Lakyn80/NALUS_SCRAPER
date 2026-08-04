@@ -1,5 +1,22 @@
 # Project Progress
 
+## 2026-08-05 Europe/Moscow — Task: Czech courts parser v7 structural corrections
+
+- Goal:
+  Implement `legal-decision-parser.cz-courts.v7` to correct confirmed v6 generalization regressions across the 17 non-golden review documents via court-profile/state rules, while preserving v6 artifacts and exact goldens `05`/`11`/`16`.
+- Worktree:
+  `nalus-scraper-parser-fix` on `fix/legal-paragraph-parser`. Starting HEAD `d0eeee58c76b29e856ac4f905daddb596bf66034`. One commit: `fix(parser): add Czech courts parser v7 structural corrections`. No push.
+- Parser corrections:
+  Constitutional compact Roman(+decimal) subheadings are independent headings; Prague opening formulas merge through `Výrok` including participant numbers as prose; Olomouc civil operative/reasoning uses expected-number progression with date/list isolation; criminal Olomouc golden remains exact.
+- Audit/export:
+  Baseline/compare under `artifacts/legal_v2/parser_v7_audit/` reports 163 changed line classes and 22 changed boundaries vs the v6 snapshot baseline, golden_status pass, conservation/duplication/ordering/exceptions 0. Generated ignored `parser_v7_remaining_17_full.json/.md`. Historical v6 exports remain byte-identical.
+- UI/API:
+  Active labels/views use parser v7 (`Changed by parser v7`, `Full corpus v7 review`, TARGETED REGRESSION PASS). Historical v6 change/corpus views and `/exports/parser_v6_*` remain available.
+- Manual-review safety:
+  Decision store SHA-256 unchanged `F98CD519CCF28310706F70B0D65F2F15FDFC28CC530304CD4FF79890219A28FB`; history unchanged `5E0E86E5A2210800A514341E6A7A87210EBC2EC7504D379BA6DB2542EB82FACD`. No automatic approvals; assisted batches 0. Stale/conflict export categories are consistent (stale=2, conflicts=0).
+- Next recommended task:
+  Human review of the v7 changed-item queue for the remaining non-golden documents, prioritizing Olomouc civil operative/reasoning and Constitutional compact headings, without treating TARGETED REGRESSION PASS as full golden proof.
+
 ## 2026-08-05 Europe/Moscow — Task: Commit parser v6 + full corpus review export
 
 - Goal:

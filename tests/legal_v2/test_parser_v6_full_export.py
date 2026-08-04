@@ -177,7 +177,7 @@ def test_source_order_conservation_and_no_duplication_in_export() -> None:
 
 def test_html_full_corpus_api_and_copy_action_and_existing_views() -> None:
     api = ReviewApi(REVIEW_DIR)
-    status, payload = api.get("/api/full-corpus-v6", {})
+    status, payload = api.get("/api/full-corpus-v7", {})
     assert status == 200
     assert len(payload["documents"]) == 20
     assert len(payload["golden_documents"]) == 3
@@ -191,7 +191,7 @@ def test_html_full_corpus_api_and_copy_action_and_existing_views() -> None:
 
     remaining_id = payload["remaining_documents"][0]["document_id"]
     status, markdown_payload = api.get(
-        "/api/full-corpus-v6/document-markdown",
+        "/api/full-corpus-v7/document-markdown",
         {"document_id": [remaining_id]},
     )
     assert status == 200
@@ -200,11 +200,16 @@ def test_html_full_corpus_api_and_copy_action_and_existing_views() -> None:
     assert "## Complete boundaries" in markdown_payload["markdown"]
     assert "## Complete blocks" in markdown_payload["markdown"]
 
+    status, historical = api.get("/api/full-corpus-v6", {})
+    assert status == 200
+    assert len(historical["documents"]) == 20
+
     for path in (
         "/api/documents",
         "/api/progress",
         "/api/problems",
         "/api/assisted/summary",
+        "/api/parser-v7/changes",
         "/api/parser-v6/changes",
     ):
         status, _ = api.get(path, {"document_id": [remaining_id]} if "changes" in path or path == "/api/problems" else {})
@@ -257,3 +262,37 @@ def test_non_golden_documents_are_not_automatically_approved(tmp_path: Path) -> 
     for document in payload["remaining_documents"]:
         assert document["parser_validation_status"] != ParserValidationStatus.AUTO_VALIDATED_GOLDEN.value
         assert document["exact_golden_coverage"] is False
+
+
+def test_conflict_and_stale_categories_are_consistent() -> None:
+    payload = build_export_payload(snapshot_dir=REVIEW_DIR, first_commit="conflict-check")
+    validate_export_payload(payload)
+    summary = payload["corpus_summary"]
+    candidates = payload["cross_document_review_candidates"]
+    assert summary["parser_manual_conflicts"] == len(candidates["parser_manual_conflicts"])
+    assert summary["stale_manual_decisions"] == len(candidates["stale_manual_decisions"])
+    conflict_keys = {(row["review_index"], row["locator"]) for row in candidates["parser_manual_conflicts"]}
+    stale_keys = {(row["review_index"], row["locator"]) for row in candidates["stale_manual_decisions"]}
+    assert not (conflict_keys & stale_keys)
+    for document in payload["remaining_documents"]:
+        for line in document["lines"]:
+            if line.get("manual_review_status") == "MANUAL_DECISION_STALE" or line.get("stale_decision_flag"):
+                assert line.get("manual_review_status") != "MANUAL_CONFLICT"
+
+
+def test_opening_formula_overmerge_false_positives_suppressed() -> None:
+    payload = build_export_payload(snapshot_dir=REVIEW_DIR, first_commit="overmerge-check")
+    by_index = {int(row["review_index"]): row for row in payload["remaining_documents"]}
+    for review_index, start, end in ((12, 1, 15), (17, 1, 12), (19, 1, 13)):
+        document = by_index[review_index]
+        opening = next(block for block in document["blocks"] if block["start_line"] == start)
+        assert opening["end_line"] == end
+        assert opening["suspicious_overmerge_flag"] is False
+    # Genuine long non-opening blocks may still be flagged.
+    flagged = [
+        block
+        for document in payload["remaining_documents"]
+        for block in document["blocks"]
+        if block["suspicious_overmerge_flag"]
+    ]
+    assert isinstance(flagged, list)

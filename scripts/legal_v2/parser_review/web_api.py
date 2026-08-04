@@ -8,6 +8,9 @@ from .full_export import (
     DEFAULT_OUTPUT_DIR,
     JSON_NAME,
     MARKDOWN_NAME,
+    V6_OUTPUT_DIR,
+    V6_JSON_NAME,
+    V6_MARKDOWN_NAME,
     GOLDEN_DOCUMENT_IDS,
     GOLDEN_REVIEW_NUMBERS,
     build_export_payload,
@@ -17,7 +20,7 @@ from .models import PROJECT_ROOT, REVIEW_SCHEMA_VERSION, read_jsonl
 from .progress import apply_manual_status, compute_progress
 from .assisted import build_assisted_review, load_assisted_artifacts, occurrences_for_rule
 from .batches import apply_batch, revert_batch
-from .status import ReviewStatusBuilder, block_ranges_for_lines
+from .status import AUDIT_DIR, V6_AUDIT_DIR, ReviewStatusBuilder, block_ranges_for_lines
 from .store import append_decision
 
 
@@ -69,16 +72,57 @@ class ReviewApi:
         if path == "/api/parser-v5/changes":
             document_id = _optional_param(params, "document_id")
             return 200, {"schema_version": REVIEW_SCHEMA_VERSION, **self._parser_v5_changes(document_id)}
+        if path == "/api/parser-v7/changes":
+            document_id = _optional_param(params, "document_id")
+            return 200, {
+                "schema_version": REVIEW_SCHEMA_VERSION,
+                **self._parser_changes(document_id, audit_dir=AUDIT_DIR, current_range_key="v7_range"),
+            }
         if path == "/api/parser-v6/changes":
             document_id = _optional_param(params, "document_id")
-            return 200, {"schema_version": REVIEW_SCHEMA_VERSION, **self._parser_v6_changes(document_id)}
+            return 200, {
+                "schema_version": REVIEW_SCHEMA_VERSION,
+                **self._parser_changes(document_id, audit_dir=V6_AUDIT_DIR, current_range_key="v6_range"),
+            }
+        if path == "/api/full-corpus-v7":
+            return 200, {
+                "schema_version": REVIEW_SCHEMA_VERSION,
+                **self._full_corpus(
+                    export_dir=DEFAULT_OUTPUT_DIR,
+                    json_name=JSON_NAME,
+                    markdown_name=MARKDOWN_NAME,
+                    audit_dir=AUDIT_DIR,
+                ),
+            }
         if path == "/api/full-corpus-v6":
-            return 200, {"schema_version": REVIEW_SCHEMA_VERSION, **self._full_corpus_v6()}
+            return 200, {
+                "schema_version": REVIEW_SCHEMA_VERSION,
+                **self._full_corpus(
+                    export_dir=V6_OUTPUT_DIR,
+                    json_name=V6_JSON_NAME,
+                    markdown_name=V6_MARKDOWN_NAME,
+                    audit_dir=V6_AUDIT_DIR,
+                ),
+            }
+        if path == "/api/full-corpus-v7/document-markdown":
+            document_id = _param(params, "document_id")
+            return 200, {
+                "schema_version": REVIEW_SCHEMA_VERSION,
+                **self._document_review_markdown(
+                    document_id,
+                    export_dir=DEFAULT_OUTPUT_DIR,
+                    json_name=JSON_NAME,
+                ),
+            }
         if path == "/api/full-corpus-v6/document-markdown":
             document_id = _param(params, "document_id")
             return 200, {
                 "schema_version": REVIEW_SCHEMA_VERSION,
-                **self._document_review_markdown(document_id),
+                **self._document_review_markdown(
+                    document_id,
+                    export_dir=V6_OUTPUT_DIR,
+                    json_name=V6_JSON_NAME,
+                ),
             }
         if path.startswith("/api/assisted/rules/"):
             parts = [part for part in path.split("/") if part]
@@ -141,8 +185,13 @@ class ReviewApi:
             "class_count": len(classes),
         }
 
-    def _parser_v6_changes(self, document_id: str | None) -> dict[str, Any]:
-        audit_dir = PROJECT_ROOT / "artifacts" / "legal_v2" / "parser_v6_audit"
+    def _parser_changes(
+        self,
+        document_id: str | None,
+        *,
+        audit_dir: Path,
+        current_range_key: str,
+    ) -> dict[str, Any]:
         classes = read_jsonl(audit_dir / "changed_line_classes.jsonl")
         boundaries = read_jsonl(audit_dir / "changed_boundaries.jsonl")
         blocks = read_jsonl(audit_dir / "changed_blocks.jsonl")
@@ -150,7 +199,7 @@ class ReviewApi:
             classes = [row for row in classes if row.get("document_id") == document_id]
             boundaries = [row for row in boundaries if row.get("document_id") == document_id]
             blocks = [row for row in blocks if row.get("document_id") == document_id]
-        builder = self._status_builder()
+        builder = ReviewStatusBuilder(self.review_dir, audit_dir=audit_dir)
         line_rows = {
             (str(row["document_id"]), int(row["raw_line_number"])): row
             for row in read_jsonl(self.review_dir / "review_lines.jsonl")
@@ -161,20 +210,39 @@ class ReviewApi:
         }
         document_rows = {str(row["document_id"]): row for row in read_jsonl(self.review_dir / "review_documents.jsonl")}
         enriched_classes = [
-            {**row, **builder.parser_status_for_line(line_rows[(str(row["document_id"]), int(row["line"]))]), **builder.manual_status_for_item("line", line_rows[(str(row["document_id"]), int(row["line"]))])}
+            {
+                **row,
+                **builder.parser_status_for_line(line_rows[(str(row["document_id"]), int(row["line"]))]),
+                **builder.manual_status_for_item("line", line_rows[(str(row["document_id"]), int(row["line"]))]),
+            }
             for row in classes
             if (str(row["document_id"]), int(row["line"])) in line_rows
         ]
         enriched_boundaries = [
-            {**row, **builder.parser_status_for_boundary(boundary_rows[(str(row["document_id"]), int(row["before_line"]))]), **builder.manual_status_for_item("boundary", boundary_rows[(str(row["document_id"]), int(row["before_line"]))])}
+            {
+                **row,
+                **builder.parser_status_for_boundary(
+                    boundary_rows[(str(row["document_id"]), int(row["before_line"]))]
+                ),
+                **builder.manual_status_for_item(
+                    "boundary",
+                    boundary_rows[(str(row["document_id"]), int(row["before_line"]))],
+                ),
+            }
             for row in boundaries
             if (str(row["document_id"]), int(row["before_line"])) in boundary_rows
         ]
-        enriched_blocks = [
-            {**row, **builder.parser_status_for_block(document_rows[str(row["document_id"])], row["v6_range"])}
-            for row in blocks
-            if str(row["document_id"]) in document_rows
-        ]
+        enriched_blocks = []
+        for row in blocks:
+            doc = document_rows.get(str(row["document_id"]))
+            if doc is None:
+                continue
+            current_range = row.get(current_range_key) or row.get("v7_range") or row.get("v6_range")
+            if not isinstance(current_range, list) or len(current_range) != 2:
+                continue
+            enriched_blocks.append(
+                {**row, **builder.parser_status_for_block(doc, [int(current_range[0]), int(current_range[1])])}
+            )
         return {
             "changed_classes": enriched_classes,
             "changed_boundaries": enriched_boundaries,
@@ -213,8 +281,15 @@ class ReviewApi:
     def _status_builder(self) -> ReviewStatusBuilder:
         return ReviewStatusBuilder(self.review_dir)
 
-    def _full_corpus_v6(self) -> dict[str, Any]:
-        builder = self._status_builder()
+    def _full_corpus(
+        self,
+        *,
+        export_dir: Path,
+        json_name: str,
+        markdown_name: str,
+        audit_dir: Path,
+    ) -> dict[str, Any]:
+        builder = ReviewStatusBuilder(self.review_dir, audit_dir=audit_dir)
         documents = read_jsonl(self.review_dir / "review_documents.jsonl")
         enriched = []
         for row in documents:
@@ -273,8 +348,8 @@ class ReviewApi:
                     ),
                 }
             )
-        json_path = DEFAULT_OUTPUT_DIR / JSON_NAME
-        md_path = DEFAULT_OUTPUT_DIR / MARKDOWN_NAME
+        json_path = export_dir / json_name
+        md_path = export_dir / markdown_name
         return {
             "documents": enriched,
             "golden_documents": [row for row in enriched if row["corpus_group"] == "golden"],
@@ -282,16 +357,22 @@ class ReviewApi:
             "exports": {
                 "json_path": str(json_path.relative_to(PROJECT_ROOT)) if json_path.exists() else None,
                 "markdown_path": str(md_path.relative_to(PROJECT_ROOT)) if md_path.exists() else None,
-                "json_url": f"/exports/{JSON_NAME}",
-                "markdown_url": f"/exports/{MARKDOWN_NAME}",
+                "json_url": f"/exports/{json_name}",
+                "markdown_url": f"/exports/{markdown_name}",
                 "json_exists": json_path.exists(),
                 "markdown_exists": md_path.exists(),
             },
         }
 
-    def _document_review_markdown(self, document_id: str) -> dict[str, Any]:
+    def _document_review_markdown(
+        self,
+        document_id: str,
+        *,
+        export_dir: Path = DEFAULT_OUTPUT_DIR,
+        json_name: str = JSON_NAME,
+    ) -> dict[str, Any]:
         document = self._document(document_id)
-        export_path = DEFAULT_OUTPUT_DIR / JSON_NAME
+        export_path = export_dir / json_name
         if export_path.exists():
             payload = json.loads(export_path.read_text(encoding="utf-8"))
         else:

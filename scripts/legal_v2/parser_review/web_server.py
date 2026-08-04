@@ -8,7 +8,14 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from .full_export import DEFAULT_OUTPUT_DIR, JSON_NAME, MARKDOWN_NAME
+from .full_export import (
+    DEFAULT_OUTPUT_DIR,
+    JSON_NAME,
+    MARKDOWN_NAME,
+    V6_OUTPUT_DIR,
+    V6_JSON_NAME,
+    V6_MARKDOWN_NAME,
+)
 from .models import DEFAULT_REVIEW_DIR
 from .security import assert_local_bind
 from .web_api import ReviewApi
@@ -17,6 +24,8 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 EXPORT_FILES = {
     f"/exports/{JSON_NAME}": (DEFAULT_OUTPUT_DIR / JSON_NAME, "application/json; charset=utf-8"),
     f"/exports/{MARKDOWN_NAME}": (DEFAULT_OUTPUT_DIR / MARKDOWN_NAME, "text/markdown; charset=utf-8"),
+    f"/exports/{V6_JSON_NAME}": (V6_OUTPUT_DIR / V6_JSON_NAME, "application/json; charset=utf-8"),
+    f"/exports/{V6_MARKDOWN_NAME}": (V6_OUTPUT_DIR / V6_MARKDOWN_NAME, "text/markdown; charset=utf-8"),
 }
 
 
@@ -62,7 +71,7 @@ class ReviewRequestHandler(SimpleHTTPRequestHandler):
     def _send_export(self, path: str) -> None:
         file_path, content_type = EXPORT_FILES[path]
         if not file_path.exists():
-            self.send_error(404, "Export file not found. Generate it with export_parser_v6_full_review.py")
+            self.send_error(404, "Export file not found. Generate it with export_parser_v7_full_review.py")
             return
         body = file_path.read_bytes()
         self.send_response(200)
