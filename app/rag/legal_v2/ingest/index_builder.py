@@ -45,6 +45,7 @@ class LegalV2BuildConfig:
     recreate_collection: bool = False
     overwrite_bm25: bool = False
     resume: bool = False
+    allow_existing_collection: bool = False
     batch_size: int = 64
     document_batch_size: int = 128
     checkpoint_path: Path | None = None
@@ -64,12 +65,18 @@ class LegalV2BuildConfig:
             and self.bm25_index_id == LEGAL_V2_BM25_INDEX_ID
         ):
             raise ValueError("Pilot Legal v2 builds must use a non-canonical BM25 index id.")
-        if self.bm25_path.exists() and not (self.overwrite_bm25 or self.resume):
+        if self.bm25_path.exists() and not (
+            self.overwrite_bm25 or self.resume or self.allow_existing_collection
+        ):
             raise ValueError(f"BM25 sidecar already exists: {self.bm25_path}")
         if self.resume and self.recreate_collection:
             raise ValueError("resume and recreate_collection cannot be used together.")
         if self.resume and self.overwrite_bm25:
             raise ValueError("resume and overwrite_bm25 cannot be used together.")
+        if self.allow_existing_collection and self.recreate_collection:
+            raise ValueError(
+                "allow_existing_collection and recreate_collection cannot be used together."
+            )
         if self.batch_size <= 0:
             raise ValueError("batch_size must be positive.")
         if self.document_batch_size <= 0:
@@ -156,8 +163,13 @@ def build_legal_v2_index(
         qdrant_client,
         collection_name=config.collection_name,
         expected=expected_chunk_ids,
+        require_exact_match=not config.allow_existing_collection,
     )
-    _validate_bm25_identity_by_ids(expected_chunk_ids, config.bm25_path)
+    _validate_bm25_identity_by_ids(
+        expected_chunk_ids,
+        config.bm25_path,
+        require_exact_match=not config.allow_existing_collection,
+    )
     manifest = LegalV2BuildManifest(
         collection_name=config.collection_name,
         bm25_index_id=config.bm25_index_id,
@@ -496,12 +508,13 @@ def _prepare_collection(client: Any, config: LegalV2BuildConfig) -> None:
             collection_name=config.collection_name,
             vectors_config=vectors_config,
         )
-    elif not config.resume and not config.recreate_collection:
+    elif not config.resume and not config.recreate_collection and not config.allow_existing_collection:
         existing = _qdrant_payload_chunk_ids(client, config.collection_name)
         if existing:
             raise ValueError(
                 f"Legal v2 collection already contains {len(existing)} chunk IDs; "
-                "use --recreate-v2-collection for a fresh build or --resume with a checkpoint."
+                "use --recreate-v2-collection for a fresh build, --resume with a checkpoint, "
+                "or allow_existing_collection for additive upsert."
             )
 
 
@@ -592,15 +605,16 @@ def _validate_qdrant_identity_by_ids(
     *,
     collection_name: str,
     expected: set[str],
+    require_exact_match: bool = True,
 ) -> None:
     actual = _qdrant_payload_chunk_ids(client, collection_name)
-    if expected != actual:
-        missing = sorted(expected - actual)[:10]
-        unexpected = sorted(actual - expected)[:10]
+    missing = expected - actual
+    unexpected = actual - expected
+    if missing or (require_exact_match and unexpected):
         raise ValueError(
             "Qdrant v2 chunk identity mismatch after upsert: "
-            f"missing={len(expected - actual)} sample_missing={missing}; "
-            f"unexpected={len(actual - expected)} sample_unexpected={unexpected}"
+            f"missing={len(missing)} sample_missing={sorted(missing)[:10]}; "
+            f"unexpected={len(unexpected)} sample_unexpected={sorted(unexpected)[:10]}"
         )
 
 
@@ -661,11 +675,21 @@ def _validate_bm25_identity(payloads: list[dict[str, Any]], path: Path) -> None:
     _validate_bm25_identity_by_ids(expected, path)
 
 
-def _validate_bm25_identity_by_ids(expected: set[str], path: Path) -> None:
+def _validate_bm25_identity_by_ids(
+    expected: set[str],
+    path: Path,
+    *,
+    require_exact_match: bool = True,
+) -> None:
     with sqlite3.connect(path) as connection:
         actual = {str(row[0]) for row in connection.execute("SELECT chunk_id FROM bm25_chunks")}
-    if expected != actual:
-        raise ValueError("Dense/BM25 v2 chunk identity mismatch.")
+    missing = expected - actual
+    unexpected = actual - expected
+    if missing or (require_exact_match and unexpected):
+        raise ValueError(
+            "Dense/BM25 v2 chunk identity mismatch: "
+            f"missing={len(missing)} unexpected={len(unexpected)}"
+        )
 
 
 def _bm25_chunk_ids(path: Path) -> set[str]:

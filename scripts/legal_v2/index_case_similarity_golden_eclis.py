@@ -140,11 +140,27 @@ def main(argv: list[str] | None = None) -> int:
     retriever_config = legal_v2_retriever_config_from_env()
     from qdrant_client import QdrantClient  # type: ignore[import-not-found]
 
+    bm25_index_id = os.getenv(
+        "NALUS_LEGAL_V2_BM25_INDEX_ID",
+        f"{args.qdrant_collection}_bm25",
+    )
+    bm25_path = Path(
+        os.getenv(
+            "NALUS_LEGAL_V2_BM25_SIDECAR_PATH",
+            str(Path("storage") / "rag" / "bm25" / f"{bm25_index_id}.sqlite"),
+        )
+    )
+    bm25_path.parent.mkdir(parents=True, exist_ok=True)
+    # Additive upsert into an existing collection must not reuse a stale full-build checkpoint.
+    resume = False
+    checkpoint = args.output_dir / "legal_v2_execute_checkpoint.json"
+    if checkpoint.exists():
+        checkpoint.unlink()
     prod_config = ProductionRetrievalConfig(
         profile=LEGAL_V2_PROFILE,
         qdrant_collection=args.qdrant_collection,
-        bm25_sidecar_path=retriever_config.bm25_sidecar_path,
-        bm25_index_id=retriever_config.bm25_index_id,
+        bm25_sidecar_path=bm25_path,
+        bm25_index_id=bm25_index_id,
         model_path=retriever_config.model_path,
         local_files_only=True,
         trust_remote_code=False,
@@ -160,12 +176,13 @@ def main(argv: list[str] | None = None) -> int:
         qdrant_client=QdrantClient(url=args.qdrant_url, timeout=120),
         config=LegalV2BuildConfig(
             collection_name=args.qdrant_collection,
-            bm25_index_id=retriever_config.bm25_index_id,
-            bm25_path=retriever_config.bm25_sidecar_path,
+            bm25_index_id=bm25_index_id,
+            bm25_path=bm25_path,
             output_dir=args.output_dir,
             recreate_collection=False,
             overwrite_bm25=False,
-            resume=True,
+            resume=resume,
+            allow_existing_collection=True,
             batch_size=32,
             document_batch_size=8,
         ),
