@@ -333,7 +333,17 @@ def _decision_date_value(metadata: dict[str, Any]) -> Any:
 
 
 def _document_identity(item: dict[str, Any]) -> str:
-    for key in ("ecli", "source_document_id", "document_id", "case_reference", "spisova_znacka", "result_id"):
+    """Resolve production document identity. Prefer verified ECLI."""
+    from app.rag.legal_v2.identity import is_valid_ecli, normalize_ecli
+
+    ecli = str(item.get("ecli") or "").strip()
+    if ecli and is_valid_ecli(ecli):
+        return normalize_ecli(ecli)
+    for key in ("canonical_document_id", "document_id"):
+        value = str(item.get(key) or "").strip()
+        if value and is_valid_ecli(value):
+            return normalize_ecli(value)
+    for key in ("source_document_id", "case_reference", "spisova_znacka", "result_id"):
         value = str(item.get(key) or "").strip()
         if value:
             return value

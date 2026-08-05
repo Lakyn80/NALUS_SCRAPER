@@ -170,16 +170,22 @@ def _aggregate_documents(
     query_spec: QuerySpecV2,
     limit: int,
 ) -> list[CandidateEvidenceDocument]:
+    from app.rag.legal_v2.identity import ecli_key, is_valid_ecli
+
     dense_rank = {chunk.id: index for index, chunk in enumerate(dense, start=1)}
     bm25_rank = {chunk.id: index for index, chunk in enumerate(bm25, start=1)}
     grouped: dict[str, list[RetrievedChunk]] = {}
+    display_ids: dict[str, str] = {}
     for chunk in fused:
         document_id = _document_id(chunk)
         if not document_id:
             continue
-        grouped.setdefault(document_id, []).append(chunk)
+        group_key = ecli_key(document_id) if is_valid_ecli(document_id) else document_id
+        display_ids.setdefault(group_key, document_id)
+        grouped.setdefault(group_key, []).append(chunk)
     documents: list[CandidateEvidenceDocument] = []
-    for document_id, chunks in grouped.items():
+    for group_key, chunks in grouped.items():
+        document_id = display_ids[group_key]
         ordered = sorted(chunks, key=lambda chunk: int((chunk.metadata or {}).get("source_order") or (chunk.metadata or {}).get("chunk_index") or 0))
         paragraphs = _paragraphs_from_chunks(document_id, ordered)
         best = max(chunks, key=lambda chunk: chunk.score)
@@ -273,10 +279,13 @@ def _paragraphs_from_chunks(document_id: str, chunks: list[RetrievedChunk]) -> l
 
 def _document_id(chunk: RetrievedChunk) -> str:
     metadata = chunk.metadata or {}
-    for key in ("document_id", "source_document_id", "ecli", "case_reference"):
-        value = str(metadata.get(key) or "").strip()
-        if value:
-            return value
+    from app.rag.legal_v2.identity import ecli_key, resolve_production_document_id
+
+    resolved = resolve_production_document_id(metadata)
+    # Prefer stable casefolded ECLI key for aggregation grouping, but return
+    # the normalized display form so downstream consumers keep the literal ECLI.
+    if resolved:
+        return resolved
     return ""
 
 

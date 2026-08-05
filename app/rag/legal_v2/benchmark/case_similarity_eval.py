@@ -14,6 +14,10 @@ FAILURE_RETRIEVAL_ERROR = "retrieval_error"
 FAILURE_INVALID_BENCHMARK_ROW = "invalid_benchmark_row"
 FAILURE_DOCUMENT_ID_MAPPING_ERROR = "document_id_mapping_error"
 FAILURE_AGGREGATION_ERROR = "aggregation_error"
+FAILURE_MISSING_VERIFIED_ECLI_IN_BENCHMARK = "missing_verified_ecli_in_benchmark"
+FAILURE_EXPECTED_ECLI_MISSING_FROM_INDEX = "expected_ecli_missing_from_index"
+FAILURE_RETRIEVED_RESULT_MISSING_ECLI = "retrieved_result_missing_ecli"
+FAILURE_CANONICAL_IDENTITY_MISMATCH = "canonical_identity_mismatch"
 
 
 class RetrievedDocumentScore(BaseModel):
@@ -21,6 +25,9 @@ class RetrievedDocumentScore(BaseModel):
 
     rank: int
     document_id: str
+    ecli: str | None = None
+    canonical_document_id: str | None = None
+    source_document_id: str | None = None
     score: float | None = None
     dense_score: float | None = None
     sparse_score: float | None = None
@@ -36,11 +43,14 @@ class CaseSimilarityQueryEvalResult(BaseModel):
     query_style: str
     difficulty: str
     expected_primary_document_id: str
+    expected_primary_source_document_id: str | None = None
+    expected_primary_ecli: str | None = None
     accepted_alternative_document_ids: list[str] = Field(default_factory=list)
     hard_negative_document_ids: list[str] = Field(default_factory=list)
     hard_negative_evaluable: bool = True
     hard_negative_blocker: str | None = None
     retrieved_document_ids: list[str] = Field(default_factory=list)
+    retrieved_eclis: list[str] = Field(default_factory=list)
     retrieved_results: list[RetrievedDocumentScore] = Field(default_factory=list)
     primary_rank: int | None = None
     best_accepted_alternative_rank: int | None = None
@@ -87,11 +97,23 @@ class CaseSimilarityAggregateMetrics(BaseModel):
     missing_hard_negative_document_count: int = 0
 
 
+def _id_match_key(document_id: str) -> str:
+    text = str(document_id or "").strip()
+    if text.upper().startswith("ECLI:"):
+        from app.rag.legal_v2.identity import ecli_key
+
+        return ecli_key(text)
+    return text
+
+
 def first_rank(document_id: str, ranked_ids: Sequence[str]) -> int | None:
-    try:
-        return list(ranked_ids).index(document_id) + 1
-    except ValueError:
+    target = _id_match_key(document_id)
+    if not target:
         return None
+    for index, candidate in enumerate(ranked_ids, start=1):
+        if _id_match_key(candidate) == target:
+            return index
+    return None
 
 
 def dedupe_document_ids(document_ids: Sequence[str]) -> list[str]:
@@ -99,9 +121,10 @@ def dedupe_document_ids(document_ids: Sequence[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for document_id in document_ids:
-        if not document_id or document_id in seen:
+        key = _id_match_key(document_id)
+        if not document_id or not key or key in seen:
             continue
-        seen.add(document_id)
+        seen.add(key)
         out.append(document_id)
     return out
 
@@ -123,6 +146,8 @@ def evaluate_ranked_documents(
     failure_type: str | None = None,
     error: str | None = None,
     top_k: int = 10,
+    expected_primary_source_document_id: str | None = None,
+    expected_primary_ecli: str | None = None,
 ) -> CaseSimilarityQueryEvalResult:
     ranked = dedupe_document_ids(ranked_document_ids)[:top_k]
     results = list(retrieved_results or [])
@@ -161,8 +186,6 @@ def evaluate_ranked_documents(
     if not hard_negative_evaluable:
         hard_before_positive = None
     elif best_positive_rank is None:
-        hard_before_positive = any(rank is not None for rank in hard_ranks.values()) or None
-        # If no positive and any HN appears, treat as outrank for evaluable rows when HN present.
         if any(rank is not None for rank in hard_ranks.values()):
             hard_before_positive = True
         else:
@@ -183,8 +206,9 @@ def evaluate_ranked_documents(
         if best_positive_rank is None:
             resolved_failure = FAILURE_POSITIVE_NOT_RETRIEVED
         elif hard_negative_evaluable and hard_before_positive:
-            # Secondary diagnostic: keep positive outcome visible via hit flags.
             resolved_failure = FAILURE_HARD_NEGATIVE_ABOVE_POSITIVE
+
+    retrieved_eclis = [doc_id for doc_id in ranked if str(doc_id).upper().startswith("ECLI:")]
 
     return CaseSimilarityQueryEvalResult(
         query_id=query_id,
@@ -192,11 +216,18 @@ def evaluate_ranked_documents(
         query_style=query_style,
         difficulty=difficulty,
         expected_primary_document_id=expected_primary_document_id,
+        expected_primary_source_document_id=expected_primary_source_document_id,
+        expected_primary_ecli=expected_primary_ecli or (
+            expected_primary_document_id
+            if str(expected_primary_document_id).upper().startswith("ECLI:")
+            else None
+        ),
         accepted_alternative_document_ids=list(accepted_alternative_document_ids),
         hard_negative_document_ids=list(hard_negative_document_ids),
         hard_negative_evaluable=hard_negative_evaluable,
         hard_negative_blocker=hard_negative_blocker,
         retrieved_document_ids=ranked,
+        retrieved_eclis=retrieved_eclis,
         retrieved_results=results[:top_k],
         primary_rank=primary_rank,
         best_accepted_alternative_rank=best_alt_rank,
@@ -347,7 +378,15 @@ def corpus_presence_summary(
     items: Sequence[Any],
     present_document_ids: Iterable[str],
 ) -> dict[str, Any]:
-    present = set(present_document_ids)
+    """Summarize corpus presence using production ECLI identity when available.
+
+    ``present_document_ids`` should contain indexed production IDs (ECLI preferred).
+    Golden ``doc-*`` IDs are matched via ``expected_primary_ecli`` /
+    rationale ``ecli`` fields, not by treating ``doc-*`` as production IDs.
+    """
+    from app.rag.legal_v2.identity import ecli_key, is_valid_ecli
+
+    present_keys = {_id_match_key(doc_id) for doc_id in present_document_ids if doc_id}
     primary_present = 0
     primary_missing = 0
     alt_present = 0
@@ -357,13 +396,39 @@ def corpus_presence_summary(
     hn_evaluable = 0
     hn_blocked = 0
     details: list[dict[str, Any]] = []
+
+    def _lookup_id(source_document_id: str, ecli: str | None) -> tuple[str, bool]:
+        if ecli and is_valid_ecli(ecli):
+            key = ecli_key(ecli)
+            return normalize_display_id(ecli), key in present_keys
+        key = _id_match_key(source_document_id)
+        return source_document_id, key in present_keys
+
+    def normalize_display_id(value: str) -> str:
+        from app.rag.legal_v2.identity import normalize_ecli
+
+        return normalize_ecli(value) if is_valid_ecli(value) else value
+
     for item in items:
-        primary = item.source_document_id
-        primary_ok = primary in present
+        primary_ecli = getattr(item, "expected_primary_ecli", None)
+        primary_id, primary_ok = _lookup_id(item.source_document_id, primary_ecli)
         primary_present += int(primary_ok)
         primary_missing += int(not primary_ok)
-        alt_status = {doc: doc in present for doc in item.accepted_alternative_document_ids}
-        hn_status = {doc: doc in present for doc in item.hard_negative_document_ids}
+
+        alt_rows = list(getattr(item, "accepted_alternative_rationales", []) or [])
+        alt_by_source = {row.document_id: getattr(row, "ecli", None) for row in alt_rows}
+        alt_status: dict[str, bool] = {}
+        for doc in item.accepted_alternative_document_ids:
+            _, ok = _lookup_id(doc, alt_by_source.get(doc))
+            alt_status[doc] = ok
+
+        hn_rows = list(getattr(item, "hard_negative_rationales", []) or [])
+        hn_by_source = {row.document_id: getattr(row, "ecli", None) for row in hn_rows}
+        hn_status: dict[str, bool] = {}
+        for doc in item.hard_negative_document_ids:
+            _, ok = _lookup_id(doc, hn_by_source.get(doc))
+            hn_status[doc] = ok
+
         alt_present += sum(1 for ok in alt_status.values() if ok)
         alt_missing += sum(1 for ok in alt_status.values() if not ok)
         hn_present += sum(1 for ok in hn_status.values() if ok)
@@ -375,12 +440,27 @@ def corpus_presence_summary(
         details.append(
             {
                 "benchmark_id": item.benchmark_id,
-                "primary": {"document_id": primary, "present": primary_ok},
+                "primary": {
+                    "source_document_id": item.source_document_id,
+                    "ecli": primary_ecli,
+                    "match_id": primary_id,
+                    "present": primary_ok,
+                },
                 "accepted_alternatives": [
-                    {"document_id": doc, "present": ok} for doc, ok in alt_status.items()
+                    {
+                        "source_document_id": doc,
+                        "ecli": alt_by_source.get(doc),
+                        "present": ok,
+                    }
+                    for doc, ok in alt_status.items()
                 ],
                 "hard_negatives": [
-                    {"document_id": doc, "present": ok} for doc, ok in hn_status.items()
+                    {
+                        "source_document_id": doc,
+                        "ecli": hn_by_source.get(doc),
+                        "present": ok,
+                    }
+                    for doc, ok in hn_status.items()
                 ],
                 "hard_negative_evaluable": item.hard_negative_evaluable,
                 "hard_negative_blocker": item.hard_negative_blocker,

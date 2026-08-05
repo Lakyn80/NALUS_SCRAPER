@@ -81,6 +81,37 @@ supporting-block sentences.
 
 ---
 
+## Document identity (ECLI)
+
+ECLI is the immutable canonical identifier of a judicial decision in Legal v2.
+Source-specific IDs (`doc-*`, import IDs, review IDs) are secondary traceability
+metadata only.
+
+Identity contract for indexed judgments:
+
+```text
+document_id == canonical_document_id == ecli
+source_document_id = secondary traceability only
+```
+
+Pilot mapping artifact:
+
+[`benchmarks/legal_v2/case_similarity_document_identity_v1.json`](../../benchmarks/legal_v2/case_similarity_document_identity_v1.json)
+
+Each golden row carries:
+
+- `source_document_id` / `expected_document_ids` (benchmark/source `doc-*`)
+- `expected_primary_ecli` / `expected_primary_canonical_document_id`
+- ECLI fields on accepted-alternative and hard-negative rationales
+
+Judgments without a verified ECLI are explicitly marked
+`blocked_missing_verified_ecli` and must not enter the production index.
+
+Evaluation and corpus compatibility match on ECLI, never on `doc-*` as the
+production document ID.
+
+---
+
 ## Intended future metrics
 
 Do **not** run these yet; no retrieval configuration is evaluated in this step.

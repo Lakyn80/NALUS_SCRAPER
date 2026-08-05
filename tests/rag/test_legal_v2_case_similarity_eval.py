@@ -41,6 +41,9 @@ def _minimal_item(**overrides):
         "difficulty": "medium",
         "source_document_id": "doc-aaaaaaaaaaaaaaaa",
         "expected_document_ids": ["doc-aaaaaaaaaaaaaaaa"],
+        "expected_primary_ecli": "ECLI:CZ:US:2024:3.US.3203.24.1",
+        "expected_primary_canonical_document_id": "ECLI:CZ:US:2024:3.US.3203.24.1",
+        "primary_identity_status": "verified",
         "hard_negative_document_ids": ["doc-bbbbbbbbbbbbbbbb"],
         "supporting_block_ids": [
             "doc-aaaaaaaaaaaaaaaa:p:00001:aaaaaaaaaaaaaaaaaaaa",
@@ -65,6 +68,9 @@ def _minimal_item(**overrides):
                 document_id="doc-bbbbbbbbbbbbbbbb",
                 looks_similar_because="looks similar",
                 materially_incorrect_because="wrong",
+                ecli="ECLI:CZ:US:2024:1.US.3299.24.1",
+                canonical_document_id="ECLI:CZ:US:2024:1.US.3299.24.1",
+                identity_status="verified",
             )
         ],
         "provenance": CaseSimilarityProvenance(

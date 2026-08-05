@@ -1,5 +1,32 @@
 # Project Progress
 
+## 2026-08-05 Europe/Moscow — Task: ECLI as canonical decision identity
+
+- Goal:
+  Make verified ECLI the permanent canonical identity for Legal v2 judicial
+  decisions across benchmark → corpus → chunks → Qdrant → retrieval → evaluation.
+- Identity contract:
+  `document_id == canonical_document_id == ecli`; `source_document_id` / `doc-*`
+  remain secondary traceability only.
+- Mapping artifact:
+  `benchmarks/legal_v2/case_similarity_document_identity_v1.json`
+  — 22 unique judgments referenced by the pilot; **17 verified**, **5 blocked**
+  (`blocked_missing_verified_ecli`) for 2026 ÚS decisions without authoritative
+  local ECLI evidence.
+- Golden schema / builder / validator / evaluator updated to carry and match ECLI.
+- Shared helper: `app/rag/legal_v2/identity.py` (`validate_decision_identity`).
+- Live collection audit (`nalus_legal_paragraph_chunks_v2_pilot_600`):
+  13824 chunks / 600 judgments; nearly all already use ECLI as `document_id`;
+  **0/15** verified golden primary ECLIs are present in that collection
+  (5 primaries remain identity-blocked). No destructive reindex performed.
+- Validation:
+  Builder/validator OK; deterministic rebuild OK; Step 4A unchanged;
+  focused tests `63 passed` (+ identity suite); `git diff --check` clean.
+- Next recommended task:
+  Additive upsert of the 15 verified golden ECLIs (plus HN ECLIs) into the
+  pilot collection under literal ECLI payloads; resolve the 5 blocked 2026 ÚS
+  ECLIs from authoritative NALUS/export metadata before indexing them.
+
 ## 2026-08-05 Europe/Moscow — Task: Case-similarity evaluator + HN blocker schema
 
 - Goal:

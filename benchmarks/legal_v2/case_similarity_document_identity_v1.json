@@ -1,0 +1,349 @@
+{
+  "schema_version": "1.0",
+  "description": "Verified source_document_id → ECLI mapping for Case Similarity Golden v1. Unverified judgments are explicitly blocked.",
+  "documents": [
+    {
+      "source_document_id": "doc-0a90125eb71851b4",
+      "ecli": "ECLI:CZ:US:2024:3.US.3203.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:3.US.3203.24.1",
+      "case_number": "III.ÚS 3203/24",
+      "court": "constitutional_court",
+      "decision_date": "2024-12-20",
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "nalus_batch_structured_metadata",
+        "path": "C:/Users/lukas/Desktop/PYTHON_PROJECTS_DESKTOP/PYTHON_PROJECTS/nalus-scraper/batches/year_2024_20260403_170521.json",
+        "field": "ecli",
+        "matched_case_reference": "III.ÚS 3203/24 #1",
+        "result_id": 130191
+      }
+    },
+    {
+      "source_document_id": "doc-b73cac9b3dfc8a42",
+      "ecli": "ECLI:CZ:US:2024:1.US.3299.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.3299.24.1",
+      "case_number": "I.ÚS 3299/24",
+      "court": "constitutional_court",
+      "decision_date": "2024-12-20",
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "nalus_batch_structured_metadata",
+        "path": "C:/Users/lukas/Desktop/PYTHON_PROJECTS_DESKTOP/PYTHON_PROJECTS/nalus-scraper/batches/year_2024_20260403_170521.json",
+        "field": "ecli",
+        "matched_case_reference": "I.ÚS 3299/24 #1",
+        "result_id": 130165
+      }
+    },
+    {
+      "source_document_id": "doc-d513b3e81616439a",
+      "ecli": "ECLI:CZ:US:2025:3.US.3352.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:3.US.3352.25.1",
+      "case_number": "III.ÚS 3352/25",
+      "court": "constitutional_court",
+      "decision_date": "2025-12-18",
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "nalus_batch_structured_metadata",
+        "path": "C:/Users/lukas/Desktop/PYTHON_PROJECTS_DESKTOP/PYTHON_PROJECTS/nalus-scraper/batches/all_stezovatel_chunk0001_p1-100.json",
+        "field": "ecli",
+        "matched_case_reference": "III.ÚS 3352/25 #1",
+        "result_id": 135407
+      }
+    },
+    {
+      "source_document_id": "doc-16b9100a8b9122dd",
+      "ecli": "ECLI:CZ:US:2025:1.US.3575.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:1.US.3575.25.1",
+      "case_number": "I.ÚS 3575/25",
+      "court": "constitutional_court",
+      "decision_date": "2025-12-22",
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "nalus_batch_structured_metadata",
+        "path": "C:/Users/lukas/Desktop/PYTHON_PROJECTS_DESKTOP/PYTHON_PROJECTS/nalus-scraper/batches/all_stezovatel_chunk0001_p1-100.json",
+        "field": "ecli",
+        "matched_case_reference": "I.ÚS 3575/25 #1",
+        "result_id": 135444
+      }
+    },
+    {
+      "source_document_id": "doc-e5ac4b1fcd075062",
+      "ecli": null,
+      "canonical_document_id": null,
+      "case_number": "IV.ÚS 650/26",
+      "court": "constitutional_court",
+      "decision_date": null,
+      "identity_status": "blocked_missing_verified_ecli",
+      "blocker": "No authoritative ECLI found in available NALUS batches, review HTML, archetypes, or live legal_v2 indexes.",
+      "verification_source": {
+        "type": "blocked_after_source_search",
+        "searched": [
+          "nalus-scraper/batches/*.json",
+          "artifacts/legal_v2/court_format_study/raw_sources/constitutional_court",
+          "artifacts/legal_v2/visual_parser_review",
+          "nalus_legal_paragraph_chunks_v2_pilot_600"
+        ]
+      }
+    },
+    {
+      "source_document_id": "doc-abd57ac0aa5dfe5b",
+      "ecli": null,
+      "canonical_document_id": null,
+      "case_number": "IV.ÚS 823/26",
+      "court": "constitutional_court",
+      "decision_date": null,
+      "identity_status": "blocked_missing_verified_ecli",
+      "blocker": "No authoritative ECLI found in available NALUS batches, review HTML, archetypes, or live legal_v2 indexes.",
+      "verification_source": {
+        "type": "blocked_after_source_search",
+        "searched": [
+          "nalus-scraper/batches/*.json",
+          "artifacts/legal_v2/court_format_study/raw_sources/constitutional_court",
+          "artifacts/legal_v2/visual_parser_review",
+          "nalus_legal_paragraph_chunks_v2_pilot_600"
+        ]
+      }
+    },
+    {
+      "source_document_id": "doc-af3c185ad674a7da",
+      "ecli": null,
+      "canonical_document_id": null,
+      "case_number": "I.ÚS 1213/26",
+      "court": "constitutional_court",
+      "decision_date": null,
+      "identity_status": "blocked_missing_verified_ecli",
+      "blocker": "No authoritative ECLI found in available NALUS batches, review HTML, archetypes, or live legal_v2 indexes.",
+      "verification_source": {
+        "type": "blocked_after_source_search",
+        "searched": [
+          "nalus-scraper/batches/*.json",
+          "artifacts/legal_v2/court_format_study/raw_sources/constitutional_court",
+          "artifacts/legal_v2/visual_parser_review",
+          "nalus_legal_paragraph_chunks_v2_pilot_600"
+        ]
+      }
+    },
+    {
+      "source_document_id": "doc-a5292901931de05a",
+      "ecli": null,
+      "canonical_document_id": null,
+      "case_number": "III.ÚS 1566/26",
+      "court": "constitutional_court",
+      "decision_date": null,
+      "identity_status": "blocked_missing_verified_ecli",
+      "blocker": "No authoritative ECLI found in available NALUS batches, review HTML, archetypes, or live legal_v2 indexes.",
+      "verification_source": {
+        "type": "blocked_after_source_search",
+        "searched": [
+          "nalus-scraper/batches/*.json",
+          "artifacts/legal_v2/court_format_study/raw_sources/constitutional_court",
+          "artifacts/legal_v2/visual_parser_review",
+          "nalus_legal_paragraph_chunks_v2_pilot_600"
+        ]
+      }
+    },
+    {
+      "source_document_id": "doc-f2c776a1533521c3",
+      "ecli": null,
+      "canonical_document_id": null,
+      "case_number": "IV.ÚS 1310/26",
+      "court": "constitutional_court",
+      "decision_date": null,
+      "identity_status": "blocked_missing_verified_ecli",
+      "blocker": "No authoritative ECLI found in available NALUS batches, review HTML, archetypes, or live legal_v2 indexes.",
+      "verification_source": {
+        "type": "blocked_after_source_search",
+        "searched": [
+          "nalus-scraper/batches/*.json",
+          "artifacts/legal_v2/court_format_study/raw_sources/constitutional_court",
+          "artifacts/legal_v2/visual_parser_review",
+          "nalus_legal_paragraph_chunks_v2_pilot_600"
+        ]
+      }
+    },
+    {
+      "source_document_id": "doc-976fafa1e2c6f093",
+      "ecli": "ECLI:CZ:US:2024:3.US.1972.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:3.US.1972.24.1",
+      "case_number": "III.ÚS 1972/24",
+      "court": "constitutional_court",
+      "decision_date": "2024-12-20",
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "nalus_batch_structured_metadata",
+        "path": "C:/Users/lukas/Desktop/PYTHON_PROJECTS_DESKTOP/PYTHON_PROJECTS/nalus-scraper/batches/year_2024_20260403_170521.json",
+        "field": "ecli",
+        "matched_case_reference": "III.ÚS 1972/24 #1",
+        "result_id": 130176
+      }
+    },
+    {
+      "source_document_id": "doc-cfa470876b0d5ed7",
+      "ecli": "ECLI:CZ:VSPH:2026:2.Cmo.28.2026.1",
+      "canonical_document_id": "ECLI:CZ:VSPH:2026:2.Cmo.28.2026.1",
+      "case_number": "2 Cmo 28/2026-127",
+      "court": "high_court_prague",
+      "decision_date": null,
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_prague/c078ef7a-3b05-43b6-a3c0-5e003eb05371.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-db9f10005638d155",
+      "ecli": "ECLI:CZ:VSPH:2026:2.Cmo.32.2026.1",
+      "canonical_document_id": "ECLI:CZ:VSPH:2026:2.Cmo.32.2026.1",
+      "case_number": "2 Cmo 32/2026-268",
+      "court": "high_court_prague",
+      "decision_date": null,
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_prague/99902ba3-2d11-4b0b-aa35-bf8c91c9e70f.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-4af3171b4be427e9",
+      "ecli": "ECLI:CZ:VSPH:2026:2.Cmo.22.2026.1",
+      "canonical_document_id": "ECLI:CZ:VSPH:2026:2.Cmo.22.2026.1",
+      "case_number": "2 Cmo 22/2026-116",
+      "court": "high_court_prague",
+      "decision_date": null,
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_prague/3bf1968d-fc99-43f3-9d35-1b0e1859e883.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-e6af147081ae754f",
+      "ecli": "ECLI:CZ:VSPH:2026:3.Co.25.2025.1",
+      "canonical_document_id": "ECLI:CZ:VSPH:2026:3.Co.25.2025.1",
+      "case_number": "3 Co 25/2025-224",
+      "court": "high_court_prague",
+      "decision_date": null,
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_prague/75d2c7a1-48c0-491b-bbd6-ed1d9337ecf5.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-f4a701825747ed58",
+      "ecli": "ECLI:CZ:VSPH:2026:9.Cmo.219.2025",
+      "canonical_document_id": "ECLI:CZ:VSPH:2026:9.Cmo.219.2025",
+      "case_number": "9 Cmo 219/2025-0",
+      "court": "high_court_prague",
+      "decision_date": null,
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_prague/2ba33230-2c6e-4630-a414-96b2f920fe9e.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-4f3c37d9c5a1afb7",
+      "ecli": "ECLI:CZ:VSOL:2022:6.TO.80.2021.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2022:6.TO.80.2021.1",
+      "case_number": "6 TO 80/2021-4552",
+      "court": "high_court_olomouc",
+      "decision_date": null,
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_olomouc/7936a14c-dc03-42da-b7fc-45047c1ebd6b.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-84ae84698dfd0205",
+      "ecli": "ECLI:CZ:VSOL:2022:1.Co.15.2022.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2022:1.Co.15.2022.1",
+      "case_number": "1 CO 15/2022-234",
+      "court": "high_court_olomouc",
+      "decision_date": null,
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_olomouc/a6e7b1ea-5bf9-4670-a5d7-973f7599f144.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-dc644c7e6d827609",
+      "ecli": "ECLI:CZ:VSOL:2024:1.Co.1.2024.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2024:1.Co.1.2024.1",
+      "case_number": "1 Co 1/2024-860",
+      "court": "high_court_olomouc",
+      "decision_date": null,
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_olomouc/780ed763-c03e-4529-85ef-127ea456b124.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-c7b72b0d6121d7f3",
+      "ecli": "ECLI:CZ:VSOL:2024:1.Co.2.2024.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2024:1.Co.2.2024.1",
+      "case_number": "1 Co 2/2024-156",
+      "court": "high_court_olomouc",
+      "decision_date": null,
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_olomouc/5b80f331-f2c1-4c8a-abf2-713b463952d2.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-6cca3be81564e762",
+      "ecli": "ECLI:CZ:VSOL:2025:4.Co.44.2025.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2025:4.Co.44.2025.1",
+      "case_number": "4 Co 44/2025-214",
+      "court": "high_court_olomouc",
+      "decision_date": null,
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_olomouc/108df4c3-8a96-4ea0-a29b-3d7c52067fe4.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-4fbdc1db957f44e7",
+      "ecli": "ECLI:CZ:VSOL:2025:6.To.41.2024.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2025:6.To.41.2024.1",
+      "case_number": "6 To 41/2024",
+      "court": "high_court_olomouc",
+      "decision_date": "2025-02-20",
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_olomouc/4fbdc1db-957f-44e7-a9d3-18abddb9cdce.json",
+        "field": "metadata.ecli"
+      }
+    },
+    {
+      "source_document_id": "doc-68c126d146c84fa1",
+      "ecli": "ECLI:CZ:VSOL:2025:6.To.42.2024.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2025:6.To.42.2024.1",
+      "case_number": "6 To 42/2024",
+      "court": "high_court_olomouc",
+      "decision_date": "2025-02-27",
+      "identity_status": "verified",
+      "verification_source": {
+        "type": "justice_open_data_metadata_ecli",
+        "path": "artifacts/legal_v2/court_format_study/raw_sources/high_court_olomouc/68c126d1-46c8-4fa1-aa5b-0602e2e7bb6e.json",
+        "field": "metadata.ecli"
+      }
+    }
+  ]
+}

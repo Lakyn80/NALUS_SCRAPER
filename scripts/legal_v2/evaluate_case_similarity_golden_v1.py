@@ -27,6 +27,9 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.rag.legal_v2.benchmark.case_similarity_eval import (  # noqa: E402
     FAILURE_DOCUMENT_ID_MAPPING_ERROR,
     FAILURE_EXPECTED_DOCUMENT_MISSING,
+    FAILURE_EXPECTED_ECLI_MISSING_FROM_INDEX,
+    FAILURE_MISSING_VERIFIED_ECLI_IN_BENCHMARK,
+    FAILURE_RETRIEVED_RESULT_MISSING_ECLI,
     FAILURE_RETRIEVAL_ERROR,
     CaseSimilarityQueryEvalResult,
     RetrievedDocumentScore,
@@ -39,8 +42,12 @@ from app.rag.legal_v2.benchmark.case_similarity_golden import (  # noqa: E402
     DEFAULT_PILOT_DATASET,
     load_case_similarity_golden_jsonl,
 )
-from app.rag.legal_v2.benchmark.corpus import load_case_similarity_corpus  # noqa: E402
-from app.rag.legal_v2.indexing import LEGAL_V2_PROFILE  # noqa: E402
+from app.rag.legal_v2.identity import (  # noqa: E402
+    IDENTITY_STATUS_BLOCKED_MISSING_ECLI,
+    IDENTITY_STATUS_VERIFIED,
+    is_valid_ecli,
+    normalize_ecli,
+)from app.rag.legal_v2.indexing import LEGAL_V2_PROFILE  # noqa: E402
 from app.rag.legal_v2.query_spec import build_query_spec_v2  # noqa: E402
 from app.rag.legal_v2.retriever import (  # noqa: E402
     LegalV2RetrieverConfig,
@@ -166,34 +173,21 @@ def main(argv: list[str] | None = None) -> int:
 
     client = QdrantClient(url=args.qdrant_url, timeout=60)
     index_doc_ids = _list_indexed_document_ids(client, args.qdrant_collection)
-    golden_to_index = _build_document_id_mapping(items, index_doc_ids)
-    mapped_present = {
-        item.source_document_id
-        for item in items
-        if golden_to_index.get(item.source_document_id) in index_doc_ids
+    source_to_ecli = _build_source_to_ecli_mapping(items)
+    golden_to_index = {
+        source_id: ecli if ecli and ecli in index_doc_ids else None
+        for source_id, ecli in source_to_ecli.items()
     }
-    # Compatibility uses golden IDs remapped when possible.
-    present_for_summary = set()
-    for item in items:
-        for document_id in (
-            [item.source_document_id]
-            + list(item.accepted_alternative_document_ids)
-            + list(item.hard_negative_document_ids)
-        ):
-            mapped = golden_to_index.get(document_id)
-            if mapped and mapped in index_doc_ids:
-                present_for_summary.add(document_id)
-            elif document_id in index_doc_ids:
-                present_for_summary.add(document_id)
-
-    compatibility = corpus_presence_summary(items=items, present_document_ids=present_for_summary)
+    # Compatibility audit uses indexed ECLIs, never doc-* as production IDs.
+    compatibility = corpus_presence_summary(items=items, present_document_ids=index_doc_ids)
     compatibility["target_collection"] = args.qdrant_collection
     compatibility["indexed_document_count"] = len(index_doc_ids)
-    compatibility["document_id_mapping"] = {
-        golden: mapped
-        for golden, mapped in golden_to_index.items()
-        if mapped is not None
+    compatibility["source_to_ecli_mapping"] = {
+        source_id: ecli for source_id, ecli in source_to_ecli.items() if ecli
     }
+    compatibility["blocked_missing_verified_ecli"] = sorted(
+        source_id for source_id, ecli in source_to_ecli.items() if not ecli
+    )
     compatibility["unmapped_golden_document_ids"] = sorted(
         {
             document_id
@@ -203,7 +197,8 @@ def main(argv: list[str] | None = None) -> int:
                 + list(item.accepted_alternative_document_ids)
                 + list(item.hard_negative_document_ids)
             )
-            if document_id not in present_for_summary
+            if not source_to_ecli.get(document_id)
+            or source_to_ecli.get(document_id) not in index_doc_ids
         }
     )
     (output_dir / "corpus_compatibility.json").write_text(
@@ -243,14 +238,14 @@ def main(argv: list[str] | None = None) -> int:
             compatibility=compatibility,
             results=[],
             reason=(
-                "Corpus/index incompatibility: one or more primary expected documents are "
-                "absent from the target collection. Scoring aborted to avoid fake misses. "
-                "Index the reviewed case-similarity corpus (or provide a document-id mapping "
-                "into an existing legal_v2 collection) before running the first real baseline."
+                "Corpus/index incompatibility: one or more primary expected ECLIs are "
+                "absent from the target collection (or missing verified ECLI in the "
+                "benchmark). Scoring aborted to avoid fake misses. Index the reviewed "
+                "judgments under their verified ECLI before running the first real baseline."
             ),
             elapsed_s=time.perf_counter() - started,
         )
-        print("BLOCKED: primary documents missing from target collection; scoring skipped.")
+        print("BLOCKED: primary ECLIs missing from target collection; scoring skipped.")
         return 2
 
     if not args.bm25_sidecar_path.exists():
@@ -271,9 +266,19 @@ def main(argv: list[str] | None = None) -> int:
 
     results: list[CaseSimilarityQueryEvalResult] = []
     for item in items:
-        primary_mapped = golden_to_index.get(item.source_document_id)
-        corpus_ok = item.source_document_id in present_for_summary
-        if not corpus_ok:
+        primary_ecli = normalize_ecli(item.expected_primary_ecli) if item.expected_primary_ecli else None
+        alt_eclis = [
+            normalize_ecli(row.ecli)
+            for row in item.accepted_alternative_rationales
+            if row.ecli
+        ]
+        hn_eclis = [
+            normalize_ecli(row.ecli)
+            for row in item.hard_negative_rationales
+            if row.ecli
+        ]
+
+        if item.primary_identity_status == IDENTITY_STATUS_BLOCKED_MISSING_ECLI or not primary_ecli:
             results.append(
                 evaluate_ranked_documents(
                     query_id=item.benchmark_id,
@@ -281,19 +286,41 @@ def main(argv: list[str] | None = None) -> int:
                     query_style=item.query_style,
                     difficulty=item.difficulty,
                     expected_primary_document_id=item.source_document_id,
-                    accepted_alternative_document_ids=item.accepted_alternative_document_ids,
-                    hard_negative_document_ids=item.hard_negative_document_ids,
+                    accepted_alternative_document_ids=alt_eclis,
+                    hard_negative_document_ids=hn_eclis,
                     hard_negative_evaluable=item.hard_negative_evaluable,
                     hard_negative_blocker=item.hard_negative_blocker,
                     ranked_document_ids=[],
                     corpus_compatible=False,
-                    failure_type=(
-                        FAILURE_DOCUMENT_ID_MAPPING_ERROR
-                        if primary_mapped is None
-                        else FAILURE_EXPECTED_DOCUMENT_MISSING
-                    ),
-                    error="primary document absent from target collection",
+                    failure_type=FAILURE_MISSING_VERIFIED_ECLI_IN_BENCHMARK,
+                    error="primary judgment lacks verified ECLI",
                     top_k=args.top_k,
+                    expected_primary_source_document_id=item.source_document_id,
+                    expected_primary_ecli=None,
+                )
+            )
+            continue
+
+        corpus_ok = primary_ecli in index_doc_ids
+        if not corpus_ok:
+            results.append(
+                evaluate_ranked_documents(
+                    query_id=item.benchmark_id,
+                    query=item.query,
+                    query_style=item.query_style,
+                    difficulty=item.difficulty,
+                    expected_primary_document_id=primary_ecli,
+                    accepted_alternative_document_ids=alt_eclis,
+                    hard_negative_document_ids=hn_eclis,
+                    hard_negative_evaluable=item.hard_negative_evaluable,
+                    hard_negative_blocker=item.hard_negative_blocker,
+                    ranked_document_ids=[],
+                    corpus_compatible=False,
+                    failure_type=FAILURE_EXPECTED_ECLI_MISSING_FROM_INDEX,
+                    error="primary ECLI absent from target collection",
+                    top_k=args.top_k,
+                    expected_primary_source_document_id=item.source_document_id,
+                    expected_primary_ecli=primary_ecli,
                 )
             )
             continue
@@ -306,19 +333,24 @@ def main(argv: list[str] | None = None) -> int:
                     "collection drift: "
                     f"{retrieval.diagnostics.get('collection')} != {args.qdrant_collection}"
                 )
-            ranked_raw = [doc.document_id for doc in retrieval.documents]
-            ranked_golden = [_to_golden_id(document_id, golden_to_index) for document_id in ranked_raw]
-            ranked = dedupe_document_ids(ranked_golden)[: args.top_k]
-            retrieved_results = []
-            for rank, (doc, golden_id) in enumerate(zip(retrieval.documents, ranked_golden), start=1):
-                if golden_id not in ranked:
+            ranked_eclis: list[str] = []
+            retrieved_results: list[RetrievedDocumentScore] = []
+            missing_ecli = False
+            for doc in retrieval.documents:
+                ecli = normalize_ecli(doc.document_id) if is_valid_ecli(doc.document_id) else ""
+                if not ecli:
+                    missing_ecli = True
                     continue
-                if any(row.document_id == golden_id for row in retrieved_results):
+                if ecli in ranked_eclis:
                     continue
+                ranked_eclis.append(ecli)
                 retrieved_results.append(
                     RetrievedDocumentScore(
                         rank=len(retrieved_results) + 1,
-                        document_id=golden_id,
+                        document_id=ecli,
+                        ecli=ecli,
+                        canonical_document_id=ecli,
+                        source_document_id=None,
                         score=getattr(doc, "score", None),
                         dense_score=None,
                         sparse_score=None,
@@ -326,23 +358,28 @@ def main(argv: list[str] | None = None) -> int:
                         reranker_score=None,
                     )
                 )
-                if len(retrieved_results) >= args.top_k:
+                if len(ranked_eclis) >= args.top_k:
                     break
+            failure = FAILURE_RETRIEVED_RESULT_MISSING_ECLI if missing_ecli and not ranked_eclis else None
             results.append(
                 evaluate_ranked_documents(
                     query_id=item.benchmark_id,
                     query=item.query,
                     query_style=item.query_style,
                     difficulty=item.difficulty,
-                    expected_primary_document_id=item.source_document_id,
-                    accepted_alternative_document_ids=item.accepted_alternative_document_ids,
-                    hard_negative_document_ids=item.hard_negative_document_ids,
+                    expected_primary_document_id=primary_ecli,
+                    accepted_alternative_document_ids=alt_eclis,
+                    hard_negative_document_ids=hn_eclis,
                     hard_negative_evaluable=item.hard_negative_evaluable,
                     hard_negative_blocker=item.hard_negative_blocker,
-                    ranked_document_ids=ranked,
+                    ranked_document_ids=ranked_eclis,
                     retrieved_results=retrieved_results,
                     corpus_compatible=True,
+                    failure_type=failure,
+                    error="retrieved documents missing ECLI identity" if failure else None,
                     top_k=args.top_k,
+                    expected_primary_source_document_id=item.source_document_id,
+                    expected_primary_ecli=primary_ecli,
                 )
             )
         except Exception as exc:  # noqa: BLE001
@@ -352,9 +389,9 @@ def main(argv: list[str] | None = None) -> int:
                     query=item.query,
                     query_style=item.query_style,
                     difficulty=item.difficulty,
-                    expected_primary_document_id=item.source_document_id,
-                    accepted_alternative_document_ids=item.accepted_alternative_document_ids,
-                    hard_negative_document_ids=item.hard_negative_document_ids,
+                    expected_primary_document_id=primary_ecli,
+                    accepted_alternative_document_ids=alt_eclis,
+                    hard_negative_document_ids=hn_eclis,
                     hard_negative_evaluable=item.hard_negative_evaluable,
                     hard_negative_blocker=item.hard_negative_blocker,
                     ranked_document_ids=[],
@@ -362,6 +399,8 @@ def main(argv: list[str] | None = None) -> int:
                     failure_type=FAILURE_RETRIEVAL_ERROR,
                     error=f"{exc.__class__.__name__}: {exc}",
                     top_k=args.top_k,
+                    expected_primary_source_document_id=item.source_document_id,
+                    expected_primary_ecli=primary_ecli,
                 )
             )
 
@@ -434,6 +473,7 @@ def _git_state() -> tuple[str, bool]:
 
 
 def _list_indexed_document_ids(client: Any, collection: str) -> set[str]:
+    """Return normalized production document IDs (ECLI preferred) from the collection."""
     ids: set[str] = set()
     next_offset = None
     while True:
@@ -441,45 +481,36 @@ def _list_indexed_document_ids(client: Any, collection: str) -> set[str]:
             collection_name=collection,
             limit=256,
             offset=next_offset,
-            with_payload=["document_id", "case_reference"],
+            with_payload=["document_id", "ecli", "canonical_document_id"],
             with_vectors=False,
         )
         for point in points:
             payload = point.payload or {}
-            document_id = payload.get("document_id")
-            if document_id:
-                ids.add(str(document_id))
+            for key in ("ecli", "canonical_document_id", "document_id"):
+                value = str(payload.get(key) or "").strip()
+                if value and is_valid_ecli(value):
+                    ids.add(normalize_ecli(value))
+                    break
+            else:
+                document_id = payload.get("document_id")
+                if document_id:
+                    ids.add(str(document_id))
         if next_offset is None:
             break
     return ids
 
 
-def _build_document_id_mapping(items: list[Any], indexed_ids: set[str]) -> dict[str, str | None]:
-    """Map golden doc-* IDs to indexed IDs via case_number when direct ID is absent."""
-    corpus = load_case_similarity_corpus()
-    refs = {ref.document_id: ref for ref in corpus.documents}
-    # Build case_reference → indexed id index (best-effort).
-    # Full case_reference scan would require another scroll; use direct ID first.
+def _build_source_to_ecli_mapping(items: list[Any]) -> dict[str, str | None]:
     mapping: dict[str, str | None] = {}
     for item in items:
-        for document_id in (
-            [item.source_document_id]
-            + list(item.accepted_alternative_document_ids)
-            + list(item.hard_negative_document_ids)
-        ):
-            if document_id in mapping:
-                continue
-            if document_id in indexed_ids:
-                mapping[document_id] = document_id
-                continue
-            mapping[document_id] = None
-    _ = refs  # reserved for future case_number→ECLI mapping once index stores matching refs
+        mapping[item.source_document_id] = (
+            normalize_ecli(item.expected_primary_ecli) if item.expected_primary_ecli else None
+        )
+        for row in item.accepted_alternative_rationales:
+            mapping[row.document_id] = normalize_ecli(row.ecli) if row.ecli else None
+        for row in item.hard_negative_rationales:
+            mapping[row.document_id] = normalize_ecli(row.ecli) if row.ecli else None
     return mapping
-
-
-def _to_golden_id(indexed_id: str, mapping: dict[str, str | None]) -> str:
-    inverse = {value: key for key, value in mapping.items() if value}
-    return inverse.get(indexed_id, indexed_id)
 
 
 def _write_results(output_dir: Path, results: list[CaseSimilarityQueryEvalResult]) -> None:

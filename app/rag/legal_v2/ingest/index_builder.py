@@ -262,6 +262,25 @@ def write_build_manifest(manifest: LegalV2BuildManifest, output_dir: Path) -> tu
     return json_path, markdown_path
 
 
+def _source_document_id_for_chunk(
+    parsed_metadata: dict[str, Any],
+    source_document: LegalSourceDocument,
+) -> str | None:
+    for candidate in (
+        parsed_metadata.get("source_document_id"),
+        source_document.metadata.get("source_document_id"),
+        source_document.metadata.get("review_document_id"),
+    ):
+        text = str(candidate or "").strip()
+        if text:
+            return text
+    # Keep legacy doc-* only when the production document_id is already ECLI.
+    doc_id = str(source_document.document_id or "").strip()
+    if doc_id.startswith("doc-"):
+        return doc_id
+    return None
+
+
 def _chunks_for_approved_documents(
     *,
     documents: list[LegalSourceDocument],
@@ -295,6 +314,18 @@ def _chunks_for_approved_documents(
                     "parser_version": PARSER_VERSION,
                     "chunker_version": CHUNKER_VERSION,
                     "document_content_hash": content_hash,
+                    "ecli": (
+                        parsed.metadata.get("ecli")
+                        or (chunk.document_id if str(chunk.document_id).upper().startswith("ECLI:") else None)
+                    ),
+                    "canonical_document_id": (
+                        parsed.metadata.get("canonical_document_id")
+                        or parsed.metadata.get("ecli")
+                        or (chunk.document_id if str(chunk.document_id).upper().startswith("ECLI:") else None)
+                    ),
+                    "source_document_id": _source_document_id_for_chunk(
+                        parsed.metadata, source_document
+                    ),
                     "parent_window_id": parent_window.window_id if parent_window else None,
                     "parent_window_paragraph_ids": parent_window.paragraph_ids if parent_window else [],
                     "parent_window_child_chunk_ids": parent_window.child_chunk_ids if parent_window else [],

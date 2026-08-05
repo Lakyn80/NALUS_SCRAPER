@@ -32,6 +32,10 @@ from app.rag.legal_v2.benchmark.corpus import (  # noqa: E402
     load_case_similarity_corpus,
     load_case_similarity_primary_document_ids,
 )
+from app.rag.legal_v2.benchmark.case_similarity_identity import (  # noqa: E402
+    load_case_similarity_identity_map,
+)
+from app.rag.legal_v2.identity import IDENTITY_STATUS_BLOCKED_MISSING_ECLI  # noqa: E402
 
 DEFAULT_OUT = PROJECT_ROOT / "benchmarks" / "legal_v2" / "case_similarity_golden_v1_pilot.jsonl"
 DEFAULT_REPORT = (
@@ -48,6 +52,7 @@ def main(argv: list[str] | None = None) -> int:
 
     corpus = load_case_similarity_corpus()
     primary_document_ids = load_case_similarity_primary_document_ids()
+    identity_map = load_case_similarity_identity_map()
     by_doc_index = {
         (block.document_id, block.block_index): block for block in corpus.blocks_by_id.values()
     }
@@ -84,22 +89,36 @@ def main(argv: list[str] | None = None) -> int:
             items.append(AnswerEvidenceItem(block_id=target.block_id, excerpt=excerpt))
         return items
 
+    def identity_fields(source_document_id: str) -> dict[str, Any]:
+        row = identity_map[source_document_id]
+        return {
+            "ecli": row.get("ecli"),
+            "canonical_document_id": row.get("canonical_document_id"),
+            "identity_status": row.get("identity_status"),
+        }
+
     raw_specs: list[dict[str, Any]] = _curated_specs()
     items: list[CaseSimilarityGoldenItem] = []
     for spec in raw_specs:
         document_id = spec["document_id"]
         ref = refs_by_id[document_id]
+        primary_identity = identity_fields(document_id)
         evidence = resolve_evidence(document_id, spec["evidence"])
         hard_rationales = [
             HardNegativeRationale(
                 document_id=row["document_id"],
                 looks_similar_because=row["looks_similar_because"],
                 materially_incorrect_because=row["materially_incorrect_because"],
+                **identity_fields(row["document_id"]),
             )
             for row in spec["hard_negatives"]
         ]
         alt_rationales = [
-            AlternativeRationale(document_id=row["document_id"], rationale=row["rationale"])
+            AlternativeRationale(
+                document_id=row["document_id"],
+                rationale=row["rationale"],
+                **identity_fields(row["document_id"]),
+            )
             for row in spec.get("alternatives", [])
         ]
         item = CaseSimilarityGoldenItem(
@@ -109,6 +128,9 @@ def main(argv: list[str] | None = None) -> int:
             difficulty=spec["difficulty"],
             source_document_id=document_id,
             expected_document_ids=[document_id],
+            expected_primary_ecli=primary_identity["ecli"],
+            expected_primary_canonical_document_id=primary_identity["canonical_document_id"],
+            primary_identity_status=primary_identity["identity_status"],
             accepted_alternative_document_ids=[row["document_id"] for row in spec.get("alternatives", [])],
             hard_negative_document_ids=[row["document_id"] for row in spec["hard_negatives"]],
             supporting_block_ids=[row.block_id for row in evidence],
@@ -131,6 +153,16 @@ def main(argv: list[str] | None = None) -> int:
             ),
             notes=spec.get("notes"),
         )
+        if primary_identity["identity_status"] == IDENTITY_STATUS_BLOCKED_MISSING_ECLI:
+            note = (
+                "PRIMARY IDENTITY BLOCKED: missing verified ECLI; "
+                "row remains for query audit but is not ECLI-evaluable until resolved."
+            )
+            item = item.model_copy(
+                update={
+                    "notes": f"{item.notes} {note}".strip() if item.notes else note,
+                }
+            )
         items.append(item)
 
     items.sort(key=lambda row: row.benchmark_id)

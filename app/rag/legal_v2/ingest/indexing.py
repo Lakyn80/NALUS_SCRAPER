@@ -47,11 +47,17 @@ def payload_for_child_chunk(
 ) -> dict[str, Any]:
     paragraph_indexes = [span.paragraph_index for span in chunk.source_spans]
     metadata = dict(chunk.metadata)
+    ecli = str(metadata.get("ecli") or "").strip() or None
+    source_document_id = str(metadata.get("source_document_id") or "").strip() or None
+    canonical_document_id = str(metadata.get("canonical_document_id") or ecli or chunk.document_id).strip()
     base = {
         "original_id": chunk.chunk_id,
         "chunk_id": chunk.chunk_id,
         "text": chunk.text,
         "document_id": chunk.document_id,
+        "canonical_document_id": canonical_document_id,
+        "ecli": ecli or (chunk.document_id if str(chunk.document_id).upper().startswith("ECLI:") else None),
+        "source_document_id": source_document_id,
         "chunk_index": chunk.chunk_index,
         "section_type": chunk.section_type.value,
         "paragraph_ids": list(chunk.paragraph_ids),

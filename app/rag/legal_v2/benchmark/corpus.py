@@ -57,6 +57,9 @@ class DevelopmentDocumentRef:
     decision_type: str | None
     decision_date: str | None
     source_checksum: str | None
+    ecli: str | None = None
+    canonical_document_id: str | None = None
+    identity_status: str | None = None
 
 
 @dataclass(frozen=True)
@@ -184,7 +187,7 @@ def load_case_similarity_corpus(
     extra_refs, extra_bundles, extra_blocks = _load_supplemental_criminal_sources(
         Path(raw_sources_dir)
     )
-    documents = list(base.documents) + extra_refs
+    documents = _enrich_refs_with_identity(list(base.documents) + extra_refs)
     bundles = dict(base.bundles)
     bundles.update(extra_bundles)
     blocks_by_id = dict(base.blocks_by_id)
@@ -194,6 +197,42 @@ def load_case_similarity_corpus(
         bundles=bundles,
         blocks_by_id=blocks_by_id,
     )
+
+
+def _enrich_refs_with_identity(
+    refs: list[DevelopmentDocumentRef],
+) -> list[DevelopmentDocumentRef]:
+    try:
+        from app.rag.legal_v2.benchmark.case_similarity_identity import (
+            load_case_similarity_identity_map,
+        )
+
+        identity_map = load_case_similarity_identity_map()
+    except Exception:  # noqa: BLE001
+        return refs
+    enriched: list[DevelopmentDocumentRef] = []
+    for ref in refs:
+        row = identity_map.get(ref.document_id)
+        if not row:
+            enriched.append(ref)
+            continue
+        enriched.append(
+            DevelopmentDocumentRef(
+                archetype_id=ref.archetype_id,
+                review_number=ref.review_number,
+                document_id=ref.document_id,
+                source_id=ref.source_id,
+                case_number=ref.case_number,
+                court=ref.court,
+                decision_type=ref.decision_type,
+                decision_date=ref.decision_date,
+                source_checksum=ref.source_checksum,
+                ecli=row.get("ecli"),
+                canonical_document_id=row.get("canonical_document_id"),
+                identity_status=row.get("identity_status"),
+            )
+        )
+    return enriched
 
 
 def load_case_similarity_primary_document_ids(
@@ -232,7 +271,9 @@ def _load_supplemental_criminal_sources(
         )
         metadata = {
             "source_id": ref.source_id,
-            "source_document_id": ref.source_id,
+            "source_document_id": ref.document_id,
+            "ecli": (payload.get("metadata") or {}).get("ecli"),
+            "canonical_document_id": (payload.get("metadata") or {}).get("ecli"),
             "case_number": ref.case_number,
             "court": ref.court,
             "decision_type": ref.decision_type,

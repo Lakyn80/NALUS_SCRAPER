@@ -16,6 +16,15 @@ from app.rag.legal_v2.benchmark.retrieval_golden import (
     normalize_evidence_text,
     normalize_query_text,
 )
+from app.rag.legal_v2.identity import (
+    IDENTITY_STATUS_BLOCKED_MISSING_ECLI,
+    IDENTITY_STATUS_VERIFIED,
+    ecli_key,
+    eclis_equal,
+    is_valid_ecli,
+    normalize_ecli,
+    validate_decision_identity,
+)
 
 SCHEMA_VERSION = "nalus-case-similarity-golden.v1"
 BENCHMARK_TYPE = "case_similarity_document_retrieval"
@@ -102,6 +111,9 @@ class HardNegativeRationale(BaseModel):
     document_id: str
     looks_similar_because: str
     materially_incorrect_because: str
+    ecli: str | None = None
+    canonical_document_id: str | None = None
+    identity_status: str | None = None
 
     @field_validator("document_id", "looks_similar_because", "materially_incorrect_because")
     @classmethod
@@ -117,6 +129,9 @@ class AlternativeRationale(BaseModel):
 
     document_id: str
     rationale: str
+    ecli: str | None = None
+    canonical_document_id: str | None = None
+    identity_status: str | None = None
 
     @field_validator("document_id", "rationale")
     @classmethod
@@ -151,6 +166,9 @@ class CaseSimilarityGoldenItem(BaseModel):
     difficulty: str
     source_document_id: str
     expected_document_ids: list[str]
+    expected_primary_ecli: str | None = None
+    expected_primary_canonical_document_id: str | None = None
+    primary_identity_status: str = "verified"
     accepted_alternative_document_ids: list[str] = Field(default_factory=list)
     hard_negative_document_ids: list[str]
     supporting_block_ids: list[str]
@@ -289,7 +307,81 @@ class CaseSimilarityGoldenItem(BaseModel):
                     "hard_negative_blocker must be one of "
                     f"{sorted(ALLOWED_HARD_NEGATIVE_BLOCKERS)}"
                 )
+
+        if self.primary_identity_status == IDENTITY_STATUS_VERIFIED:
+            validate_decision_identity(
+                ecli=self.expected_primary_ecli,
+                canonical_document_id=self.expected_primary_canonical_document_id,
+            )
+        elif self.primary_identity_status == IDENTITY_STATUS_BLOCKED_MISSING_ECLI:
+            if self.expected_primary_ecli is not None or self.expected_primary_canonical_document_id is not None:
+                raise ValueError(
+                    "blocked primary identity must leave expected_primary_ecli and "
+                    "expected_primary_canonical_document_id null"
+                )
+        else:
+            raise ValueError(
+                f"unsupported primary_identity_status {self.primary_identity_status!r}"
+            )
+
+        for row in self.hard_negative_rationales:
+            _validate_reference_identity(
+                source_document_id=row.document_id,
+                ecli=row.ecli,
+                canonical_document_id=row.canonical_document_id,
+                identity_status=row.identity_status,
+                label="hard_negative",
+            )
+        for row in self.accepted_alternative_rationales:
+            _validate_reference_identity(
+                source_document_id=row.document_id,
+                ecli=row.ecli,
+                canonical_document_id=row.canonical_document_id,
+                identity_status=row.identity_status,
+                label="accepted_alternative",
+            )
+
+        primary_ecli = normalize_ecli(self.expected_primary_ecli) if self.expected_primary_ecli else None
+        if primary_ecli:
+            for row in [*self.hard_negative_rationales, *self.accepted_alternative_rationales]:
+                if row.ecli and eclis_equal(row.ecli, primary_ecli):
+                    raise ValueError(
+                        "hard-negative/alternative ECLI must not equal primary ECLI"
+                    )
+            alt_eclis = [
+                normalize_ecli(row.ecli)
+                for row in self.accepted_alternative_rationales
+                if row.ecli
+            ]
+            for row in self.hard_negative_rationales:
+                if row.ecli and any(eclis_equal(row.ecli, alt) for alt in alt_eclis):
+                    raise ValueError(
+                        "hard-negative ECLI must not equal an accepted-alternative ECLI"
+                    )
         return self
+
+
+def _validate_reference_identity(
+    *,
+    source_document_id: str,
+    ecli: str | None,
+    canonical_document_id: str | None,
+    identity_status: str | None,
+    label: str,
+) -> None:
+    status = identity_status or IDENTITY_STATUS_VERIFIED
+    if status == IDENTITY_STATUS_VERIFIED:
+        try:
+            validate_decision_identity(ecli=ecli, canonical_document_id=canonical_document_id)
+        except ValueError as exc:
+            raise ValueError(f"{label} {source_document_id}: {exc}") from exc
+    elif status == IDENTITY_STATUS_BLOCKED_MISSING_ECLI:
+        if ecli is not None or canonical_document_id is not None:
+            raise ValueError(
+                f"{label} {source_document_id}: blocked identity must have null ecli/canonical"
+            )
+    else:
+        raise ValueError(f"{label} {source_document_id}: unsupported identity_status {status!r}")
 
 
 class CaseSimilarityValidationIssue(BaseModel):
@@ -741,6 +833,83 @@ def validate_case_similarity_dataset(
 
     if rebuild_bytes is not None and tracked_bytes is not None and rebuild_bytes != tracked_bytes:
         err("deterministic_rebuild", "builder output is not byte-identical to tracked dataset")
+
+    # Identity-map / ECLI dataset rules
+    try:
+        from app.rag.legal_v2.benchmark.case_similarity_identity import (
+            load_case_similarity_identity_map,
+        )
+
+        identity_map = load_case_similarity_identity_map()
+    except Exception as exc:  # noqa: BLE001
+        err("identity_map_load", f"failed to load identity map: {exc}")
+        identity_map = {}
+
+    if identity_map:
+        source_to_ecli: dict[str, str] = {}
+        ecli_to_sources: dict[str, list[str]] = {}
+        for source_id, row in identity_map.items():
+            status = row.get("identity_status")
+            ecli = row.get("ecli")
+            if status == IDENTITY_STATUS_VERIFIED and ecli:
+                key = ecli_key(ecli)
+                source_to_ecli[source_id] = normalize_ecli(ecli)
+                ecli_to_sources.setdefault(key, []).append(source_id)
+            elif status == IDENTITY_STATUS_BLOCKED_MISSING_ECLI and ecli is not None:
+                err(
+                    "blocked_identity_has_ecli",
+                    f"blocked identity row {source_id} must not carry an ecli",
+                )
+        for ecli_norm, sources in ecli_to_sources.items():
+            if len(sources) > 1:
+                err(
+                    "duplicate_ecli_mapping",
+                    f"ECLI {ecli_norm} mapped to multiple sources: {sources}",
+                )
+
+        for item in items:
+            if item.source_document_id not in identity_map:
+                err(
+                    "primary_identity_unmapped",
+                    f"primary {item.source_document_id} missing from identity map",
+                    item.benchmark_id,
+                )
+            mapped = identity_map.get(item.source_document_id) or {}
+            if item.primary_identity_status == IDENTITY_STATUS_VERIFIED:
+                if not item.expected_primary_ecli:
+                    err(
+                        "missing_verified_ecli",
+                        "verified primary missing expected_primary_ecli",
+                        item.benchmark_id,
+                    )
+                elif ecli_key(item.expected_primary_ecli) != ecli_key(mapped.get("ecli")):
+                    err(
+                        "primary_ecli_map_mismatch",
+                        "expected_primary_ecli does not match identity map",
+                        item.benchmark_id,
+                    )
+                if item.source_document_id.startswith("doc-") and not item.expected_primary_ecli:
+                    err(
+                        "doc_id_used_as_canonical",
+                        "row uses only doc-* without verified ECLI for evaluation",
+                        item.benchmark_id,
+                    )
+            for row in item.hard_negative_rationales + item.accepted_alternative_rationales:
+                if row.document_id not in identity_map:
+                    err(
+                        "reference_identity_unmapped",
+                        f"{row.document_id} missing from identity map",
+                        item.benchmark_id,
+                    )
+                    continue
+                mapped_ref = identity_map[row.document_id]
+                if row.identity_status == IDENTITY_STATUS_VERIFIED:
+                    if ecli_key(row.ecli) != ecli_key(mapped_ref.get("ecli")):
+                        err(
+                            "reference_ecli_map_mismatch",
+                            f"{row.document_id} ecli does not match identity map",
+                            item.benchmark_id,
+                        )
 
     return CaseSimilarityValidationReport(
         dataset_path=dataset_path,
