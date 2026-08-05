@@ -64,6 +64,21 @@ Historical v6 change/corpus views and `/exports/parser_v6_*` routes remain avail
 
 Targeted regression documents may display `TARGETED REGRESSION PASS`. Exact `GOLDEN PASS` remains reserved for documents `05`, `11`, and `16`.
 
+## Baseline acceptance
+
+Decision: **`ACCEPT_V7_WITH_KNOWN_LIMITATIONS`**
+
+Canonical record:
+
+[`docs/architecture/PARSER_V7_BASELINE_DECISION.md`](../architecture/PARSER_V7_BASELINE_DECISION.md)
+
+Known limitation:
+
+- `KNOWN-PARSER-001` — closing location/date without `dne` may be labeled `heading` instead of `metadata`; boundaries and reconstruction remain correct; no demonstrated retrieval impact; do not open parser v8 for this label.
+
+Parser tuning for non-blocking label noise is stopped. Next work follows
+[`docs/architecture/NALUS_LEGAL_RAG_MASTER_PLAN.md`](../architecture/NALUS_LEGAL_RAG_MASTER_PLAN.md).
+
 ## Rebuild
 
 ```powershell

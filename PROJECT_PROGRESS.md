@@ -1,5 +1,32 @@
 # Project Progress
 
+## 2026-08-05 Europe/Moscow — Task: ACCEPT_V7 + Phase 1 archetypes + docs pointer cleanup
+
+- Goal:
+  Close parser v7 as the accepted structural baseline with known limitations, create the Phase 1 archetype manifest from the 20 review documents, and make `docs/architecture/NALUS_LEGAL_RAG_MASTER_PLAN.md` the single controlling plan pointer.
+- Decision:
+  `ACCEPT_V7_WITH_KNOWN_LIMITATIONS`. Do not open parser v8 for non-blocking label noise. Documented limitation: `KNOWN-PARSER-001` (doc 08 closing date without `dne` classified as `heading`).
+- Deliverables:
+  - `docs/architecture/PARSER_V7_BASELINE_DECISION.md`
+  - `docs/architecture/parser_benchmark/archetypes_v1.json` (+ local mirror under `artifacts/legal_v2/parser_benchmark/`)
+  - `docs/retrieval-enterprise/NALUS_SYSTEM_BUILD_PLAN.md` reduced to a pointer
+  - updated `docs/retrieval-enterprise/README.md` and `LEGAL_DECISION_PARSER_V7.md`
+- Coverage gaps:
+  Four holdout slots remain `pending_external` because the current design set has only 20 documents (target 21 slots / 7×3 roles).
+- Next recommended task:
+  Canonical block/child/parent chunk schema (master-plan Phase 2), then retrieval golden 100–150 queries; fill pending holdouts when new unseen documents are available. No broad parser polishing first.
+
+## 2026-08-05 Europe/Moscow — Task: Adopt controlling NALUS system build plan
+
+- Goal:
+  Capture the post-v7 end-to-end strategy as a binding plan: benchmark-first sequencing, dual parser/retrieval goldens, parent–child chunking, hybrid RRF, and runtime FAST/BALANCED/PRECISE profiles (ColBERT / cross-encoder cascade), not separate Git product branches.
+- Deliverable:
+  Initially drafted as `docs/retrieval-enterprise/NALUS_SYSTEM_BUILD_PLAN.md`; superseded by committed `docs/architecture/NALUS_LEGAL_RAG_MASTER_PLAN.md` (`1141cc0`). The short file is now only a pointer.
+- Decision:
+  Parser v7 stays frozen as structural baseline. Next work is archetypes + span-level retrieval golden, then one-layer experiments only.
+- Next recommended task:
+  Superseded by the ACCEPT_V7 / archetypes entry above.
+
 ## 2026-08-05 Europe/Moscow — Task: Czech courts parser v7 structural corrections
 
 - Goal:
@@ -15,7 +42,7 @@
 - Manual-review safety:
   Decision store SHA-256 unchanged `F98CD519CCF28310706F70B0D65F2F15FDFC28CC530304CD4FF79890219A28FB`; history unchanged `5E0E86E5A2210800A514341E6A7A87210EBC2EC7504D379BA6DB2542EB82FACD`. No automatic approvals; assisted batches 0. Stale/conflict export categories are consistent (stale=2, conflicts=0).
 - Next recommended task:
-  Human review of the v7 changed-item queue for the remaining non-golden documents, prioritizing Olomouc civil operative/reasoning and Constitutional compact headings, without treating TARGETED REGRESSION PASS as full golden proof.
+  Superseded: v7 accepted with known limitations; continue from master-plan Phase 1/2.
 
 ## 2026-08-05 Europe/Moscow — Task: Commit parser v6 + full corpus review export
 

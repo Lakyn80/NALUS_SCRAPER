@@ -1092,6 +1092,10 @@ A phase is complete only when:
 
 ### Step 1 — complete v7 review
 
+Status: **done** as `ACCEPT_V7_WITH_KNOWN_LIMITATIONS`.
+
+Record: `docs/architecture/PARSER_V7_BASELINE_DECISION.md`
+
 Obtain and independently inspect:
 
 ```text
@@ -1106,15 +1110,20 @@ Output:
 - decision `ACCEPT_V7` or `FIX_V8`;
 - no further parser tuning without concrete retrieval impact.
 
+Current decision: `ACCEPT_V7_WITH_KNOWN_LIMITATIONS` including `KNOWN-PARSER-001`.
+
 ### Step 2 — create parser archetype manifest
 
-Suggested file:
+Status: **initial draft created**.
+
+Suggested / created file:
 
 ```text
+docs/architecture/parser_benchmark/archetypes_v1.json
 artifacts/legal_v2/parser_benchmark/archetypes_v1.json
 ```
 
-It must include development/regression/holdout roles and the reason each document was selected.
+It must include development/regression/holdout roles and the reason each document was selected. Four holdout slots remain `pending_external` until additional unseen documents are added.
 
 ### Step 3 — design canonical child/parent schema
 
