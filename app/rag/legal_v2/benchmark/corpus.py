@@ -17,7 +17,33 @@ DEFAULT_ARCHETYPES_PATH = (
     PROJECT_ROOT / "docs" / "architecture" / "parser_benchmark" / "archetypes_v1.json"
 )
 DEFAULT_REVIEW_DIR = PROJECT_ROOT / "artifacts" / "legal_v2" / "visual_parser_review"
+DEFAULT_RAW_SOURCES_DIR = (
+    PROJECT_ROOT / "artifacts" / "legal_v2" / "court_format_study" / "raw_sources"
+)
 _LINE_PREFIX_RE = re.compile(r"^\d{5}:\s?")
+
+# Supplemental criminal appeals available in local raw_sources but outside the
+# 20-document reviewed pilot pool. Used only as hard-negative candidates.
+CASE_SIMILARITY_SUPPLEMENTAL_CRIMINAL_SOURCES: tuple[dict[str, str], ...] = (
+    {
+        "document_id": "doc-4fbdc1db957f44e7",
+        "source_id": "4fbdc1db-957f-44e7-a9d3-18abddb9cdce",
+        "relative_path": "high_court_olomouc/4fbdc1db-957f-44e7-a9d3-18abddb9cdce.json",
+        "court": "high_court_olomouc",
+        "decision_type": "criminal_appeal",
+        "case_number": "6 To 41/2024",
+        "decision_date": "2025-02-20",
+    },
+    {
+        "document_id": "doc-68c126d146c84fa1",
+        "source_id": "68c126d1-46c8-4fa1-aa5b-0602e2e7bb6e",
+        "relative_path": "high_court_olomouc/68c126d1-46c8-4fa1-aa5b-0602e2e7bb6e.json",
+        "court": "high_court_olomouc",
+        "decision_type": "criminal_appeal",
+        "case_number": "6 To 42/2024",
+        "decision_date": "2025-02-27",
+    },
+)
 
 
 @dataclass(frozen=True)
@@ -83,13 +109,199 @@ def load_development_document_refs(
     return refs
 
 
+def load_reviewed_pool_document_refs(
+    archetypes_path: Path | str = DEFAULT_ARCHETYPES_PATH,
+) -> list[DevelopmentDocumentRef]:
+    """Load all reviewed inventory documents (parser design pool of 20)."""
+    payload = json.loads(Path(archetypes_path).read_text(encoding="utf-8"))
+    refs: list[DevelopmentDocumentRef] = []
+    seen: set[str] = set()
+    for item in payload.get("inventory", []):
+        document_id = item.get("document_id")
+        review_number = item.get("review_number")
+        if not document_id or review_number is None:
+            continue
+        if document_id in seen:
+            continue
+        refs.append(
+            DevelopmentDocumentRef(
+                archetype_id="",
+                review_number=int(review_number),
+                document_id=str(document_id),
+                source_id=_first(item.get("source_id")),
+                case_number=_first(item.get("case_number")),
+                court=_first(item.get("court")),
+                decision_type=_first(item.get("document_type")),
+                decision_date=_first(item.get("decision_date")),
+                source_checksum=_first(item.get("source_checksum")),
+            )
+        )
+        seen.add(str(document_id))
+    refs.sort(key=lambda ref: ref.review_number)
+    return refs
+
+
 def load_development_corpus(
     *,
     archetypes_path: Path | str = DEFAULT_ARCHETYPES_PATH,
     review_dir: Path | str = DEFAULT_REVIEW_DIR,
 ) -> DevelopmentCorpus:
-    review_root = Path(review_dir)
     refs = load_development_document_refs(archetypes_path)
+    return _load_corpus_for_refs(
+        refs,
+        archetypes_path=archetypes_path,
+        review_dir=review_dir,
+        archetype_role="development",
+    )
+
+
+def load_reviewed_pool_corpus(
+    *,
+    archetypes_path: Path | str = DEFAULT_ARCHETYPES_PATH,
+    review_dir: Path | str = DEFAULT_REVIEW_DIR,
+) -> DevelopmentCorpus:
+    """Canonical corpus for all 20 reviewed parser-v7 judgments in the design pool."""
+    refs = load_reviewed_pool_document_refs(archetypes_path)
+    return _load_corpus_for_refs(
+        refs,
+        archetypes_path=archetypes_path,
+        review_dir=review_dir,
+        archetype_role="reviewed_pool",
+    )
+
+
+def load_case_similarity_corpus(
+    *,
+    archetypes_path: Path | str = DEFAULT_ARCHETYPES_PATH,
+    review_dir: Path | str = DEFAULT_REVIEW_DIR,
+    raw_sources_dir: Path | str = DEFAULT_RAW_SOURCES_DIR,
+) -> DevelopmentCorpus:
+    """Reviewed pilot pool plus supplemental criminal hard-negative sources."""
+    base = load_reviewed_pool_corpus(
+        archetypes_path=archetypes_path,
+        review_dir=review_dir,
+    )
+    extra_refs, extra_bundles, extra_blocks = _load_supplemental_criminal_sources(
+        Path(raw_sources_dir)
+    )
+    documents = list(base.documents) + extra_refs
+    bundles = dict(base.bundles)
+    bundles.update(extra_bundles)
+    blocks_by_id = dict(base.blocks_by_id)
+    blocks_by_id.update(extra_blocks)
+    return DevelopmentCorpus(
+        documents=documents,
+        bundles=bundles,
+        blocks_by_id=blocks_by_id,
+    )
+
+
+def load_case_similarity_primary_document_ids(
+    archetypes_path: Path | str = DEFAULT_ARCHETYPES_PATH,
+) -> list[str]:
+    """The 20 reviewed-pool document IDs that must each appear once as a primary."""
+    return [ref.document_id for ref in load_reviewed_pool_document_refs(archetypes_path)]
+
+
+def _load_supplemental_criminal_sources(
+    raw_sources_dir: Path,
+) -> tuple[list[DevelopmentDocumentRef], dict[str, CanonicalDocumentBundle], dict[str, CanonicalBlock]]:
+    refs: list[DevelopmentDocumentRef] = []
+    bundles: dict[str, CanonicalDocumentBundle] = {}
+    blocks_by_id: dict[str, CanonicalBlock] = {}
+    for index, item in enumerate(CASE_SIMILARITY_SUPPLEMENTAL_CRIMINAL_SOURCES, start=1001):
+        path = raw_sources_dir / item["relative_path"]
+        if not path.exists():
+            raise FileNotFoundError(f"Missing supplemental criminal source: {path}")
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        text = _justice_json_plain_text(
+            payload,
+            court_label="Vrchní soud v Olomouci",
+            case_number=item["case_number"],
+        )
+        ref = DevelopmentDocumentRef(
+            archetype_id="supplemental_criminal_hard_negative",
+            review_number=index,
+            document_id=item["document_id"],
+            source_id=item["source_id"],
+            case_number=item["case_number"],
+            court=item["court"],
+            decision_type=item["decision_type"],
+            decision_date=item["decision_date"],
+            source_checksum=None,
+        )
+        metadata = {
+            "source_id": ref.source_id,
+            "source_document_id": ref.source_id,
+            "case_number": ref.case_number,
+            "court": ref.court,
+            "decision_type": ref.decision_type,
+            "document_type": ref.decision_type,
+            "decision_date": ref.decision_date,
+            "language": "cs",
+            "jurisdiction": "CZ",
+            "archetype_id": ref.archetype_id,
+            "archetype_role": "supplemental_hard_negative",
+        }
+        parsed = parse_legal_document(
+            document_id=ref.document_id,
+            text=text,
+            metadata=metadata,
+        )
+        bundle = map_legal_v2_bundle(
+            parsed,
+            source_document_id=ref.source_id,
+        )
+        refs.append(ref)
+        bundles[ref.document_id] = bundle
+        for block in bundle.blocks:
+            blocks_by_id[block.block_id] = block
+    return refs, bundles, blocks_by_id
+
+
+def _justice_json_plain_text(
+    payload: dict[str, Any],
+    *,
+    court_label: str,
+    case_number: str,
+) -> str:
+    """Minimal offline extractor for Justice Open Data finaldoc JSON."""
+    lines: list[str] = [court_label, case_number]
+    for key, heading in (
+        ("header", None),
+        ("verdict", "Výrok"),
+        ("justification", "Odůvodnění"),
+    ):
+        blocks = payload.get(key)
+        if heading and blocks:
+            lines.append(heading)
+        if not isinstance(blocks, list):
+            continue
+        for block in blocks:
+            if not isinstance(block, dict):
+                continue
+            texts = block.get("texts")
+            if not isinstance(texts, list):
+                continue
+            joined = "".join(
+                str(part.get("text") or "") for part in texts if isinstance(part, dict)
+            )
+            normalized = re.sub(r"\s+", " ", joined).strip()
+            if normalized:
+                lines.append(normalized)
+    plain = "\n".join(lines)
+    return plain if plain.endswith("\n") else plain + "\n"
+
+
+def _load_corpus_for_refs(
+    refs: list[DevelopmentDocumentRef],
+    *,
+    archetypes_path: Path | str,
+    review_dir: Path | str,
+    archetype_role: str,
+) -> DevelopmentCorpus:
+    review_root = Path(review_dir)
+    _ = archetypes_path  # reserved for future archetype-role enrichment
     bundles: dict[str, CanonicalDocumentBundle] = {}
     blocks_by_id: dict[str, CanonicalBlock] = {}
     line_rows = _safe_read_jsonl(review_root / "review_lines.jsonl")
@@ -108,7 +320,7 @@ def load_development_corpus(
             "language": "cs",
             "jurisdiction": "CZ",
             "archetype_id": ref.archetype_id,
-            "archetype_role": "development",
+            "archetype_role": archetype_role,
         }
         parsed = parse_legal_document(
             document_id=ref.document_id,
@@ -190,8 +402,14 @@ __all__ = [
     "DevelopmentCorpus",
     "DEFAULT_ARCHETYPES_PATH",
     "DEFAULT_REVIEW_DIR",
+    "DEFAULT_RAW_SOURCES_DIR",
+    "CASE_SIMILARITY_SUPPLEMENTAL_CRIMINAL_SOURCES",
     "load_development_document_refs",
+    "load_reviewed_pool_document_refs",
     "load_development_corpus",
+    "load_reviewed_pool_corpus",
+    "load_case_similarity_corpus",
+    "load_case_similarity_primary_document_ids",
     "token_overlap_score",
     "rank_blocks_by_token_overlap",
 ]

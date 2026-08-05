@@ -1147,10 +1147,16 @@ Production Qdrant/BM25 payload writers remain on the legacy paragraph/window fie
 
 ### Step 4 — create retrieval benchmark v1
 
-Status: **Step 4A pilot done** (30 grounded queries). Final 100–150 target remains open.
+Status: **Step 4A passage pilot done** (30 grounded queries). **Case-similarity
+document pilot done** (20 case descriptions over the 20 reviewed judgments).
+Final scaled targets remain open.
 
-Pilot contract: `docs/architecture/RETRIEVAL_GOLDEN_V1.md`
-Pilot dataset: `benchmarks/legal_v2/retrieval_golden_v1_pilot.jsonl`
+Passage pilot (secondary): `docs/architecture/RETRIEVAL_GOLDEN_V1.md`
+Passage dataset: `benchmarks/legal_v2/retrieval_golden_v1_pilot.jsonl`
+
+Case-similarity pilot (primary product workflow):
+`docs/architecture/CASE_SIMILARITY_RETRIEVAL_GOLDEN_V1.md`
+Case-similarity dataset: `benchmarks/legal_v2/case_similarity_golden_v1_pilot.jsonl`
 
 First full iteration target:
 
@@ -1160,7 +1166,8 @@ First full iteration target:
 - hard negatives;
 - locked holdout.
 
-The 30-query pilot must not be used alone to select a production chunking winner.
+The 30-query passage pilot and the 20-query case-similarity pilot must not be
+used alone to select a production chunking winner.
 
 ### Step 5 — run chunking experiment
 

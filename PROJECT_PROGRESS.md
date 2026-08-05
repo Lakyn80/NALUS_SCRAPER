@@ -1,5 +1,48 @@
 # Project Progress
 
+## 2026-08-05 Europe/Moscow — Task: Case-similarity pilot correction (003 / 007 / 016)
+
+- Goal:
+  Targeted correction of three case-similarity pilot rows only; no clarification
+  gate; no Step 4A / provider / runtime changes.
+- Results:
+  - `nalus-cs-pilot-003`: client paraphrase of causation conclusion; primary
+    `doc-d513b3e81616439a` unchanged; longest supporting-block token overlap
+    reduced to 2; forbidden eight-token legal phrase removed.
+  - `nalus-cs-pilot-007`: **CORPUS BLOCKER** — no honest same-domain hard
+    negatives found in reviewed pool + local raw_sources + NSoud dumps for
+    lawyer discipline / former-client conflict / insolvency representation.
+    Weak cross-domain HNs retained only for schema `min=1`; not claimed strong.
+  - `nalus-cs-pilot-016`: hard negatives replaced with supplemental criminal
+    appeals `doc-4fbdc1db957f44e7` (`6 To 41/2024`) and `doc-68c126d146c84fa1`
+    (`6 To 42/2024`) loaded from `court_format_study/raw_sources` via
+    `load_case_similarity_corpus()` (outside the 20 reviewed primaries).
+- Validation:
+  Builder/validator/export OK; deterministic rebuild byte-identical; Step 4A
+  no-diff; focused tests `31 passed` (case-similarity + Step 4A); no commit.
+- Next recommended task:
+  Expand local corpus with lawyer-discipline / conflict-of-interest peers so
+  `007` can receive honest hard negatives; then human audit of remaining rows.
+
+## 2026-08-05 Europe/Moscow — Task: Case-similarity retrieval golden v1 pilot (20 docs)
+
+- Goal:
+  Create a source-grounded **document-level** case-similarity benchmark pilot:
+  realistic user case descriptions → most similar whole judgment → supporting
+  passages → hard negatives. Primary product workflow for NALUS similarity search.
+- Deliverables:
+  - `benchmarks/legal_v2/case_similarity_golden_v1_pilot.jsonl` (20 development rows)
+  - `app/rag/legal_v2/benchmark/case_similarity_golden.py`
+  - `app/rag/legal_v2/benchmark/corpus.py` (`load_reviewed_pool_corpus`)
+  - `docs/architecture/CASE_SIMILARITY_RETRIEVAL_GOLDEN_V1.md`
+  - builder / validator / manual-review export scripts
+  - `tests/rag/test_legal_v2_case_similarity_golden_v1_pilot.py`
+- Explicit non-goals:
+  No Step 4A changes; no parser/Qdrant/BM25/provider/runtime retrieval; no commit.
+- Next recommended task:
+  Human audit of all 20 case-similarity rows (`PASS`/`FIX`/`REJECT`), then expand
+  or begin document-level retrieval metrics against frozen judgments.
+
 ## 2026-08-05 Europe/Moscow — Task: Step 4A retrieval-golden v1 pilot (30 queries)
 
 - Goal:
