@@ -10,6 +10,15 @@
 
 **Case-similarity corpus (pilot + supplemental hard negatives):** `load_case_similarity_corpus()` — the 20 reviewed primaries plus offline supplemental criminal appeals from `artifacts/legal_v2/court_format_study/raw_sources` used only as hard negatives for `nalus-cs-pilot-016`.
 
+**Hard-negative evaluability:** each row carries explicit fields:
+
+- `hard_negative_evaluable` (default `true` for older rows)
+- `hard_negative_blocker` (`null` when evaluable; required when blocked)
+
+`nalus-cs-pilot-007` is blocked with `insufficient_same_domain_corpus`. Blocked rows remain in Hit@K / MRR but are excluded from hard-negative outrank denominators.
+
+**Retrieval baseline runner:** `scripts/legal_v2/evaluate_case_similarity_golden_v1.py` (Legal v2 hybrid retriever, offline, no LLM).
+
 **Binding plan:** [`NALUS_LEGAL_RAG_MASTER_PLAN.md`](./NALUS_LEGAL_RAG_MASTER_PLAN.md)
 
 ---

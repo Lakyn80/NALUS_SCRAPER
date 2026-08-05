@@ -1,5 +1,28 @@
 # Project Progress
 
+## 2026-08-05 Europe/Moscow — Task: Case-similarity evaluator + HN blocker schema
+
+- Goal:
+  Checkpoint the golden pilot, add explicit hard-negative evaluability fields,
+  and implement the first Legal v2 hybrid document-level evaluation runner.
+- Phase A commit:
+  `8dddea6` — `feat(legal-v2): add case similarity golden v1 pilot`
+- Phase B results:
+  - Schema fields `hard_negative_evaluable` / `hard_negative_blocker`;
+    `nalus-cs-pilot-007` blocked as `insufficient_same_domain_corpus`.
+  - Runner: `scripts/legal_v2/evaluate_case_similarity_golden_v1.py`
+    (`LegalV2HybridRetriever`, offline, no LLM).
+  - Metrics module + focused tests.
+  - **Real scored baseline blocked:** target collection
+    `nalus_legal_paragraph_chunks_v2_pilot_600` contains 600 indexed docs with
+    ECLI IDs; **0/20** golden `doc-*` primaries are present (ID/corpus mismatch).
+    Compatibility audit written under
+    `artifacts/legal_v2/case_similarity_golden_v1_baseline/<run_id>/`.
+- Next recommended task:
+  Index the 20 reviewed case-similarity judgments (and supplemental criminal HN
+  sources) into a legal_v2 collection with stable document-ID mapping, then rerun
+  the untuned baseline once.
+
 ## 2026-08-05 Europe/Moscow — Task: Case-similarity pilot correction (003 / 007 / 016)
 
 - Goal:

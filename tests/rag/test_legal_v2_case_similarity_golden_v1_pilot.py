@@ -278,6 +278,8 @@ def test_entry_007_hard_negatives_exist_and_are_not_primary(
     item = next(row for row in pilot_items if row.benchmark_id == "nalus-cs-pilot-007")
     assert item.source_document_id == "doc-af3c185ad674a7da"
     assert "CORPUS BLOCKER" in (item.notes or "")
+    assert item.hard_negative_evaluable is False
+    assert item.hard_negative_blocker == "insufficient_same_domain_corpus"
     corpus_ids = {ref.document_id for ref in case_similarity_corpus.documents}
     for document_id in item.hard_negative_document_ids:
         assert document_id in corpus_ids

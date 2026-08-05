@@ -140,6 +140,8 @@ def build_manual_review_markdown(
                 f"- factual_facets: {', '.join(item.factual_facets) or '—'}",
                 f"- legal_issue_facets: {', '.join(item.legal_issue_facets) or '—'}",
                 f"- procedural_facets: {', '.join(item.procedural_facets) or '—'}",
+                f"- hard_negative_evaluable: `{item.hard_negative_evaluable}`",
+                f"- hard_negative_blocker: `{item.hard_negative_blocker}`",
                 f"- builder_notes: {item.notes or '—'}",
                 "",
                 "### Human verdict",

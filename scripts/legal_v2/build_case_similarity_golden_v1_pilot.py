@@ -119,6 +119,8 @@ def main(argv: list[str] | None = None) -> int:
             similarity_rationale=spec["similarity_rationale"],
             hard_negative_rationales=hard_rationales,
             accepted_alternative_rationales=alt_rationales,
+            hard_negative_evaluable=bool(spec.get("hard_negative_evaluable", True)),
+            hard_negative_blocker=spec.get("hard_negative_blocker"),
             provenance=CaseSimilarityProvenance(
                 builder=BUILDER_NAME,
                 corpus_role="reviewed_pool",
@@ -461,6 +463,8 @@ def _curated_specs() -> list[dict[str, Any]]:
                 },
             ],
             "alternatives": [],
+            "hard_negative_evaluable": False,
+            "hard_negative_blocker": "insufficient_same_domain_corpus",
             "notes": (
                 "Reviewed pool #7. CORPUS BLOCKER for honest same-domain hard negatives: "
                 "local raw_sources (93) + NSoud dumps contain no second lawyer-discipline / "

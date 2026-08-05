@@ -31,6 +31,12 @@ MAX_QUERY_WORDS = 180
 MIN_QUERY_SENTENCES = 3
 MAX_QUERY_SENTENCES = 8
 COPIED_SENTENCE_MIN_TOKENS = 12
+HARD_NEGATIVE_BLOCKER_INSUFFICIENT_SAME_DOMAIN_CORPUS = "insufficient_same_domain_corpus"
+ALLOWED_HARD_NEGATIVE_BLOCKERS = frozenset(
+    {
+        HARD_NEGATIVE_BLOCKER_INSUFFICIENT_SAME_DOMAIN_CORPUS,
+    }
+)
 
 ALLOWED_SPLITS = frozenset({"development"})
 ALLOWED_DIFFICULTIES = frozenset({"easy", "medium", "hard"})
@@ -155,6 +161,8 @@ class CaseSimilarityGoldenItem(BaseModel):
     similarity_rationale: str
     hard_negative_rationales: list[HardNegativeRationale]
     accepted_alternative_rationales: list[AlternativeRationale] = Field(default_factory=list)
+    hard_negative_evaluable: bool = True
+    hard_negative_blocker: str | None = None
     provenance: CaseSimilarityProvenance
     human_review_status: str = HUMAN_REVIEW_STATUS
     notes: str | None = None
@@ -266,6 +274,21 @@ class CaseSimilarityGoldenItem(BaseModel):
                 f"query sentence count must be {MIN_QUERY_SENTENCES}-{MAX_QUERY_SENTENCES}, "
                 f"found {sentences}"
             )
+
+        if self.hard_negative_evaluable and self.hard_negative_blocker is not None:
+            raise ValueError(
+                "hard_negative_blocker must be null when hard_negative_evaluable is true"
+            )
+        if not self.hard_negative_evaluable:
+            if not self.hard_negative_blocker:
+                raise ValueError(
+                    "hard_negative_blocker is required when hard_negative_evaluable is false"
+                )
+            if self.hard_negative_blocker not in ALLOWED_HARD_NEGATIVE_BLOCKERS:
+                raise ValueError(
+                    "hard_negative_blocker must be one of "
+                    f"{sorted(ALLOWED_HARD_NEGATIVE_BLOCKERS)}"
+                )
         return self
 
 
@@ -543,6 +566,26 @@ def validate_case_similarity_dataset(
         hard_set = set(item.hard_negative_document_ids)
         if expected_set & alt_set or expected_set & hard_set or alt_set & hard_set:
             err("document_set_overlap", "expected/alternative/hard-negative overlap", item.benchmark_id)
+
+        if item.hard_negative_evaluable and item.hard_negative_blocker is not None:
+            err(
+                "hard_negative_state_conflict",
+                "hard_negative_evaluable=true cannot set a blocker",
+                item.benchmark_id,
+            )
+        if not item.hard_negative_evaluable:
+            if not item.hard_negative_blocker:
+                err(
+                    "hard_negative_blocker_missing",
+                    "hard_negative_evaluable=false requires hard_negative_blocker",
+                    item.benchmark_id,
+                )
+            elif item.hard_negative_blocker not in ALLOWED_HARD_NEGATIVE_BLOCKERS:
+                err(
+                    "hard_negative_blocker_invalid",
+                    f"unsupported hard_negative_blocker {item.hard_negative_blocker}",
+                    item.benchmark_id,
+                )
 
         rationale_docs = {row.document_id for row in item.hard_negative_rationales}
         if rationale_docs != hard_set:
