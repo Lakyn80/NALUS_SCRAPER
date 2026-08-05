@@ -1,5 +1,20 @@
 # Project Progress
 
+## 2026-08-05 Europe/Moscow — Task: Phase 2 canonical block/chunk schema
+
+- Goal:
+  Lock the master-plan document → block → child → parent data contract without cutting over production indexing or changing parser v7 rules.
+- Deliverables:
+  - `docs/architecture/CANONICAL_BLOCK_CHUNK_SCHEMA_V1.md` (field contract + legacy alias map)
+  - `app/rag/legal_v2/schema/canonical_v1.py` (typed models, stable IDs, checksums, reconstruction validators)
+  - `app/rag/legal_v2/schema/map_from_legal_v2.py` (bridge from `LegalDocumentStructure` / hierarchical chunks)
+  - `tests/rag/test_legal_v2_canonical_schema_v1.py`
+  - `scripts/legal_v2/export_canonical_schema_pilot.py` (offline 1–3 doc pilot under gitignored `artifacts/legal_v2/canonical_schema_pilot/`)
+- Explicit non-goals:
+  No parser v8, no full-corpus Qdrant/BM25 upsert, no chunking A/B winner, no 100–150 retrieval golden annotations in this task.
+- Next recommended task:
+  Phase 3 chunking A/B/C/D and/or Phase 4 retrieval golden skeleton — one major variable at a time. Fill `pending_external` archetype holdouts when new unseen documents are available.
+
 ## 2026-08-05 Europe/Moscow — Task: ACCEPT_V7 + Phase 1 archetypes + docs pointer cleanup
 
 - Goal:
@@ -14,7 +29,7 @@
 - Coverage gaps:
   Four holdout slots remain `pending_external` because the current design set has only 20 documents (target 21 slots / 7×3 roles).
 - Next recommended task:
-  Canonical block/child/parent chunk schema (master-plan Phase 2), then retrieval golden 100–150 queries; fill pending holdouts when new unseen documents are available. No broad parser polishing first.
+  Superseded by the Phase 2 canonical schema entry above.
 
 ## 2026-08-05 Europe/Moscow — Task: Adopt controlling NALUS system build plan
 

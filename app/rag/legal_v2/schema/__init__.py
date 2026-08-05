@@ -1,0 +1,53 @@
+"""Canonical block/chunk schema package for legal_v2 Phase 2."""
+
+from app.rag.legal_v2.schema.canonical_v1 import (
+    DEFAULT_CHUNKING_PROFILE,
+    DEFAULT_PARSER_PROFILE,
+    SCHEMA_VERSION,
+    CanonicalBlock,
+    CanonicalChildChunk,
+    CanonicalDocument,
+    CanonicalDocumentBundle,
+    CanonicalParentContext,
+    ReconstructionReport,
+    bundle_from_dict,
+    bundle_from_json,
+    bundle_to_dict,
+    bundle_to_json,
+    content_checksum,
+    reconstruct_child_text,
+    stable_block_id,
+    stable_child_chunk_id,
+    stable_parent_id,
+    validate_bundle_invariants,
+)
+from app.rag.legal_v2.schema.map_from_legal_v2 import (
+    LineInventoryRow,
+    line_inventory_from_review_rows,
+    map_legal_v2_bundle,
+)
+
+__all__ = [
+    "SCHEMA_VERSION",
+    "DEFAULT_CHUNKING_PROFILE",
+    "DEFAULT_PARSER_PROFILE",
+    "CanonicalDocument",
+    "CanonicalBlock",
+    "CanonicalChildChunk",
+    "CanonicalParentContext",
+    "CanonicalDocumentBundle",
+    "ReconstructionReport",
+    "LineInventoryRow",
+    "content_checksum",
+    "stable_block_id",
+    "stable_child_chunk_id",
+    "stable_parent_id",
+    "reconstruct_child_text",
+    "validate_bundle_invariants",
+    "bundle_to_dict",
+    "bundle_from_dict",
+    "bundle_to_json",
+    "bundle_from_json",
+    "map_legal_v2_bundle",
+    "line_inventory_from_review_rows",
+]

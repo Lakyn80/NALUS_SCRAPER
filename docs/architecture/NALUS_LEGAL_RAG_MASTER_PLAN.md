@@ -838,6 +838,8 @@ Tasks:
 
 **Goal:** stable data contract for all later experiments.
 
+**Status:** implemented for experiment/pilot use; production indexer not cut over.
+
 Tasks:
 
 - Pydantic/typed models;
@@ -1127,12 +1129,21 @@ It must include development/regression/holdout roles and the reason each documen
 
 ### Step 3 — design canonical child/parent schema
 
-Do not index the full corpus yet. First create:
+Status: **done** (typed models, mapper, reconstruction tests, offline pilot).
+
+Contract: `docs/architecture/CANONICAL_BLOCK_CHUNK_SCHEMA_V1.md`
+Typed models: `app/rag/legal_v2/schema/canonical_v1.py`
+Mapper: `app/rag/legal_v2/schema/map_from_legal_v2.py`
+Pilot script: `scripts/legal_v2/export_canonical_schema_pilot.py`
+
+Do not index the full corpus yet. Delivered:
 
 - typed model;
 - stable identities;
 - reconstruction test;
 - one small isolated pilot.
+
+Production Qdrant/BM25 payload writers remain on the legacy paragraph/window field names until a later migration.
 
 ### Step 4 — create retrieval benchmark v1
 
