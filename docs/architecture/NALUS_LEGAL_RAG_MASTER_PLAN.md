@@ -1147,13 +1147,20 @@ Production Qdrant/BM25 payload writers remain on the legacy paragraph/window fie
 
 ### Step 4 — create retrieval benchmark v1
 
-First iteration target:
+Status: **Step 4A pilot done** (30 grounded queries). Final 100–150 target remains open.
+
+Pilot contract: `docs/architecture/RETRIEVAL_GOLDEN_V1.md`
+Pilot dataset: `benchmarks/legal_v2/retrieval_golden_v1_pilot.jsonl`
+
+First full iteration target:
 
 - 100–150 queries;
 - span annotations;
 - alternative relevance;
 - hard negatives;
 - locked holdout.
+
+The 30-query pilot must not be used alone to select a production chunking winner.
 
 ### Step 5 — run chunking experiment
 

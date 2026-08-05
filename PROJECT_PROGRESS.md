@@ -1,5 +1,21 @@
 # Project Progress
 
+## 2026-08-05 Europe/Moscow — Task: Step 4A retrieval-golden v1 pilot (30 queries)
+
+- Goal:
+  Create an evidence-first, block-grounded retrieval-golden **pilot** (29 positive + 1 corpus-negative) from development archetype documents only, without claiming the final 100–150 benchmark is complete.
+- Deliverables:
+  - `benchmarks/legal_v2/retrieval_golden_v1_pilot.jsonl`
+  - `app/rag/legal_v2/benchmark/retrieval_golden.py` (+ corpus loader)
+  - `docs/architecture/RETRIEVAL_GOLDEN_V1.md`
+  - `scripts/legal_v2/build_retrieval_golden_v1_pilot.py`
+  - `scripts/legal_v2/validate_retrieval_golden_v1_pilot.py`
+  - `tests/rag/test_legal_v2_retrieval_golden_v1_pilot.py`
+- Explicit non-goals:
+  No parser/Qdrant/BM25/provider changes; pilot must not select a production chunking winner.
+- Next recommended task:
+  Expand toward 100–150 retrieval queries with validation/locked_holdout splits; only then evaluate chunking A/B/C/D for a winner.
+
 ## 2026-08-05 Europe/Moscow — Task: Phase 2 canonical block/chunk schema
 
 - Goal:
