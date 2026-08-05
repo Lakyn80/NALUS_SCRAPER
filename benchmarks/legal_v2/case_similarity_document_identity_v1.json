@@ -68,97 +68,92 @@
     },
     {
       "source_document_id": "doc-e5ac4b1fcd075062",
-      "ecli": null,
-      "canonical_document_id": null,
+      "ecli": "ECLI:CZ:US:2026:4.US.650.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.650.26.1",
       "case_number": "IV.ÚS 650/26",
       "court": "constitutional_court",
-      "decision_date": null,
-      "identity_status": "blocked_missing_verified_ecli",
-      "blocker": "No authoritative ECLI found in available NALUS batches, review HTML, archetypes, or live legal_v2 indexes.",
+      "decision_date": "2026-07-22",
+      "identity_status": "verified",
       "verification_source": {
-        "type": "blocked_after_source_search",
-        "searched": [
-          "nalus-scraper/batches/*.json",
-          "artifacts/legal_v2/court_format_study/raw_sources/constitutional_court",
-          "artifacts/legal_v2/visual_parser_review",
-          "nalus_legal_paragraph_chunks_v2_pilot_600"
-        ]
+        "type": "official_document_url",
+        "path": "https://nalus.usoud.cz/Search/GetText.aspx?sz=4-650-26_1",
+        "field": "sz",
+        "sz": "4-650-26_1",
+        "decision_date_from_page": "2026-07-22",
+        "mapping_rule": "ECLI:CZ:US:{decision_year}:{senate}.US.{number}.{case_year}.1 from NALUS GetText sz",
+        "algorithm_validated_against_verified_pilot_eclis": true
       }
     },
     {
       "source_document_id": "doc-abd57ac0aa5dfe5b",
-      "ecli": null,
-      "canonical_document_id": null,
+      "ecli": "ECLI:CZ:US:2026:4.US.823.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.823.26.1",
       "case_number": "IV.ÚS 823/26",
       "court": "constitutional_court",
-      "decision_date": null,
-      "identity_status": "blocked_missing_verified_ecli",
-      "blocker": "No authoritative ECLI found in available NALUS batches, review HTML, archetypes, or live legal_v2 indexes.",
+      "decision_date": "2026-07-22",
+      "identity_status": "verified",
       "verification_source": {
-        "type": "blocked_after_source_search",
-        "searched": [
-          "nalus-scraper/batches/*.json",
-          "artifacts/legal_v2/court_format_study/raw_sources/constitutional_court",
-          "artifacts/legal_v2/visual_parser_review",
-          "nalus_legal_paragraph_chunks_v2_pilot_600"
-        ]
+        "type": "official_document_url",
+        "path": "https://nalus.usoud.cz/Search/GetText.aspx?sz=4-823-26_1",
+        "field": "sz",
+        "sz": "4-823-26_1",
+        "decision_date_from_page": "2026-07-22",
+        "mapping_rule": "ECLI:CZ:US:{decision_year}:{senate}.US.{number}.{case_year}.1 from NALUS GetText sz",
+        "algorithm_validated_against_verified_pilot_eclis": true
       }
     },
     {
       "source_document_id": "doc-af3c185ad674a7da",
-      "ecli": null,
-      "canonical_document_id": null,
+      "ecli": "ECLI:CZ:US:2026:1.US.1213.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:1.US.1213.26.1",
       "case_number": "I.ÚS 1213/26",
       "court": "constitutional_court",
-      "decision_date": null,
-      "identity_status": "blocked_missing_verified_ecli",
-      "blocker": "No authoritative ECLI found in available NALUS batches, review HTML, archetypes, or live legal_v2 indexes.",
+      "decision_date": "2026-07-02",
+      "identity_status": "verified",
       "verification_source": {
-        "type": "blocked_after_source_search",
-        "searched": [
-          "nalus-scraper/batches/*.json",
-          "artifacts/legal_v2/court_format_study/raw_sources/constitutional_court",
-          "artifacts/legal_v2/visual_parser_review",
-          "nalus_legal_paragraph_chunks_v2_pilot_600"
-        ]
+        "type": "official_document_url",
+        "path": "https://nalus.usoud.cz/Search/GetText.aspx?sz=1-1213-26_1",
+        "field": "sz",
+        "sz": "1-1213-26_1",
+        "decision_date_from_page": "2026-07-02",
+        "mapping_rule": "ECLI:CZ:US:{decision_year}:{senate}.US.{number}.{case_year}.1 from NALUS GetText sz",
+        "algorithm_validated_against_verified_pilot_eclis": true
       }
     },
     {
       "source_document_id": "doc-a5292901931de05a",
-      "ecli": null,
-      "canonical_document_id": null,
+      "ecli": "ECLI:CZ:US:2026:3.US.1566.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:3.US.1566.26.1",
       "case_number": "III.ÚS 1566/26",
       "court": "constitutional_court",
-      "decision_date": null,
-      "identity_status": "blocked_missing_verified_ecli",
-      "blocker": "No authoritative ECLI found in available NALUS batches, review HTML, archetypes, or live legal_v2 indexes.",
+      "decision_date": "2026-07-01",
+      "identity_status": "verified",
       "verification_source": {
-        "type": "blocked_after_source_search",
-        "searched": [
-          "nalus-scraper/batches/*.json",
-          "artifacts/legal_v2/court_format_study/raw_sources/constitutional_court",
-          "artifacts/legal_v2/visual_parser_review",
-          "nalus_legal_paragraph_chunks_v2_pilot_600"
-        ]
+        "type": "official_document_url",
+        "path": "https://nalus.usoud.cz/Search/GetText.aspx?sz=3-1566-26_1",
+        "field": "sz",
+        "sz": "3-1566-26_1",
+        "decision_date_from_page": "2026-07-01",
+        "mapping_rule": "ECLI:CZ:US:{decision_year}:{senate}.US.{number}.{case_year}.1 from NALUS GetText sz",
+        "algorithm_validated_against_verified_pilot_eclis": true
       }
     },
     {
       "source_document_id": "doc-f2c776a1533521c3",
-      "ecli": null,
-      "canonical_document_id": null,
+      "ecli": "ECLI:CZ:US:2026:4.US.1310.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.1310.26.1",
       "case_number": "IV.ÚS 1310/26",
       "court": "constitutional_court",
-      "decision_date": null,
-      "identity_status": "blocked_missing_verified_ecli",
-      "blocker": "No authoritative ECLI found in available NALUS batches, review HTML, archetypes, or live legal_v2 indexes.",
+      "decision_date": "2026-07-01",
+      "identity_status": "verified",
       "verification_source": {
-        "type": "blocked_after_source_search",
-        "searched": [
-          "nalus-scraper/batches/*.json",
-          "artifacts/legal_v2/court_format_study/raw_sources/constitutional_court",
-          "artifacts/legal_v2/visual_parser_review",
-          "nalus_legal_paragraph_chunks_v2_pilot_600"
-        ]
+        "type": "official_document_url",
+        "path": "https://nalus.usoud.cz/Search/GetText.aspx?sz=4-1310-26_1",
+        "field": "sz",
+        "sz": "4-1310-26_1",
+        "decision_date_from_page": "2026-07-01",
+        "mapping_rule": "ECLI:CZ:US:{decision_year}:{senate}.US.{number}.{case_year}.1 from NALUS GetText sz",
+        "algorithm_validated_against_verified_pilot_eclis": true
       }
     },
     {

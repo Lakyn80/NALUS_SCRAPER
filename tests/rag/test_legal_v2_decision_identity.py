@@ -19,7 +19,6 @@ from app.rag.legal_v2.benchmark.case_similarity_identity import (
 )
 from app.rag.legal_v2.identity import (
     DecisionIdentityError,
-    IDENTITY_STATUS_BLOCKED_MISSING_ECLI,
     IDENTITY_STATUS_VERIFIED,
     is_valid_ecli,
     production_identity_fields,
@@ -90,23 +89,18 @@ def test_identity_map_no_conflicting_ecli_aliases() -> None:
         by_ecli[ecli] = source_id
 
 
-def test_pilot_primaries_and_references_carry_identity() -> None:
+def test_all_pilot_references_have_verified_ecli() -> None:
     items = load_case_similarity_golden_jsonl(PILOT_PATH)
-    assert len(items) == 20
+    mapping = load_case_similarity_identity_map(IDENTITY_PATH)
+    assert len(mapping) == 22
+    assert all(row.get("identity_status") == IDENTITY_STATUS_VERIFIED for row in mapping.values())
     for item in items:
-        assert item.source_document_id.startswith("doc-")
-        if item.primary_identity_status == IDENTITY_STATUS_VERIFIED:
-            assert item.expected_primary_ecli
-            assert item.expected_primary_canonical_document_id == item.expected_primary_ecli
-        else:
-            assert item.primary_identity_status == IDENTITY_STATUS_BLOCKED_MISSING_ECLI
-            assert item.expected_primary_ecli is None
-        for row in item.accepted_alternative_rationales:
-            if row.identity_status == IDENTITY_STATUS_VERIFIED:
-                assert row.ecli and row.canonical_document_id == row.ecli
-        for row in item.hard_negative_rationales:
-            if row.identity_status == IDENTITY_STATUS_VERIFIED:
-                assert row.ecli and row.canonical_document_id == row.ecli
+        assert item.primary_identity_status == IDENTITY_STATUS_VERIFIED
+        assert item.expected_primary_ecli
+        assert item.expected_primary_canonical_document_id == item.expected_primary_ecli
+        for row in item.hard_negative_rationales + item.accepted_alternative_rationales:
+            assert row.identity_status == IDENTITY_STATUS_VERIFIED
+            assert row.ecli and row.canonical_document_id == row.ecli
 
 
 def test_chunk_payload_uses_ecli_as_document_id() -> None:
@@ -212,8 +206,8 @@ def test_compatibility_uses_ecli_presence() -> None:
         if item.expected_primary_ecli
     }
     summary = corpus_presence_summary(items=items, present_document_ids=present)
-    assert summary["primary_documents_present"] == len(present)
-    assert summary["primary_documents_missing"] == 20 - len(present)
+    assert summary["primary_documents_present"] == 20
+    assert summary["primary_documents_missing"] == 0
 
 
 def test_golden_schema_rejects_canonical_mismatch() -> None:

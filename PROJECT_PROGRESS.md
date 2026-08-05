@@ -1,5 +1,21 @@
 # Project Progress
 
+## 2026-08-06 Europe/Moscow — Task: Resolve remaining case-similarity ECLIs
+
+- Goal:
+  Clear the five previously blocked 2026 ÚS identity gaps without fabricating
+  identifiers.
+- Method:
+  Official NALUS GetText URLs (`sz=…`) plus decision dates from the same pages;
+  mapping rule validated against five already-verified pilot ÚS ECLIs from
+  NALUS batch metadata.
+- Result:
+  All 22 pilot-referenced judgments now `verified` (0 blocked).
+  Examples: `IV.ÚS 650/26` → `ECLI:CZ:US:2026:4.US.650.26.1`.
+- Next:
+  Additive upsert of verified golden ECLIs into
+  `nalus_legal_paragraph_chunks_v2_pilot_600` (still missing from live index).
+
 ## 2026-08-05 Europe/Moscow — Task: ECLI as canonical decision identity
 
 - Goal:
@@ -10,9 +26,8 @@
   remain secondary traceability only.
 - Mapping artifact:
   `benchmarks/legal_v2/case_similarity_document_identity_v1.json`
-  — 22 unique judgments referenced by the pilot; **17 verified**, **5 blocked**
-  (`blocked_missing_verified_ecli`) for 2026 ÚS decisions without authoritative
-  local ECLI evidence.
+  — 22 unique judgments referenced by the pilot; all verified via batch /
+  Justice metadata or official NALUS GetText URLs (see 2026-08-06 follow-up).
 - Golden schema / builder / validator / evaluator updated to carry and match ECLI.
 - Shared helper: `app/rag/legal_v2/identity.py` (`validate_decision_identity`).
 - Live collection audit (`nalus_legal_paragraph_chunks_v2_pilot_600`):
