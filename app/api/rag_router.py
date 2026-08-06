@@ -1214,6 +1214,233 @@ def retrieve_verified(
     )
 
 
+class CaseSimilarityStage1SearchRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    query: str = Field(min_length=1, max_length=8000)
+    limit: int | None = Field(default=None, ge=1, le=50)
+    include_debug: bool = False
+
+    @field_validator("query")
+    @classmethod
+    def _query_must_not_be_blank(cls, value: str) -> str:
+        cleaned = " ".join(value.split())
+        if not cleaned:
+            raise ValueError("query must not be blank")
+        return cleaned
+
+
+class CaseSimilarityStage1PassageResult(BaseModel):
+    text: str
+    chunk_id: str
+    section: str | None = None
+    page: int | None = None
+    score: float | None = None
+
+
+class CaseSimilarityStage1DocumentResult(BaseModel):
+    rank: int
+    document_id: str
+    canonical_document_id: str
+    ecli: str
+    court: str | None = None
+    case_number: str | None = None
+    decision_date: str | None = None
+    document_type: str | None = None
+    score: float
+    relevant_passages: list[CaseSimilarityStage1PassageResult] = Field(default_factory=list)
+    source_document_id: str | None = None
+    dense_rank: int | None = None
+    bm25_rank: int | None = None
+    rrf_score: float | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CaseSimilarityStage1SearchResponse(BaseModel):
+    query: str
+    result_count: int
+    retrieval_stage: str
+    results: list[CaseSimilarityStage1DocumentResult]
+    diagnostics: dict[str, Any] = Field(default_factory=dict)
+
+
+class CaseSimilarityStage1ReadyResponse(BaseModel):
+    ready: bool
+    status: str
+    collection: str | None = None
+    bm25_index_id: str | None = None
+    bm25_sidecar_exists: bool | None = None
+    retrieval_stage: str | None = None
+    error_type: str | None = None
+    enabled: bool = False
+
+
+@router.get(
+    "/legal-v2/case-similarity/ready",
+    response_model=CaseSimilarityStage1ReadyResponse,
+)
+def case_similarity_stage1_ready() -> CaseSimilarityStage1ReadyResponse:
+    from app.rag.legal_v2.retrieve.case_similarity_search import (
+        case_similarity_stage1_enabled,
+        probe_case_similarity_stage1_readiness,
+    )
+
+    enabled = case_similarity_stage1_enabled()
+    if not enabled:
+        return CaseSimilarityStage1ReadyResponse(
+            ready=False,
+            status="disabled",
+            enabled=False,
+            retrieval_stage="hybrid_rrf_stage_1",
+        )
+    payload = probe_case_similarity_stage1_readiness()
+    return CaseSimilarityStage1ReadyResponse(
+        ready=bool(payload.get("ready")),
+        status=str(payload.get("status") or "unavailable"),
+        collection=payload.get("collection"),
+        bm25_index_id=payload.get("bm25_index_id"),
+        bm25_sidecar_exists=payload.get("bm25_sidecar_exists"),
+        retrieval_stage=payload.get("retrieval_stage"),
+        error_type=payload.get("error_type"),
+        enabled=True,
+    )
+
+
+@router.post(
+    "/legal-v2/case-similarity/search",
+    response_model=CaseSimilarityStage1SearchResponse,
+)
+def case_similarity_stage1_search(
+    req: CaseSimilarityStage1SearchRequest,
+) -> CaseSimilarityStage1SearchResponse:
+    endpoint_label = "/api/rag/legal-v2/case-similarity/search"
+    from app.rag.legal_v2.retrieve.case_similarity_search import (
+        case_similarity_stage1_enabled,
+        max_result_limit,
+        search_case_similarity_stage1,
+        stage1_debug_allowed,
+    )
+    from app.rag.retrieval.errors import RetrievalConfigurationError
+
+    if not case_similarity_stage1_enabled():
+        record_request(endpoint=endpoint_label, status="disabled")
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Legal v2 Stage 1 case-similarity search is disabled. Set "
+                "NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED=1 (or NALUS_LEGAL_V2_SEARCH_ENABLED=1)."
+            ),
+        )
+
+    include_debug = bool(req.include_debug) and stage1_debug_allowed()
+    if req.limit is not None and req.limit > max_result_limit():
+        raise HTTPException(
+            status_code=422,
+            detail=f"limit must be <= {max_result_limit()}",
+        )
+
+    trace_event(
+        logger,
+        "api.legal_v2.case_similarity.search.start",
+        query_length=len(req.query),
+        limit=req.limit,
+        include_debug=include_debug,
+    )
+    try:
+        result = search_case_similarity_stage1(
+            query=req.query,
+            limit=req.limit,
+            include_debug=include_debug,
+        )
+    except ValueError as exc:
+        record_request(endpoint=endpoint_label, status="validation_error")
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RetrievalConfigurationError as exc:
+        logger.warning(
+            "[api] legal v2 stage1 configuration error type=%s",
+            exc.__class__.__name__,
+        )
+        record_request(endpoint=endpoint_label, status="unavailable")
+        raise HTTPException(
+            status_code=503,
+            detail="Legal v2 Stage 1 retrieval dependencies are unavailable.",
+        ) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "[api] legal v2 stage1 search failed type=%s",
+            exc.__class__.__name__,
+        )
+        record_request(endpoint=endpoint_label, status="error")
+        raise HTTPException(
+            status_code=503,
+            detail="Legal v2 Stage 1 search is temporarily unavailable.",
+        ) from exc
+
+    record_request(endpoint=endpoint_label, status="success")
+    logger.info(
+        "[api] legal_v2 stage1 search done result_count=%s collection=%s",
+        result.result_count,
+        (result.diagnostics or {}).get("collection"),
+    )
+    return CaseSimilarityStage1SearchResponse(
+        query=result.query,
+        result_count=result.result_count,
+        retrieval_stage=result.retrieval_stage,
+        results=[
+            CaseSimilarityStage1DocumentResult(
+                rank=item.rank,
+                document_id=item.document_id,
+                canonical_document_id=item.canonical_document_id,
+                ecli=item.ecli,
+                court=item.court,
+                case_number=item.case_number,
+                decision_date=item.decision_date,
+                document_type=item.document_type,
+                score=item.score,
+                relevant_passages=[
+                    CaseSimilarityStage1PassageResult(
+                        text=passage.text,
+                        chunk_id=passage.chunk_id,
+                        section=passage.section,
+                        page=passage.page,
+                        score=passage.score,
+                    )
+                    for passage in item.relevant_passages
+                ],
+                source_document_id=item.source_document_id,
+                dense_rank=item.dense_rank,
+                bm25_rank=item.bm25_rank,
+                rrf_score=item.rrf_score,
+                metadata=item.metadata,
+            )
+            for item in result.results
+        ],
+        diagnostics=result.diagnostics if include_debug else {
+            key: value
+            for key, value in result.diagnostics.items()
+            if key
+            in {
+                "query_length",
+                "generated_query_count",
+                "result_count",
+                "collection",
+                "bm25_index_id",
+                "queryspec_latency_ms",
+                "dense_latency_ms",
+                "bm25_latency_ms",
+                "rrf_latency_ms",
+                "aggregation_latency_ms",
+                "total_latency_ms",
+                "dense_candidate_chunks",
+                "bm25_candidate_chunks",
+                "fused_candidate_chunks",
+                "aggregated_documents",
+                "retrieval_status",
+            }
+        },
+    )
+
+
 @router.post("/search-v2", response_model=LegalV2SearchResponse)
 def search_v2(
     req: LegalV2SearchRequest,
