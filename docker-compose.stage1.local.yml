@@ -1,0 +1,49 @@
+# Local Stage 1 deploy overlay.
+# Uses the existing nalus-scraper Qdrant + storage/models; does not recreate indexes.
+#
+# Usage (PowerShell, from repo root):
+#   docker stop nalus-scraper-api-1
+#   docker compose -f docker-compose.yml -f docker-compose.stage1.local.yml up -d --build --no-deps api
+#
+# Do NOT start the worktree `qdrant` service for this overlay — it may be empty.
+
+services:
+  api:
+    ports:
+      - "8029:8000"
+    environment:
+      # Explicit container DNS — avoid resolving to this worktree's empty `qdrant` service.
+      QDRANT_URL: http://nalus-scraper-qdrant-1:6333
+      NALUS_LEGAL_V2_SEARCH_ENABLED: "1"
+      NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED: "1"
+      NALUS_LEGAL_V2_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_pilot_600
+      NALUS_LEGAL_V2_BM25_SIDECAR_PATH: /app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_pilot_600.sqlite
+      NALUS_LEGAL_V2_BM25_INDEX_ID: nalus_legal_paragraph_bm25_v2_pilot_600
+      NALUS_LEGAL_V2_DEFAULT_RESULT_LIMIT: "10"
+      NALUS_LEGAL_V2_MAX_RESULT_LIMIT: "20"
+      NALUS_LEGAL_V2_DEBUG: "0"
+      EMBEDDING_MODEL_NAME: /root/.cache/huggingface/hub/models--BAAI--bge-m3/snapshots/5617a9f61b028005a4858fdac845db406aefb181
+      EMBEDDING_LOCAL_FILES_ONLY: "1"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    volumes:
+      - ./app:/app/app
+      - ./scripts:/app/scripts
+      - ./artifacts:/app/artifacts
+      - ../nalus-scraper/storage:/app/storage
+      - ../nalus-scraper/models:/app/models:ro
+      - ../nalus-scraper/batches:/app/batches:ro
+      - nalus_scraper_hf_cache:/root/.cache/huggingface
+    networks:
+      - default
+      - nalus_scraper_net
+
+volumes:
+  nalus_scraper_hf_cache:
+    external: true
+    name: nalus-scraper_huggingface_cache
+
+networks:
+  nalus_scraper_net:
+    external: true
+    name: nalus-scraper_default

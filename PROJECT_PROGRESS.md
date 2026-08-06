@@ -1,5 +1,23 @@
 # Project Progress
 
+## 2026-08-06 Europe/Moscow — Task: Deploy Stage 1 case-similarity API + FE
+
+- Goal:
+  Expose validated Stage 1 retrieval (QuerySpec + BGE-M3 + BM25 + RRF + ECLI
+  aggregation) through FastAPI + existing NalusFE for live pilot testing.
+- Assets audited (read-only):
+  collection `nalus_legal_paragraph_chunks_v2_pilot_600` = 14448 chunks,
+  622 unique ECLI via `document_id`; BM25 `nalus_legal_paragraph_bm25_v2_pilot_600`
+  = 14448 rows, perfect ECLI overlap; no doc-* primary IDs.
+- API: `POST /api/rag/legal-v2/case-similarity/search` + readiness GET;
+  process-singleton BGE-M3/BM25; no ColBERT/CE; no paid LLM on Stage 1 path.
+- Docker: `docker-compose.stage1.local.yml` binds worktree code + parent
+  storage/models to existing `nalus-scraper-qdrant-1` (not empty worktree qdrant).
+- Frontend (NalusFE): v2 mode → Stage 1 endpoint; search UI at `/vyhledavani`.
+- Smoke: queries A–E HTTP 200, identity OK, warm ~0.5–0.9s after first load.
+- Unchanged: golden, ECLI map, retrieval knobs, no corpus rebuild, no push.
+- Next: ColBERT / CE rerank; corpus-wide chunk QA; larger relevance benchmark.
+
 ## 2026-08-06 Europe/Moscow — Task: Case-similarity rank-diff audit (Hit@1)
 
 - Goal:

@@ -1,6 +1,141 @@
 # Legal Retrieval v2
 
-Status: implemented as an isolated, disabled-by-default pipeline. It is not production traffic.
+## Stage 1 case-similarity search (production-testable)
+
+Status: **deployed for local Docker pilot testing**. Candidate retrieval only —
+no ColBERT, no cross-encoder, no paid LLM on this path.
+
+### Pipeline
+
+```text
+user query
+→ build_query_spec_v2 (deterministic)
+→ original + focused retrieval queries
+→ BGE-M3 dense retrieval
+→ BM25 sparse retrieval
+→ RRF fusion
+→ chunk-to-document aggregation by ECLI
+→ TOP candidate judgments (default 10; internal pool ~40)
+→ POST /api/rag/legal-v2/case-similarity/search
+→ existing NalusFE `/vyhledavani`
+```
+
+### Validation (case-similarity golden v1 pilot)
+
+```text
+evaluable: 20/20
+retrieval_failures: 0
+Hit@10: 1.0
+hard-negative outrank: 0.0
+```
+
+This validates **pilot candidate recall**, not final legal ranking precision.
+Exact order inside TOP 10 is provisional until ColBERT / cross-encoder stages.
+
+### Live assets (do not recreate)
+
+| Asset | Value |
+| --- | --- |
+| Qdrant collection | `nalus_legal_paragraph_chunks_v2_pilot_600` |
+| Chunks | 14448 (Cosine, dim 1024) |
+| Unique ECLI (resolved) | 622 |
+| BM25 index ID | `nalus_legal_paragraph_bm25_v2_pilot_600` |
+| BM25 sidecar | `/app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_pilot_600.sqlite` (14448 rows) |
+
+Identity: every chunk resolves to a valid ECLI via `document_id` (and, where
+backfilled, `ecli` / `canonical_document_id`). API responses always expose
+
+`document_id == canonical_document_id == ecli`.
+
+### Endpoints
+
+- Readiness: `GET /api/rag/legal-v2/case-similarity/ready`
+- Search: `POST /api/rag/legal-v2/case-similarity/search`
+- Flag: `NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED=1` (also enabled when
+  `NALUS_LEGAL_V2_SEARCH_ENABLED=1`)
+
+Request:
+
+```json
+{
+  "query": "Hledám rozhodnutí o úpravě styku rodiče s nezletilým dítětem.",
+  "limit": 10,
+  "include_debug": false
+}
+```
+
+Response (abbreviated):
+
+```json
+{
+  "query": "...",
+  "result_count": 10,
+  "retrieval_stage": "hybrid_rrf_stage_1",
+  "results": [
+    {
+      "rank": 1,
+      "document_id": "ECLI:CZ:US:...",
+      "canonical_document_id": "ECLI:CZ:US:...",
+      "ecli": "ECLI:CZ:US:...",
+      "court": "Ústavní soud",
+      "case_number": "...",
+      "decision_date": "...",
+      "document_type": "...",
+      "score": 0.0,
+      "relevant_passages": [{"text": "...", "chunk_id": "...", "section": "..."}]
+    }
+  ],
+  "diagnostics": {
+    "collection": "nalus_legal_paragraph_chunks_v2_pilot_600",
+    "bm25_index_id": "nalus_legal_paragraph_bm25_v2_pilot_600",
+    "total_latency_ms": 0.0
+  }
+}
+```
+
+### Local Docker startup (reuse existing Qdrant data)
+
+Do **not** start the worktree `qdrant` service for Stage 1 — use the existing
+`nalus-scraper-qdrant-1` data volume.
+
+```powershell
+cd C:\Users\lukas\Desktop\PYTHON_PROJECTS_DESKTOP\PYTHON_PROJECTS\nalus-scraper-parser-fix
+docker stop nalus-scraper-api-1
+docker compose -f docker-compose.yml -f docker-compose.stage1.local.yml up -d --build --no-deps api
+```
+
+Frontend (sibling repo `NalusFE`, retrieval mode `v2`):
+
+```powershell
+cd C:\Users\lukas\Desktop\PYTHON_PROJECTS_DESKTOP\PYTHON_PROJECTS\NalusFE
+# .env: NALUS_RETRIEVAL_MODE=v2, NALUS_API_BASE_URL=http://host.docker.internal:8029
+docker compose up -d --build frontend
+```
+
+| Surface | URL |
+| --- | --- |
+| Frontend search | http://localhost:3017/vyhledavani |
+| Backend API | http://localhost:8029 |
+| OpenAPI | http://localhost:8029/docs |
+| Health | http://localhost:8029/health |
+| Stage 1 readiness | http://localhost:8029/api/rag/legal-v2/case-similarity/ready |
+
+BGE-M3 and BM25 initialize once per API process (lazy singleton on first Stage 1
+search / ready probe). First request may take minutes if the model must warm;
+warm requests are typically under 1s on the pilot corpus.
+
+### Benchmark
+
+```powershell
+.\scripts\legal_v2\evaluate_case_similarity_golden_v1.ps1
+```
+
+---
+
+## Verified search-v2 (DeepSeek QuerySpec + verifier)
+
+Status: implemented as an isolated, disabled-by-default pipeline for the
+**verified** path (paid DeepSeek). Distinct from Stage 1 candidate search above.
 
 ## Runtime Boundary
 
@@ -18,7 +153,8 @@ Status: implemented as an isolated, disabled-by-default pipeline. It is not prod
   runtime lazily and uses only the isolated v2 Qdrant collection and v2 BM25
   sidecar. It does not fall back to legacy retrieval or pad results with
   unrelated documents.
-- The frontend is not connected to `search-v2`.
+- Stage 1 frontend path uses `/api/rag/legal-v2/case-similarity/search`, not
+  `search-v2`.
 
 ## Pipeline
 
