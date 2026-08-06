@@ -46,6 +46,19 @@ DEFAULT_COLLECTION = "nalus_legal_paragraph_chunks_v2_pilot_600"
 DEFAULT_OUT = PROJECT_ROOT / "artifacts" / "legal_v2" / "case_similarity_golden_v1_pilot" / "ecli_index_build"
 
 
+def _default_bm25_index_id(collection: str) -> str:
+    """Match existing pilot sidecar naming, not ``{collection}_bm25``."""
+    if collection == "nalus_legal_paragraph_chunks_v2_pilot_600":
+        return "nalus_legal_paragraph_bm25_v2_pilot_600"
+    if "nalus_legal_paragraph_chunks_v2" in collection:
+        return collection.replace(
+            "nalus_legal_paragraph_chunks_v2",
+            "nalus_legal_paragraph_bm25_v2",
+            1,
+        )
+    return f"{collection}_bm25"
+
+
 def _plain_text_from_bundle(bundle: Any) -> str:
     lines: list[str] = []
     for block in getattr(bundle, "blocks", []) or []:
@@ -142,7 +155,7 @@ def main(argv: list[str] | None = None) -> int:
 
     bm25_index_id = os.getenv(
         "NALUS_LEGAL_V2_BM25_INDEX_ID",
-        f"{args.qdrant_collection}_bm25",
+        _default_bm25_index_id(args.qdrant_collection),
     )
     bm25_path = Path(
         os.getenv(

@@ -47,7 +47,8 @@ from app.rag.legal_v2.identity import (  # noqa: E402
     IDENTITY_STATUS_VERIFIED,
     is_valid_ecli,
     normalize_ecli,
-)from app.rag.legal_v2.indexing import LEGAL_V2_PROFILE  # noqa: E402
+)
+from app.rag.legal_v2.indexing import LEGAL_V2_PROFILE  # noqa: E402
 from app.rag.legal_v2.query_spec import build_query_spec_v2  # noqa: E402
 from app.rag.legal_v2.retriever import (  # noqa: E402
     LegalV2RetrieverConfig,
@@ -169,7 +170,24 @@ def main(argv: list[str] | None = None) -> int:
         encoding="utf-8",
     )
 
-    from qdrant_client import QdrantClient  # type: ignore[import-not-found]
+    try:
+        from qdrant_client import QdrantClient  # type: ignore[import-not-found]
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            "Missing dependency 'qdrant_client' in this Python environment. "
+            "Run the evaluator inside the nalus-scraper-api Docker image "
+            "(same setup as golden ECLI indexing), e.g.\n"
+            "  docker run --rm --network nalus-scraper_default "
+            "--volumes-from nalus-scraper-api-1 "
+            "-v \"<repo>:/work\" -w /work "
+            "-e EMBEDDING_MODEL_NAME=/root/.cache/huggingface/hub/models--BAAI--bge-m3/snapshots/5617a9f61b028005a4858fdac845db406aefb181 "
+            "-e EMBEDDING_LOCAL_FILES_ONLY=1 "
+            "-e NALUS_LEGAL_V2_QDRANT_COLLECTION=nalus_legal_paragraph_chunks_v2_pilot_600 "
+            "-e NALUS_LEGAL_V2_BM25_INDEX_ID=nalus_legal_paragraph_bm25_v2_pilot_600 "
+            "-e NALUS_LEGAL_V2_BM25_SIDECAR_PATH=/app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_pilot_600.sqlite "
+            "nalus-scraper-api python scripts/legal_v2/evaluate_case_similarity_golden_v1.py "
+            "--qdrant-url http://qdrant:6333"
+        ) from exc
 
     client = QdrantClient(url=args.qdrant_url, timeout=60)
     index_doc_ids = _list_indexed_document_ids(client, args.qdrant_collection)
@@ -422,11 +440,14 @@ def main(argv: list[str] | None = None) -> int:
         "\n".join(
             [
                 f"processed={len(results)}",
+                f"evaluable={metrics.evaluable_positive_retrieval_queries}",
+                f"retrieval_failures={metrics.retrieval_execution_failures}",
                 f"hit_at_1={metrics.hit_at_1}",
                 f"hit_at_10={metrics.hit_at_10}",
                 f"mrr={metrics.mrr}",
                 f"hn_blocked={metrics.hard_negative_blocked_query_count}",
                 f"hn_outrank_rate={metrics.hard_negative_outrank_rate}",
+                f"output_dir={output_dir}",
             ]
         )
     )

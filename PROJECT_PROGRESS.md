@@ -1,5 +1,44 @@
 # Project Progress
 
+## 2026-08-06 Europe/Moscow — Task: Fix bm25_index_id provenance + real baseline
+
+- Goal:
+  Unblock case-similarity scoring after golden ECLI upsert stamped a mismatched
+  `bm25_index_id` on 560 Qdrant payloads (`…chunks_v2_pilot_600_bm25` vs
+  `…bm25_v2_pilot_600`), causing 19/20 `retrieval_error`s and a misleading
+  Hit@1=1.0 over a single evaluable query.
+- Fixes:
+  - `scripts/legal_v2/repair_pilot_600_bm25_index_id.py` (set_payload + SQLite)
+  - index helper defaults now map pilot_600 collection → existing BM25 id
+  - evaluator console prints `evaluable` / `retrieval_failures`
+- Repair result: Qdrant 14448/14448 on target `bm25_index_id`.
+- Real baseline (`20260805T234409Z`):
+  evaluable=`20`, retrieval_failures=`0`;
+  Hit@1=`0.6`, Hit@10=`0.95`, MRR≈`0.70`, HN outrank=`0.0`;
+  only miss outside top-10: `nalus-cs-pilot-004`.
+  Report: `artifacts/legal_v2/case_similarity_golden_v1_baseline/20260805T234409Z/`.
+- Next recommended task:
+  Inspect misses (esp. 004, and ranks >1 for 001/002/008); optional formal
+  PASS verdicts in manual_review; expand golden — not ColBERT/CE yet.
+
+## 2026-08-06 Europe/Moscow — Task: Case-similarity untuned baseline (live)
+
+- Goal:
+  Run the first real scored case-similarity baseline against
+  `nalus_legal_paragraph_chunks_v2_pilot_600` after ECLI upsert.
+- Fixes:
+  Evaluator import syntax; clearer `qdrant_client` missing error; Docker runner
+  `scripts/legal_v2/evaluate_case_similarity_golden_v1.ps1`. Golden BM25 rows
+  merged into full pilot sidecar (`14448` chunks).
+- Result (`20260805T231907Z`):
+  `primary_present=20`, `primary_missing=0`; Hit@1=`1.0`, Hit@10=`1.0`,
+  MRR=`1.0`, HN outrank rate=`0.0` (1 HN-blocked row excluded from HN denom).
+  Artifacts under `artifacts/legal_v2/case_similarity_golden_v1_baseline/20260805T231907Z/`.
+- Next recommended task:
+  Human review of per-query ranked lists / supporting evidence; then expand
+  case-similarity or retrieval golden size — do not treat n=20 as production
+  chunking/reranker winner.
+
 ## 2026-08-06 Europe/Moscow — Task: Resolve remaining case-similarity ECLIs
 
 - Goal:
@@ -12,9 +51,10 @@
 - Result:
   All 22 pilot-referenced judgments now `verified` (0 blocked).
   Examples: `IV.ÚS 650/26` → `ECLI:CZ:US:2026:4.US.650.26.1`.
+  Additive upsert into pilot_600 completed earlier the same night (22 docs /
+  624 chunks; collection audit: no missing golden primaries).
 - Next:
-  Additive upsert of verified golden ECLIs into
-  `nalus_legal_paragraph_chunks_v2_pilot_600` (still missing from live index).
+  Superseded by the live baseline entry above.
 
 ## 2026-08-05 Europe/Moscow — Task: ECLI as canonical decision identity
 

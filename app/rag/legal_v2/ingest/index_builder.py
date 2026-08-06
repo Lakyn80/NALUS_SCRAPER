@@ -145,7 +145,14 @@ def build_legal_v2_index(
         if item.status != "pass"
     ]
     _prepare_collection(qdrant_client, config)
-    _prepare_bm25_sidecar(config.bm25_path, overwrite=config.overwrite_bm25, resume=config.resume)
+    bm25_resume = config.resume or (
+        config.allow_existing_collection and config.bm25_path.exists()
+    )
+    _prepare_bm25_sidecar(
+        config.bm25_path,
+        overwrite=config.overwrite_bm25,
+        resume=bm25_resume,
+    )
     stream_summary = _stream_index_documents(
         documents=documents,
         approved_ids=approved_ids,
@@ -241,7 +248,7 @@ def _append_bm25_payloads(payloads: list[dict[str, Any]], path: Path) -> None:
     with sqlite3.connect(path) as connection:
         connection.executemany(
             """
-            INSERT INTO bm25_chunks (
+            INSERT OR REPLACE INTO bm25_chunks (
                 chunk_id, text, metadata, document_id, section_type, paragraph_ids,
                 qdrant_collection, retrieval_profile, bm25_index_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
