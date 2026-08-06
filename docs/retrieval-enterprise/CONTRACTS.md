@@ -42,6 +42,25 @@ Rules:
   dispositive for the legal task.
 - QuerySpec extraction failures fail closed or use an explicitly declared
   deterministic fallback.
+- Explicitly negated requested case types must not become positive retrieval
+  expansions or positive hard constraints. Scoped semantic negation binds Czech
+  contrastive forms (`nehledám X`, `nejde mi o X`, `neřeším X`, `nechci X`,
+  `nikoli X, ale Y`, and equivalents) to the affected concept, not merely to a
+  generic `negation_present` flag.
+- When the user explicitly contrasts factual background with a requested legal
+  issue (including `hledám jen/pouze Y`), procedural posture, requested issue,
+  decision outcome, and procedural defects take priority over substantive
+  background domain concepts. Background may remain as lower-priority context.
+- The original user query text is always preserved as the first retrieval query.
+  Generated expansions are appended separately and must not concatenate
+  contradictory positive terms onto the original.
+- Context and requested legal issue are represented separately
+  (`contextual_concepts` vs `candidate_retrieval_concepts`).
+- Every generated retrieval expansion is checked against scoped negative
+  constraints before use; conflicting expansions are suppressed and may be
+  recorded in `structured_query.suppressed_expansions`.
+- QuerySpec corrections are general production behavior. They must not hardcode
+  benchmark IDs, expected ECLIs, or benchmark-only query strings.
 
 ## CandidateChunk
 

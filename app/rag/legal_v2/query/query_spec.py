@@ -233,8 +233,101 @@ _LEGAL_CONCEPT_RULES: tuple[dict[str, Any], ...] = (
     {
         "name": "domestic_custody",
         "label": "péče o nezletilé dítě",
-        "patterns": ("pece", "styk", "opatrovnick", "svereni nezletileho", "kontakt s ditetem"),
+        "patterns": (
+            "pece o",
+            "peci o",
+            "o peci",
+            "spor o peci",
+            "zasah do pece",
+            "styk",
+            "opatrovnick",
+            "svereni nezletileho",
+            "kontakt s ditetem",
+        ),
         "expansions": ("péče o nezletilé dítě", "úprava styku rodiče s dítětem", "opatrovnické řízení"),
+        "merits_expansions": ("úprava styku rodiče s dítětem", "opatrovnické řízení", "meritorní spor o péči"),
+    },
+    {
+        "name": "mandatory_lawyer_representation",
+        "label": "povinné zastoupení advokátem",
+        "patterns": (
+            "bez advokata",
+            "nemel jsem advokata",
+            "nemela jsem advokata",
+            "chybelo zastoupeni",
+            "chybelo zastoupeni advokatem",
+            "nebyl zastoupen advokatem",
+            "nebyla zastoupena advokatem",
+            "povinne pravni zastoupeni",
+            "povinne zastoupeni advokatem",
+            "zastoupeni, takze",
+        ),
+        "expansions": (
+            "povinné zastoupení advokátem",
+            "chybějící advokát u ústavní stížnosti",
+            "nezastoupený stěžovatel",
+        ),
+    },
+    {
+        "name": "defective_filing",
+        "label": "vadné podání",
+        "patterns": (
+            "vadne podani",
+            "vadnych stiznosti",
+            "vadne stiznosti",
+            "formalni vady",
+            "formalnich vadach",
+            "nesplnovalo nalezitosti",
+            "nalezitosti podani",
+            "chybi oduvodneni",
+            "podani mi chybi",
+            "neprojednateln",
+            "padne uz na formalnich",
+            "padl na nalezitostech",
+            "odmitnuto pro vady",
+            "odmitnuti pro vady",
+            "odmitnuto pro formalni",
+            "pro vady",
+        ),
+        "expansions": (
+            "vadné podání",
+            "formální vady podání",
+            "nesplnění náležitostí ústavní stížnosti",
+        ),
+    },
+    {
+        "name": "missing_or_inadequate_reasoning",
+        "label": "nedostatečné odůvodnění",
+        "patterns": (
+            "chybi oduvodneni",
+            "chybelo oduvodneni",
+            "chybi poradné oduvodneni",
+            "bez radneho oduvodneni",
+            "nedostatecne oduvodneni",
+            "nedostatecne vysvetlil",
+            "neuvedl jaka prava",
+            "chaotick",
+        ),
+        "expansions": (
+            "nedostatečné odůvodnění ústavní stížnosti",
+            "chybějící odůvodnění porušení práv",
+        ),
+    },
+    {
+        "name": "failure_to_cure_filing_defects",
+        "label": "neodstranění vad podání",
+        "patterns": (
+            "vady nebyly odstraneny",
+            "nedoplnil podani",
+            "neodstranil vady",
+            "neodstraneni vad",
+            "na vyzvu nereagoval",
+            "nereagoval na vyzvu",
+        ),
+        "expansions": (
+            "neodstranění vad podání",
+            "nedoplnění podání ve lhůtě",
+        ),
     },
     {
         "name": "maintenance",
@@ -305,14 +398,27 @@ _LEGAL_CONCEPT_RULES: tuple[dict[str, Any], ...] = (
     {
         "name": "contract",
         "label": "smluvní spor",
-        "patterns": ("smlouv", "neplatnost smlouvy", "platnost pravniho jednani"),
+        "patterns": (
+            "smlouv",
+            "platnost smlouvy",
+            "neplatnost smlouvy",
+            "platnost pravniho jednani",
+        ),
         "expansions": ("smlouva", "neplatnost smlouvy", "platnost právního jednání"),
+        "merits_expansions": ("neplatnost smlouvy", "platnost právního jednání"),
     },
     {
         "name": "damages",
         "label": "náhrada škody",
-        "patterns": ("nahrada skody", "odpovednost za skodu", "pricinna souvislost"),
+        "patterns": (
+            "nahrada skody",
+            "vyse skody",
+            "vysi skody",
+            "odpovednost za skodu",
+            "pricinna souvislost",
+        ),
         "expansions": ("náhrada škody", "odpovědnost za škodu", "příčinná souvislost"),
+        "merits_expansions": ("náhrada škody", "výše škody", "odpovědnost za škodu"),
     },
     {
         "name": "employment",
@@ -359,7 +465,13 @@ _LEGAL_CONCEPT_RULES: tuple[dict[str, Any], ...] = (
     {
         "name": "court_costs",
         "label": "náklady řízení",
-        "patterns": ("naklady rizeni", "nahrada nakladu", "soudni poplatek"),
+        "patterns": (
+            "naklady rizeni",
+            "nakladu rizeni",
+            "nahrada nakladu",
+            "nahradu nakladu",
+            "soudni poplatek",
+        ),
         "expansions": ("náklady řízení", "náhrada nákladů řízení", "soudní poplatek"),
     },
     {
@@ -407,7 +519,15 @@ _LEGAL_CONCEPT_RULES: tuple[dict[str, Any], ...] = (
     {
         "name": "tax_law",
         "label": "daňové řízení",
-        "patterns": ("dan", "danove rizeni", "platebni vymer", "financni urad"),
+        "patterns": (
+            "danove rizeni",
+            "danovy",
+            "danove",
+            "platebni vymer",
+            "financni urad",
+            "dph",
+            "dane z prijmu",
+        ),
         "expansions": ("daňové řízení", "dodatečný platební výměr", "finanční úřad", "správní soudnictví"),
     },
     {
@@ -444,7 +564,107 @@ _CANDIDATE_RETRIEVAL_CONCEPT_NAMES = frozenset(
         "public_administration",
         "jurisdiction_competence",
         "extraordinary_remedy",
+        "court_costs",
+        "limitation_periods",
+        "child_contact",
+        "mandatory_lawyer_representation",
+        "defective_filing",
+        "missing_or_inadequate_reasoning",
+        "failure_to_cure_filing_defects",
     }
+)
+
+_PROCEDURAL_PRIORITY_CONCEPT_NAMES = frozenset(
+    {
+        "constitutional_admissibility",
+        "mandatory_lawyer_representation",
+        "defective_filing",
+        "missing_or_inadequate_reasoning",
+        "failure_to_cure_filing_defects",
+        "service_of_documents",
+        "restoration_of_deadline",
+        "extraordinary_remedy",
+        "court_costs",
+        "limitation_periods",
+        "civil_procedure",
+        "criminal_procedure",
+    }
+)
+
+_MAX_RETRIEVAL_QUERIES = 8
+
+# Folded-text hints used to bind a negated span to concept names.
+_NEGATABLE_CONCEPT_HINTS: dict[str, tuple[str, ...]] = {
+    "domestic_custody": (
+        "meritorni spor o peci",
+        "spor o peci",
+        "peci o dite",
+        "pece o dite",
+        "pece o deti",
+        "uprava styku",
+        "opatrovnick",
+        "styk rodice",
+        "rozhodovani o peci",
+    ),
+    "child_contact": (
+        "uprava styku",
+        "styk rodice",
+        "kontakt s ditetem",
+        "styk s ditetem",
+    ),
+    "damages": (
+        "vyse skody",
+        "nahrada skody",
+        "skody",
+        "skoda",
+    ),
+    "contract": (
+        "platnost smlouvy",
+        "neplatnost smlouvy",
+        "smlouvy",
+        "smlouva",
+    ),
+    "criminal_guilt": (
+        "obzalovany vinen",
+        "byl vinen",
+        "byla vinna",
+        "vina",
+        "vinen",
+        "vinu",
+    ),
+}
+
+_NEGATABLE_CONCEPT_LABELS: dict[str, str] = {
+    "child_custody_merits": "meritorní spor o péči o dítě",
+    "parent_contact_merits": "meritorní úprava styku s dítětem",
+    "criminal_guilt": "meritorní posouzení viny",
+}
+
+_SCOPED_NEGATION_PREFIX_RE = re.compile(
+    r"(?:"
+    r"nehledam|"
+    r"nechci|"
+    r"neresim|"
+    r"nejde\s+mi\s+o|"
+    r"nejde\s+o|"
+    r"nikoli|"
+    r"ne\s+"
+    r"),?\s+(?P<body>.{3,120}?)"
+    r"(?=("
+    r",?\s+ale\b|"
+    r",?\s+nybrz\b|"
+    r",?\s+nýbrž\b|"
+    r"\s+spis\b|"
+    r"\s+nez\b|"
+    r"$|[.!?]"
+    r"))",
+    re.IGNORECASE,
+)
+
+# Explicit requested-issue focus: "hledám jen/pouze Y" demotes background domains.
+_REQUESTED_FOCUS_RE = re.compile(
+    r"(?:ale\s+)?hledam\s+(?:jen|pouze|ted|nyni)\s+(?P<body>.{3,160}?)(?=$|[.!?])",
+    re.IGNORECASE,
 )
 
 
@@ -479,6 +699,8 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
         folded_query=folded_query,
     )
     legal_concepts = _extract_legal_concepts(folded_query)
+    scoped_negative_concepts = _extract_scoped_negative_concepts(folded_query)
+    negated_requested_names = {item["name"] for item in scoped_negative_concepts}
 
     parent_entity = _extract_parent_role(folded_query, normalized_original, entities)
     child_entity = _extract_child_entity(folded_query, normalized_original, entities)
@@ -598,7 +820,31 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
         concept
         for concept in legal_concepts
         if _concept_affects_candidate_retrieval(concept)
+        and concept["name"] not in negated_requested_names
     ]
+    focus_demoted_names = _focus_demoted_concept_names(
+        folded_query=folded_query,
+        candidate_concepts=candidate_retrieval_concepts,
+    )
+    if focus_demoted_names:
+        candidate_retrieval_concepts = [
+            concept
+            for concept in candidate_retrieval_concepts
+            if concept["name"] not in focus_demoted_names
+        ]
+    contextual_concepts = [
+        concept
+        for concept in legal_concepts
+        if concept["name"] in negated_requested_names
+        or concept["name"] in focus_demoted_names
+        or (
+            concept["name"] in {"domestic_custody", "child_contact"}
+            and concept["name"] not in {item["name"] for item in candidate_retrieval_concepts}
+            and any(token in folded_query for token in ("pece", "peci", "dite", "deti", "ospod", "social"))
+        )
+    ]
+    # Prefer procedural / requested-issue concepts ahead of background domain.
+    candidate_retrieval_concepts = _prioritize_retrieval_concepts(candidate_retrieval_concepts)
     for concept in candidate_retrieval_concepts:
         _add_constraint(
             hard_constraints,
@@ -606,6 +852,14 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
             _concept_constraint_value(concept),
             ConstraintPolarity.HARD,
             attribute=f"legal_concept:{concept['name']}",
+        )
+    for item in scoped_negative_concepts:
+        _add_constraint(
+            negative_constraints,
+            ConstraintCategory.LEGAL_PROVISION,
+            item["label"],
+            ConstraintPolarity.NEGATIVE,
+            attribute=f"legal_concept:{item['name']}",
         )
     for value in courts:
         _add_constraint(soft_constraints, ConstraintCategory.COURT, value, ConstraintPolarity.SOFT)
@@ -689,7 +943,7 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
         origin=origin,
         destination=destination,
     )
-    retrieval_queries = _build_retrieval_queries(
+    retrieval_queries, suppressed_expansions = _build_retrieval_queries(
         original_query=original_query,
         normalized_query=normalized_query,
         origin=origin,
@@ -698,6 +952,10 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
         child_entity=child_entity,
         action=action,
         legal_concepts=candidate_retrieval_concepts,
+        contextual_concepts=contextual_concepts,
+        negated_concept_names=negated_requested_names,
+        procedural_posture=procedural_posture,
+        decision_outcome=decision_outcome,
     )
     intent = _infer_intent(
         action=action,
@@ -722,6 +980,15 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
             {"name": concept["name"], "label": concept["label"]}
             for concept in candidate_retrieval_concepts
         ],
+        "contextual_concepts": [
+            {"name": concept["name"], "label": concept["label"]}
+            for concept in contextual_concepts
+        ],
+        "negated_requested_concepts": [
+            {"name": item["name"], "label": item["label"]}
+            for item in scoped_negative_concepts
+        ],
+        "suppressed_expansions": suppressed_expansions,
     }
     return demote_structural_fact_slot_constraints(
         QuerySpecV2(
@@ -1143,34 +1410,348 @@ def _extract_document_types(folded_query: str) -> list[str]:
 
 def _extract_procedural_posture(folded_query: str) -> list[str]:
     values: list[str] = []
-    if "ustavni stiznost" in folded_query:
+    constitutional = (
+        "ustavni stiznost" in folded_query
+        or "ustavnimu soudu" in folded_query
+        or "u ustavniho soudu" in folded_query
+        or ("stiznost" in folded_query and "ustavn" in folded_query)
+        # Mandatory counsel + formal filing defects is characteristic of ÚS complaints.
+        or (
+            "stiznost" in folded_query
+            and "bez advokata" in folded_query
+            and ("formalni" in folded_query or "nalezitost" in folded_query or "vadn" in folded_query)
+        )
+    )
+    if constitutional:
         values.append("ústavní stížnost")
+        values.append("constitutional_complaint")
     if "dovolani" in folded_query:
         values.append("dovolání")
     if "kasačni stiznost" in folded_query or "kasacni stiznost" in folded_query:
         values.append("kasační stížnost")
-    return values
+    return _dedupe(values)
 
 
 def _extract_decision_outcome(folded_query: str) -> list[str]:
     values: list[str] = []
     if "vyhov" in folded_query:
         values.append("vyhověno")
-    if "odmit" in folded_query:
+    formal_rejection = (
+        "formalni vad" in folded_query
+        or "formalnich vad" in folded_query
+        or "padne uz na formalnich" in folded_query
+        or "padl na nalezitostech" in folded_query
+        or ("odmit" in folded_query and ("vad" in folded_query or "nalezitost" in folded_query))
+        or "bez meritorniho prezkumu" in folded_query
+        or "nebyla vecne projednana" in folded_query
+        or "nebyl vecne projednan" in folded_query
+    )
+    if formal_rejection:
+        values.append("rejected_for_formal_defects")
+        values.append("odmítnuto")
+    elif "odmit" in folded_query:
         values.append("odmítnuto")
     if "zamít" in folded_query or "zamit" in folded_query:
         values.append("zamítnuto")
-    return values
+    return _dedupe(values)
 
 
 def _extract_negations(folded_query: str) -> list[str]:
     values: list[str] = []
-    if re.search(r"\b(ne|neni|nebyl\w*|nikoli|bez)\b", folded_query):
+    if re.search(r"\b(ne|neni|nebyl\w*|nikoli|bez|nehledam|neresim|nechci)\b", folded_query):
         values.append("negation_present")
     consent_match = re.search(r"\bbez\s+souhlasu(?:\s+\w+)?", folded_query)
     if consent_match:
         values.append(consent_match.group(0))
     return _dedupe(values)
+
+
+def _extract_scoped_negative_concepts(folded_query: str) -> list[dict[str, str]]:
+    """Bind contrastive Czech negations to requested-case-type concept names."""
+    found: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    def _register(concept_name: str) -> None:
+        if concept_name in seen:
+            return
+        rule = next((item for item in _LEGAL_CONCEPT_RULES if item["name"] == concept_name), None)
+        label = _NEGATABLE_CONCEPT_LABELS.get(concept_name) or (
+            str(rule["label"]) if rule else concept_name
+        )
+        # Merits-scoped aliases for custody/contact when user rejects that case type.
+        if concept_name == "domestic_custody":
+            for alias in ("child_custody_merits", "parent_contact_merits"):
+                if alias not in seen:
+                    seen.add(alias)
+                    found.append(
+                        {
+                            "name": alias,
+                            "label": _NEGATABLE_CONCEPT_LABELS[alias],
+                        }
+                    )
+        if concept_name == "child_contact":
+            alias = "parent_contact_merits"
+            if alias not in seen:
+                seen.add(alias)
+                found.append(
+                    {
+                        "name": alias,
+                        "label": _NEGATABLE_CONCEPT_LABELS[alias],
+                    }
+                )
+        seen.add(concept_name)
+        found.append({"name": concept_name, "label": label})
+
+    for match in _SCOPED_NEGATION_PREFIX_RE.finditer(folded_query):
+        body = _fold_text(str(match.group("body") or ""))
+        if not body.strip():
+            continue
+        for concept_name, hints in _NEGATABLE_CONCEPT_HINTS.items():
+            if any(hint in body for hint in hints):
+                _register(concept_name)
+
+    # "spis X nez Y" / "pouze X, ne Y" — Y is de-emphasized / negated.
+    for match in re.finditer(
+        r"(?:spis|pouze|jen)\s+.{3,60}?\s+(?:nez|ne)\s+(?P<body>.{3,80}?)(?=$|[.!?])",
+        folded_query,
+        flags=re.IGNORECASE,
+    ):
+        body = _fold_text(str(match.group("body") or ""))
+        for concept_name, hints in _NEGATABLE_CONCEPT_HINTS.items():
+            if any(hint in body for hint in hints):
+                _register(concept_name)
+
+    return found
+
+
+def _prioritize_retrieval_concepts(concepts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    procedural = [c for c in concepts if c["name"] in _PROCEDURAL_PRIORITY_CONCEPT_NAMES]
+    other = [c for c in concepts if c["name"] not in _PROCEDURAL_PRIORITY_CONCEPT_NAMES]
+    return procedural + other
+
+
+def _focus_demoted_concept_names(
+    *,
+    folded_query: str,
+    candidate_concepts: list[dict[str, Any]],
+) -> set[str]:
+    """When the user says 'hledám jen Y', keep Y (and procedural) and demote background domains."""
+    match = None
+    for candidate in _REQUESTED_FOCUS_RE.finditer(folded_query):
+        match = candidate
+    if match is None:
+        return set()
+    focus_body = _fold_text(str(match.group("body") or ""))
+    if not focus_body.strip():
+        return set()
+    focus_names = {concept["name"] for concept in _extract_legal_concepts(focus_body)}
+    demoted: set[str] = set()
+    for concept in candidate_concepts:
+        name = str(concept["name"])
+        if name in _PROCEDURAL_PRIORITY_CONCEPT_NAMES:
+            continue
+        if name in focus_names:
+            continue
+        demoted.add(name)
+    return demoted
+
+
+def _concept_expansions_for_retrieval(
+    concept: dict[str, Any],
+    *,
+    negated_concept_names: set[str],
+) -> list[str]:
+    expansions = [str(item) for item in concept.get("expansions") or []]
+    merits = {str(item) for item in concept.get("merits_expansions") or []}
+    if concept["name"] in negated_concept_names or any(
+        alias in negated_concept_names
+        for alias in ("child_custody_merits", "parent_contact_merits")
+        if concept["name"] in {"domestic_custody", "child_contact"}
+    ):
+        return []
+    if concept["name"] == "criminal_procedure" and "criminal_guilt" in negated_concept_names:
+        expansions = [
+            item
+            for item in expansions
+            if "vin" not in _fold_text(item)
+        ]
+    # Never emit merits expansions when custody merits are negatively scoped.
+    if "child_custody_merits" in negated_concept_names or "parent_contact_merits" in negated_concept_names:
+        expansions = [item for item in expansions if item not in merits]
+    if concept["name"] in {"damages", "contract"} and concept["name"] in negated_concept_names:
+        return []
+    if merits and concept["name"] in negated_concept_names:
+        expansions = [item for item in expansions if item not in merits]
+    return expansions
+
+
+def _expansion_contradicts_negatives(
+    expansion: str,
+    *,
+    negated_concept_names: set[str],
+) -> bool:
+    folded = _fold_text(expansion)
+    blocked_terms = {
+        "uprava styku rodice s ditetem",
+        "opatrovnicke rizeni",
+        "meritorni spor o peci",
+        "styk rodice s ditetem",
+    }
+    if negated_concept_names.intersection(
+        {"domestic_custody", "child_contact", "child_custody_merits", "parent_contact_merits"}
+    ):
+        if any(term in folded for term in blocked_terms):
+            return True
+        if "opatrovnick" in folded or "uprava styku" in folded:
+            return True
+    if "criminal_guilt" in negated_concept_names and any(
+        token in folded for token in ("vinen", "vina obzalovaneho", "prohlaseni viny")
+    ):
+        return True
+    if "damages" in negated_concept_names and any(
+        token in folded for token in ("nahrada skody", "vyse skody", "odpovednost za skodu")
+    ):
+        return True
+    if "contract" in negated_concept_names and any(
+        token in folded
+        for token in ("neplatnost smlouvy", "platnost smlouvy", "platnost pravniho jednani")
+    ):
+        return True
+    for concept_name in negated_concept_names:
+        rule = next((item for item in _LEGAL_CONCEPT_RULES if item["name"] == concept_name), None)
+        if rule is None:
+            continue
+        for pattern in rule.get("patterns") or ():
+            if pattern and pattern in folded and len(pattern) >= 4:
+                # Allow short contextual mentions only when explicitly marked context.
+                if concept_name in {"domestic_custody", "child_contact"} and expansion.startswith("kontext:"):
+                    continue
+                if any(str(exp).lower() in expansion.lower() for exp in rule.get("merits_expansions") or ()):
+                    return True
+                if pattern in {"styk", "pece o", "opatrovnick"} and concept_name in {
+                    "domestic_custody",
+                    "child_contact",
+                }:
+                    return True
+        for exp in rule.get("expansions") or ():
+            if _fold_text(str(exp)) == folded:
+                return True
+            if concept_name in {"damages", "contract"} and _fold_text(str(exp)) in folded:
+                return True
+    return False
+
+
+def _build_focused_procedural_query(
+    *,
+    procedural_posture: list[str],
+    decision_outcome: list[str],
+    legal_concepts: list[dict[str, Any]],
+) -> str | None:
+    parts: list[str] = []
+    if any("ústavní stížnost" in item or item == "constitutional_complaint" for item in procedural_posture):
+        parts.append("ústavní stížnost")
+    elif procedural_posture:
+        parts.append(procedural_posture[0])
+    if "rejected_for_formal_defects" in decision_outcome:
+        parts.append("odmítnutá pro formální vady")
+    elif "odmítnuto" in decision_outcome:
+        parts.append("odmítnutá")
+    labels_by_name = {concept["name"]: concept["label"] for concept in legal_concepts}
+    for name in (
+        "mandatory_lawyer_representation",
+        "missing_or_inadequate_reasoning",
+        "defective_filing",
+        "failure_to_cure_filing_defects",
+    ):
+        if name in labels_by_name:
+            parts.append(str(labels_by_name[name]))
+    if not parts:
+        return None
+    return ", ".join(parts)
+
+
+def _build_retrieval_queries(
+    *,
+    original_query: str,
+    normalized_query: str,
+    origin: QueryEntity | None,
+    destination: QueryEntity | None,
+    parent_entity: QueryEntity | None,
+    child_entity: QueryEntity | None,
+    action: str | None,
+    legal_concepts: list[dict[str, Any]],
+    contextual_concepts: list[dict[str, Any]] | None = None,
+    negated_concept_names: set[str] | None = None,
+    procedural_posture: list[str] | None = None,
+    decision_outcome: list[str] | None = None,
+) -> tuple[list[str], list[dict[str, str]]]:
+    negated = set(negated_concept_names or ())
+    suppressed: list[dict[str, str]] = []
+    queries: list[str] = []
+
+    def _try_add(text: str, *, reason: str, allow_even_if_contradicts: bool = False) -> None:
+        cleaned = " ".join(str(text or "").split())
+        if not cleaned:
+            return
+        if cleaned in queries:
+            return
+        if not allow_even_if_contradicts and _expansion_contradicts_negatives(
+            cleaned, negated_concept_names=negated
+        ):
+            suppressed.append({"expansion": cleaned, "reason": reason})
+            return
+        queries.append(cleaned)
+
+    # Original user query is always preserved unchanged as the first retrieval query.
+    _try_add(original_query, reason="original_query", allow_even_if_contradicts=True)
+    focused = _build_focused_procedural_query(
+        procedural_posture=list(procedural_posture or []),
+        decision_outcome=list(decision_outcome or []),
+        legal_concepts=legal_concepts,
+    )
+    if focused:
+        _try_add(focused, reason="focused_procedural_contradiction")
+
+    if action == "abduction" and child_entity is not None:
+        parts = ["mezinárodní únos dítěte", "neoprávněné přemístění dítěte"]
+        if parent_entity is not None:
+            parts.append(parent_entity.text)
+        if origin is not None and destination is not None:
+            parts.append(f"z {origin.text} do {destination.text}")
+        _try_add(" ".join(parts), reason="abduction_template_contradiction")
+
+    reserve_context_slot = any(
+        item["name"] in {"domestic_custody", "child_contact"}
+        for item in (contextual_concepts or [])
+    )
+    expansion_cap = _MAX_RETRIEVAL_QUERIES - (1 if reserve_context_slot else 0)
+
+    for concept in legal_concepts:
+        expansions = _concept_expansions_for_retrieval(concept, negated_concept_names=negated)
+        for expansion in expansions:
+            _try_add(expansion, reason=f"blocked_by_negative:{concept['name']}")
+            if len(queries) >= expansion_cap:
+                break
+        if len(queries) >= expansion_cap:
+            break
+
+    # Optional non-merits context after procedural expansions; original query already
+    # preserves background wording when the expansion budget is exhausted.
+    for concept in contextual_concepts or []:
+        if concept["name"] not in {"domestic_custody", "child_contact"}:
+            continue
+        _try_add(
+            "zásah do péče o děti",
+            reason="context_family_background",
+            allow_even_if_contradicts=True,
+        )
+        break
+
+    # Keep normalized query only when it does not reintroduce negated merits terms.
+    if normalized_query and normalized_query != original_query:
+        _try_add(normalized_query, reason="normalized_query_contradiction")
+
+    return queries[:_MAX_RETRIEVAL_QUERIES], suppressed
 
 
 def _extract_modalities(folded_query: str) -> list[str]:
@@ -1230,31 +1811,6 @@ def _extract_ambiguities(
     if broad_single_concept and legal_concepts:
         ambiguities.append("single_broad_legal_concept_requires_clarification")
     return ambiguities
-
-
-def _build_retrieval_queries(
-    *,
-    original_query: str,
-    normalized_query: str,
-    origin: QueryEntity | None,
-    destination: QueryEntity | None,
-    parent_entity: QueryEntity | None,
-    child_entity: QueryEntity | None,
-    action: str | None,
-    legal_concepts: list[dict[str, Any]],
-) -> list[str]:
-    queries = _dedupe([original_query, normalized_query])
-    if action == "abduction" and child_entity is not None:
-        parts = ["mezinárodní únos dítěte", "neoprávněné přemístění dítěte"]
-        if parent_entity is not None:
-            parts.append(parent_entity.text)
-        if origin is not None and destination is not None:
-            parts.append(f"z {origin.text} do {destination.text}")
-        queries.append(" ".join(parts))
-    for concept in legal_concepts:
-        queries.extend(str(item) for item in concept["expansions"])
-        queries.append(" ".join([original_query, *[str(item) for item in concept["expansions"][:2]]]))
-    return queries
 
 
 def _infer_intent(

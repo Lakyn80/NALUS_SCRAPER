@@ -1,5 +1,51 @@
 # Project Progress
 
+## 2026-08-06 Europe/Moscow — Task: Preserve negation in QuerySpec
+
+- Goal:
+  General query-understanding fix so explicitly negated requested case types
+  are not reintroduced as positive expansions/hard constraints; extract
+  procedural-defect signals; prioritize procedural issue over background.
+- Root cause:
+  `build_query_spec_v2` matched `domestic_custody` broadly and expanded
+  `úprava styku…` / `opatrovnické řízení` while `_extract_negations` only set
+  generic `negation_present` and never bound “Nehledám … spor o péči”.
+- Changes:
+  Scoped semantic negation; procedural-defect concepts; concept priority /
+  focus demotion; contradiction-safe expansion filter; CONTRACTS invariants;
+  focused tests (cases A–F + pilot-004 query load without production ID use).
+- Single-query diagnostic (`diagnose_nalus-cs-pilot-004_after_queryspec.json`):
+  expected ECLI dense doc rank **5**, BM25 **8**, RRF **4**, aggregated **1**.
+- Full baseline (`20260806T092207Z`):
+  evaluable=`20`, retrieval_failures=`0`;
+  Hit@1=`0.60`, Hit@10=`1.0` (was 0.95), MRR≈`0.70`, HN outrank=`0.0`;
+  `nalus-cs-pilot-004` primary_rank=`1`; no prior TOP-10 miss regressed.
+- Unchanged: golden JSONL, ECLI map, Step 4A, retrieval knobs, no push.
+- Next recommended task:
+  Optional deeper ranking work for Hit@1 on 001/002/003/008/009; then
+  chunking A/B/C/D / ColBERT / CE per master plan — not required for this fix.
+
+## 2026-08-06 Europe/Moscow — Task: Diagnose case-similarity miss 004
+
+- Goal:
+  Stage-trace `nalus-cs-pilot-004` without changing config or golden.
+- Expected: `ECLI:CZ:US:2025:1.US.3575.25.1`
+- Result (`artifacts/.../diagnose_nalus-cs-pilot-004.json`):
+  - QuerySpec keeps OSPOD/children, no-lawyer, reasoning defects, formal
+    rejection in the retrieval query text; also HARD-expands
+    `péče o nezletilé dítě` / soft `odmítnuto`, plus expansions
+    `úprava styku…` / `opatrovnické řízení` (custody-merits bias risk).
+  - Dense TOP 80: **absent**
+  - BM25: present weakly (doc rank **35**, best chunk rank **78**)
+  - RRF TOP 120: **absent** (BM25-only weak hit truncated)
+  - Aggregation: never sees expected ECLI
+- Drop point:
+  `present_in_bm25_only_but_dropped_by_rrf` — primary issue is **dense miss**
+  (+ BM25 too weak to carry RRF alone), not aggregation.
+- Next recommended task:
+  Inspect why dense misses 004 (chunk text / query expansions), still without
+  golden edits; only then consider query-processing or retrieval knobs.
+
 ## 2026-08-06 Europe/Moscow — Task: Fix bm25_index_id provenance + real baseline
 
 - Goal:
