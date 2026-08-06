@@ -1,5 +1,26 @@
 # Project Progress
 
+## 2026-08-06 Europe/Moscow — Task: Case-similarity rank-diff audit (Hit@1)
+
+- Goal:
+  Explain unchanged Hit@1=0.60 after QuerySpec fix where `004` reached primary
+  rank 1 (`20260805T234409Z` → `20260806T092207Z`).
+- Evaluator semantics (from code):
+  Hit@K/MRR use `best_positive_rank = min(primary, best accepted alternative)`;
+  accepted alternatives count for Hit@1; ranks stored within TOP 10 only;
+  HN-blocked rows remain in Hit@K denominator.
+- Independent recompute matched both stored reports (12/20 Hit@1 both runs).
+- Hit@1 arithmetic:
+  gained=`nalus-cs-pilot-004`, lost=`nalus-cs-pilot-013` → 12+1-1=12.
+- Verdict: `OFFSET_RANK1_REGRESSION`.
+- Material degradations also: `003` (3→9), `009` (2→6), `013` (1→2);
+  all remain Hit@10.
+- Tooling: `scripts/legal_v2/compare_case_similarity_runs.py` + tests.
+- Unchanged: golden, QuerySpec production logic, indexes, retrieval knobs.
+- Next:
+  Optional focused diagnosis of `013` (and optionally `003`/`009`) rank drift
+  without changing retrieval parameters in the same task.
+
 ## 2026-08-06 Europe/Moscow — Task: Preserve negation in QuerySpec
 
 - Goal:
