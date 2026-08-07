@@ -75,9 +75,9 @@ from app.rag.retrieval.full_document import (
     FullDocumentResult,
     FullDocumentStore,
     QdrantFullDocumentStore,
+    resolve_full_document_collection_name,
     validate_document_id,
 )
-from app.rag.retrieval.production_profile import DEFAULT_QDRANT_COLLECTION
 from app.rag.retrieval.production_profile import ProductionRetrievalConfig
 from app.rag.synthesis.synthesis_service import MockSynthesisLLM, SynthesisService
 
@@ -455,7 +455,13 @@ _legal_v2_runtime_lock = Lock()
 
 
 def _collection_name() -> str:
-    return os.getenv("QDRANT_COLLECTION_NAME", DEFAULT_QDRANT_COLLECTION)
+    """Collection for full-document reconstruction and related Qdrant reads.
+
+    When Stage 1 / Legal v2 search is enabled, this follows
+    ``NALUS_LEGAL_V2_QDRANT_COLLECTION`` so FE \"Celý rozsudek\" hits the same
+    indexed corpus as search results.
+    """
+    return resolve_full_document_collection_name()
 
 
 def get_pipeline() -> SearchPipelineLike:
@@ -1217,14 +1223,16 @@ def retrieve_verified(
 class CaseSimilarityStage1SearchRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    query: str = Field(min_length=1, max_length=8000)
+    # Raw paste may be long when long-input preprocessing is enabled; Stage 1
+    # still searches only the condensed retrieval_query (<= 8000).
+    query: str = Field(min_length=1, max_length=100_000)
     limit: int | None = Field(default=None, ge=1, le=50)
     include_debug: bool = False
 
     @field_validator("query")
     @classmethod
     def _query_must_not_be_blank(cls, value: str) -> str:
-        cleaned = " ".join(value.split())
+        cleaned = value.strip()
         if not cleaned:
             raise ValueError("query must not be blank")
         return cleaned
@@ -1273,6 +1281,11 @@ class CaseSimilarityStage1ReadyResponse(BaseModel):
     retrieval_stage: str | None = None
     error_type: str | None = None
     enabled: bool = False
+    model_loaded: bool | None = None
+    bm25_loaded: bool | None = None
+    warmup_status: str | None = None
+    warmup_required: bool | None = None
+    warmup_latency_ms: float | None = None
 
 
 @router.get(
@@ -1303,6 +1316,11 @@ def case_similarity_stage1_ready() -> CaseSimilarityStage1ReadyResponse:
         retrieval_stage=payload.get("retrieval_stage"),
         error_type=payload.get("error_type"),
         enabled=True,
+        model_loaded=payload.get("model_loaded"),
+        bm25_loaded=payload.get("bm25_loaded"),
+        warmup_status=payload.get("warmup_status"),
+        warmup_required=payload.get("warmup_required"),
+        warmup_latency_ms=payload.get("warmup_latency_ms"),
     )
 
 
@@ -1436,6 +1454,8 @@ def case_similarity_stage1_search(
                 "fused_candidate_chunks",
                 "aggregated_documents",
                 "retrieval_status",
+                "original_query_length",
+                "input_processing",
             }
         },
     )

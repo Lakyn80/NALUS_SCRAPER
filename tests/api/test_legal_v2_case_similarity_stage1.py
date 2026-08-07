@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.main import app
+from app.rag.legal_v2.query_input.service import reset_query_input_service_for_tests
 from app.rag.legal_v2.retrieve.case_similarity_search import (
     CaseSimilarityStage1Runtime,
     Stage1DocumentResult,
@@ -23,10 +24,15 @@ from app.rag.retrieval.errors import RetrievalConfigurationError
 @pytest.fixture(autouse=True)
 def _reset_runtime(monkeypatch: pytest.MonkeyPatch):
     reset_case_similarity_stage1_runtime_for_tests()
+    reset_query_input_service_for_tests()
     monkeypatch.setenv("NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED", "1")
     monkeypatch.delenv("NALUS_LEGAL_V2_DEBUG", raising=False)
+    # Never load real BGE-M3 during API unit tests.
+    monkeypatch.delenv("NALUS_LEGAL_V2_STAGE1_WARMUP_ON_START", raising=False)
+    monkeypatch.delenv("NALUS_LEGAL_V2_LONG_INPUT_ENABLED", raising=False)
     yield
     reset_case_similarity_stage1_runtime_for_tests()
+    reset_query_input_service_for_tests()
 
 
 def _sample_result(*, include_debug: bool = False) -> Stage1SearchResult:
@@ -117,6 +123,27 @@ def test_stage1_limit_validation(monkeypatch: pytest.MonkeyPatch) -> None:
     assert resp.status_code == 422
 
 
+def test_stage1_accepts_limit_50(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NALUS_LEGAL_V2_MAX_RESULT_LIMIT", "50")
+    called: dict[str, Any] = {}
+
+    def _fake_search(**kwargs):
+        called.update(kwargs)
+        return _sample_result()
+
+    monkeypatch.setattr(
+        "app.rag.legal_v2.retrieve.case_similarity_search.search_case_similarity_stage1",
+        _fake_search,
+    )
+    client = TestClient(app)
+    resp = client.post(
+        "/api/rag/legal-v2/case-similarity/search",
+        json={"query": "mezinárodní únos dítěte", "limit": 50},
+    )
+    assert resp.status_code == 200
+    assert called["limit"] == 50
+
+
 def test_stage1_success_uses_authoritative_search(monkeypatch: pytest.MonkeyPatch) -> None:
     called: dict[str, Any] = {}
 
@@ -191,6 +218,11 @@ def test_stage1_ready_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
             "bm25_index_id": "nalus_legal_paragraph_bm25_v2_pilot_600",
             "bm25_sidecar_exists": True,
             "retrieval_stage": "hybrid_rrf_stage_1",
+            "model_loaded": True,
+            "bm25_loaded": True,
+            "warmup_status": "warm",
+            "warmup_required": True,
+            "warmup_latency_ms": 12.5,
         },
     )
     client = TestClient(app)
@@ -199,6 +231,8 @@ def test_stage1_ready_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     payload = resp.json()
     assert payload["ready"] is True
     assert payload["enabled"] is True
+    assert payload["model_loaded"] is True
+    assert payload["warmup_status"] == "warm"
 
 
 def test_stage1_openapi_contains_models() -> None:
@@ -290,3 +324,77 @@ def test_search_case_similarity_stage1_builds_queryspec(monkeypatch: pytest.Monk
             observed["spec"].structured_query.get("negated_requested_concepts") or []
         )
     }
+
+
+def test_warmup_loads_embedder_and_bm25(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.rag.legal_v2.retrieve import case_similarity_search as module
+
+    class _FakeEmbedder:
+        def __init__(self) -> None:
+            self.loaded = False
+
+        def load(self) -> None:
+            self.loaded = True
+
+        def embed_query(self, query: str) -> list[float]:
+            assert query == "warmup"
+            self.loaded = True
+            return [0.1, 0.2]
+
+    class _FakeBm25:
+        def __init__(self) -> None:
+            self._index = None
+
+        def search(self, query: str, top_k: int):
+            self._index = object()
+            return []
+
+    class _FakeRetriever:
+        def __init__(self) -> None:
+            self._bm25 = _FakeBm25()
+
+    embedder = _FakeEmbedder()
+    runtime = CaseSimilarityStage1Runtime(
+        retriever=_FakeRetriever(),  # type: ignore[arg-type]
+        config=MagicMock(
+            qdrant_collection="nalus_legal_paragraph_chunks_v2_pilot_600",
+            bm25_index_id="nalus_legal_paragraph_bm25_v2_pilot_600",
+            bm25_sidecar_path=MagicMock(exists=lambda: True),
+        ),
+        embedder=embedder,
+        ready=True,
+    )
+    monkeypatch.setattr(module, "get_case_similarity_stage1_runtime", lambda: runtime)
+    monkeypatch.setenv("NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED", "1")
+
+    result = module.warmup_case_similarity_stage1_runtime()
+    assert result["warmup_status"] == "warm"
+    assert runtime.model_loaded is True
+    assert runtime.bm25_loaded is True
+    assert embedder.loaded is True
+
+
+def test_probe_not_ready_while_warmup_required_and_cold(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.rag.legal_v2.retrieve import case_similarity_search as module
+
+    class _FakeRetriever:
+        _bm25 = MagicMock(_index=None)
+
+    runtime = CaseSimilarityStage1Runtime(
+        retriever=_FakeRetriever(),  # type: ignore[arg-type]
+        config=MagicMock(
+            qdrant_collection="pilot",
+            bm25_index_id="bm25",
+            bm25_sidecar_path=MagicMock(exists=lambda: True),
+        ),
+        embedder=MagicMock(loaded=False),
+        ready=True,
+        warmup_status="cold",
+    )
+    monkeypatch.setattr(module, "get_case_similarity_stage1_runtime", lambda: runtime)
+    monkeypatch.setenv("NALUS_LEGAL_V2_STAGE1_WARMUP_ON_START", "1")
+
+    payload = module.probe_case_similarity_stage1_readiness()
+    assert payload["ready"] is False
+    assert payload["status"] == "cold"
+    assert payload["warmup_required"] is True

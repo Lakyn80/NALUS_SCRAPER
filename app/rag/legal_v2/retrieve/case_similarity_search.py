@@ -28,26 +28,28 @@ logger = get_logger(__name__)
 
 STAGE_1_RETRIEVAL = "hybrid_rrf_stage_1"
 DEFAULT_RESULT_LIMIT = 10
-MAX_RESULT_LIMIT = 20
+MAX_RESULT_LIMIT = 50
 MAX_QUERY_LENGTH = 8000
 MIN_QUERY_LENGTH = 1
+_TRUTHY = {"1", "true", "yes", "on"}
+_WARMUP_QUERY = "warmup"
 
 
 def case_similarity_stage1_enabled() -> bool:
     raw = os.getenv("NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED", "").strip().lower()
-    if raw in {"1", "true", "yes", "on"}:
+    if raw in _TRUTHY:
         return True
     # Allow Stage 1 when the broader Legal v2 search flag is on.
-    return os.getenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    return os.getenv("NALUS_LEGAL_V2_SEARCH_ENABLED", "").strip().lower() in _TRUTHY
 
 
 def stage1_debug_allowed() -> bool:
-    return os.getenv("NALUS_LEGAL_V2_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
+    return os.getenv("NALUS_LEGAL_V2_DEBUG", "").strip().lower() in _TRUTHY
+
+
+def stage1_warmup_on_start_enabled() -> bool:
+    """When enabled, API preloads BGE-M3 + BM25 after boot so first search is warm."""
+    return os.getenv("NALUS_LEGAL_V2_STAGE1_WARMUP_ON_START", "").strip().lower() in _TRUTHY
 
 
 def default_result_limit() -> int:
@@ -64,7 +66,7 @@ def max_result_limit() -> int:
         os.getenv("NALUS_LEGAL_V2_MAX_RESULT_LIMIT"),
         default=MAX_RESULT_LIMIT,
         minimum=1,
-        maximum=50,
+        maximum=MAX_RESULT_LIMIT,
     )
 
 
@@ -109,8 +111,14 @@ class Stage1SearchResult:
 class CaseSimilarityStage1Runtime:
     retriever: LegalV2HybridRetriever
     config: LegalV2RetrieverConfig
+    embedder: Any | None = None
     ready: bool = False
     ready_error: str | None = None
+    model_loaded: bool = False
+    bm25_loaded: bool = False
+    warmup_status: str = "cold"  # cold | warming | warm | failed | skipped
+    warmup_error_type: str | None = None
+    warmup_latency_ms: float | None = None
 
 
 _runtime: CaseSimilarityStage1Runtime | None = None
@@ -173,8 +181,12 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
         _runtime = CaseSimilarityStage1Runtime(
             retriever=retriever,
             config=config,
+            embedder=embedder,
             ready=True,
             ready_error=None,
+            model_loaded=bool(getattr(embedder, "loaded", False)),
+            bm25_loaded=False,
+            warmup_status="cold",
         )
         logger.info(
             "[legal_v2.stage1] runtime ready collection=%s bm25_index_id=%s points=%s",
@@ -185,8 +197,89 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
         return _runtime
 
 
+def _embedder_is_loaded(runtime: CaseSimilarityStage1Runtime) -> bool:
+    if runtime.model_loaded:
+        return True
+    embedder = runtime.embedder
+    return bool(embedder is not None and getattr(embedder, "loaded", False))
+
+
+def _bm25_is_loaded(runtime: CaseSimilarityStage1Runtime) -> bool:
+    if runtime.bm25_loaded:
+        return True
+    bm25 = getattr(runtime.retriever, "_bm25", None)
+    return bool(bm25 is not None and getattr(bm25, "_index", None) is not None)
+
+
+def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
+    """Load BGE-M3 + BM25 into process memory (blocking; call from a worker thread)."""
+    if not case_similarity_stage1_enabled():
+        return {
+            "warmup_status": "skipped",
+            "reason": "stage1_disabled",
+            "model_loaded": False,
+            "bm25_loaded": False,
+        }
+
+    runtime = get_case_similarity_stage1_runtime()
+    if runtime.warmup_status == "warm" and _embedder_is_loaded(runtime) and _bm25_is_loaded(runtime):
+        return {
+            "warmup_status": "warm",
+            "model_loaded": True,
+            "bm25_loaded": True,
+            "warmup_latency_ms": runtime.warmup_latency_ms,
+            "collection": runtime.config.qdrant_collection,
+        }
+
+    runtime.warmup_status = "warming"
+    runtime.warmup_error_type = None
+    started = time.perf_counter()
+    try:
+        embedder = runtime.embedder
+        if embedder is None:
+            raise RetrievalConfigurationError("Stage 1 embedder is not configured.")
+        embedder.load()
+        # Force a real encode so first user query does not pay JIT / graph costs.
+        vector = embedder.embed_query(_WARMUP_QUERY)
+        if not vector:
+            raise RetrievalConfigurationError("Stage 1 warmup embedder returned an empty vector.")
+        runtime.model_loaded = True
+
+        bm25 = getattr(runtime.retriever, "_bm25", None)
+        if bm25 is None:
+            raise RetrievalConfigurationError("Stage 1 BM25 sidecar is not configured.")
+        bm25.search(_WARMUP_QUERY, top_k=1)
+        runtime.bm25_loaded = True
+
+        runtime.warmup_status = "warm"
+        runtime.warmup_latency_ms = (time.perf_counter() - started) * 1000.0
+        logger.info(
+            "[legal_v2.stage1] warmup complete collection=%s model_loaded=1 bm25_loaded=1 "
+            "warmup_latency_ms=%.1f",
+            runtime.config.qdrant_collection,
+            runtime.warmup_latency_ms,
+        )
+        return {
+            "warmup_status": "warm",
+            "model_loaded": True,
+            "bm25_loaded": True,
+            "warmup_latency_ms": runtime.warmup_latency_ms,
+            "collection": runtime.config.qdrant_collection,
+        }
+    except Exception as exc:  # noqa: BLE001
+        runtime.warmup_status = "failed"
+        runtime.warmup_error_type = type(exc).__name__
+        runtime.warmup_latency_ms = (time.perf_counter() - started) * 1000.0
+        logger.warning(
+            "[legal_v2.stage1] warmup failed error_type=%s warmup_latency_ms=%.1f",
+            runtime.warmup_error_type,
+            runtime.warmup_latency_ms,
+        )
+        raise
+
+
 def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
-    """Lightweight readiness probe without requiring a search."""
+    """Readiness probe. With warmup-on-start, ready means model+BM25 are loaded."""
     try:
         runtime = get_case_similarity_stage1_runtime()
     except Exception as exc:  # noqa: BLE001
@@ -196,14 +289,42 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
             "error_type": exc.__class__.__name__,
             "collection": os.getenv("NALUS_LEGAL_V2_QDRANT_COLLECTION"),
             "bm25_index_id": os.getenv("NALUS_LEGAL_V2_BM25_INDEX_ID"),
+            "model_loaded": False,
+            "bm25_loaded": False,
+            "warmup_status": "failed",
+            "warmup_required": stage1_warmup_on_start_enabled(),
         }
+
+    model_loaded = _embedder_is_loaded(runtime)
+    bm25_loaded = _bm25_is_loaded(runtime)
+    warmup_required = stage1_warmup_on_start_enabled()
+    warm_enough = model_loaded and bm25_loaded
+
+    if warmup_required and not warm_enough:
+        if runtime.warmup_status == "failed":
+            status = "unavailable"
+        elif runtime.warmup_status == "warming":
+            status = "warming"
+        else:
+            status = "cold"
+        ready = False
+    else:
+        status = "ready"
+        ready = True
+
     return {
-        "ready": True,
-        "status": "ready",
+        "ready": ready,
+        "status": status,
         "collection": runtime.config.qdrant_collection,
         "bm25_index_id": runtime.config.bm25_index_id,
         "bm25_sidecar_exists": runtime.config.bm25_sidecar_path.exists(),
         "retrieval_stage": STAGE_1_RETRIEVAL,
+        "model_loaded": model_loaded,
+        "bm25_loaded": bm25_loaded,
+        "warmup_status": runtime.warmup_status,
+        "warmup_required": warmup_required,
+        "warmup_latency_ms": runtime.warmup_latency_ms,
+        "error_type": runtime.warmup_error_type if not ready else None,
     }
 
 
@@ -215,7 +336,25 @@ def search_case_similarity_stage1(
     runtime: CaseSimilarityStage1Runtime | None = None,
     query_spec_builder=build_query_spec_v2,
 ) -> Stage1SearchResult:
-    cleaned = " ".join(str(query or "").split())
+    from app.rag.legal_v2.query_input.errors import (
+        InputTooLargeError,
+        NoUsefulContentError,
+        UnsupportedCondensationModeError,
+    )
+    from app.rag.legal_v2.query_input.service import get_query_input_service
+
+    raw = str(query or "").strip()
+    if not raw:
+        raise ValueError("query must not be blank")
+
+    try:
+        prepared = get_query_input_service().prepare(raw)
+    except InputTooLargeError as exc:
+        raise ValueError(str(exc)) from exc
+    except (NoUsefulContentError, UnsupportedCondensationModeError) as exc:
+        raise ValueError(str(exc)) from exc
+
+    cleaned = prepared.retrieval_query
     if not cleaned:
         raise ValueError("query must not be blank")
     if len(cleaned) > MAX_QUERY_LENGTH:
@@ -242,6 +381,7 @@ def search_case_similarity_stage1(
     total_ms = (time.perf_counter() - started) * 1000.0
     diagnostics = {
         "query_length": len(cleaned),
+        "original_query_length": len(prepared.original_query),
         "generated_query_count": len(query_spec.retrieval_queries),
         "result_count": len(documents),
         "collection": active.config.qdrant_collection,
@@ -263,9 +403,15 @@ def search_case_similarity_stage1(
         "fused_candidate_chunks": retrieval.diagnostics.get("fused_candidate_chunks"),
         "aggregated_documents": retrieval.diagnostics.get("candidate_documents"),
         "retrieval_status": "ok",
+        "input_processing": prepared.input_processing_diagnostics(
+            include_brief_text=False
+        ),
     }
     if include_debug and stage1_debug_allowed():
         diagnostics["debug"] = _safe_debug_payload(query_spec, retrieval)
+        diagnostics["debug"]["input_processing"] = prepared.input_processing_diagnostics(
+            include_brief_text=True
+        )
 
     trace_event(
         logger,
@@ -277,7 +423,8 @@ def search_case_similarity_stage1(
     logger.info(
         "[legal_v2.stage1] search done result_count=%s query_length=%s "
         "generated_query_count=%s collection=%s bm25_index_id=%s "
-        "dense_latency_ms=%s bm25_latency_ms=%s total_latency_ms=%s",
+        "dense_latency_ms=%s bm25_latency_ms=%s total_latency_ms=%s "
+        "was_condensed=%s classification=%s",
         len(documents),
         len(cleaned),
         len(query_spec.retrieval_queries),
@@ -286,6 +433,8 @@ def search_case_similarity_stage1(
         diagnostics.get("dense_latency_ms"),
         diagnostics.get("bm25_latency_ms"),
         diagnostics.get("total_latency_ms"),
+        prepared.was_condensed,
+        prepared.classification.value,
     )
     return Stage1SearchResult(
         query=cleaned,

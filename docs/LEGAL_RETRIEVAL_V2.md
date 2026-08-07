@@ -1,5 +1,13 @@
 # Legal Retrieval v2
 
+## Long-input SearchBrief (optional pre-retrieval layer)
+
+Disabled by default. See `docs/architecture/LONG_INPUT_SEARCH_BRIEF_V1.md`.
+
+When `NALUS_LEGAL_V2_LONG_INPUT_ENABLED=1`, long pasted legal text is condensed
+deterministically to a short `SearchBrief` before `build_query_spec_v2`. Short
+queries pass through unchanged. Active provider: extractive (no LLM).
+
 ## Stage 1 case-similarity search (production-testable)
 
 Status: **deployed for local Docker pilot testing**. Candidate retrieval only —
@@ -15,10 +23,13 @@ user query
 → BM25 sparse retrieval
 → RRF fusion
 → chunk-to-document aggregation by ECLI
-→ TOP candidate judgments (default 10; internal pool ~40)
+→ TOP candidate judgments (default 10 shown in UI; API can return up to 50)
 → POST /api/rag/legal-v2/case-similarity/search
 → existing NalusFE `/vyhledavani`
 ```
+
+Default FE search requests `limit=50` and initially displays the first 10 with
+“Načíst další výsledky”. Internal aggregation pool is `NALUS_LEGAL_V2_CANDIDATE_DOCUMENTS=50`.
 
 ### Validation (case-similarity golden v1 pilot)
 
@@ -51,6 +62,11 @@ backfilled, `ecli` / `canonical_document_id`). API responses always expose
 
 - Readiness: `GET /api/rag/legal-v2/case-similarity/ready`
 - Search: `POST /api/rag/legal-v2/case-similarity/search`
+- Full judgment (FE „Celý rozsudek“): `GET /api/rag/documents/{ecli}`
+  — when Stage 1 / Legal v2 search flags are on, reconstruction uses the same
+  collection as search (`NALUS_LEGAL_V2_QDRANT_COLLECTION`), not the legacy
+  `QDRANT_COLLECTION_NAME`. Optional override:
+  `NALUS_FULL_DOCUMENT_QDRANT_COLLECTION`.
 - Flag: `NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED=1` (also enabled when
   `NALUS_LEGAL_V2_SEARCH_ENABLED=1`)
 
@@ -120,9 +136,13 @@ docker compose up -d --build frontend
 | Health | http://localhost:8029/health |
 | Stage 1 readiness | http://localhost:8029/api/rag/legal-v2/case-similarity/ready |
 
-BGE-M3 and BM25 initialize once per API process (lazy singleton on first Stage 1
-search / ready probe). First request may take minutes if the model must warm;
-warm requests are typically under 1s on the pilot corpus.
+BGE-M3 and BM25 initialize once per API process. With
+`NALUS_LEGAL_V2_STAGE1_WARMUP_ON_START=1` (enabled in
+`docker-compose.stage1.local.yml`), the API warms them in a background task at
+boot. Until warmup finishes, `GET .../case-similarity/ready` returns
+`ready=false` and `status=cold|warming` (fields: `model_loaded`, `bm25_loaded`,
+`warmup_status`). After warmup, first FE searches are typically under 1s on the
+pilot corpus. With the flag off, runtime stays lazy on first search.
 
 ### Benchmark
 

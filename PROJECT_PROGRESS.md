@@ -1,5 +1,63 @@
 # Project Progress
 
+## 2026-08-08 Europe/Moscow — Task: Long-input SearchBrief preprocessing (OFF by default)
+
+- Goal: modular pre-retrieval layer for long pasted legal text without changing
+  validated Stage 1 retrieval.
+- Added `app/rag/legal_v2/query_input/` (classifier, normalizer, extractive
+  provider, Precise LLM stub, QueryInputService).
+- Integration: Stage 1 search → `QueryInputService.prepare()` → QuerySpec.
+- Flag `NALUS_LEGAL_V2_LONG_INPUT_ENABLED=0` (compose explicitly off).
+- FE SearchBar uses textarea for multi-line paste (no second UI).
+- Docs: `docs/architecture/LONG_INPUT_SEARCH_BRIEF_V1.md`.
+- Unchanged: BGE-M3/BM25/RRF knobs, Qdrant corpus, golden benchmark, no LLM calls.
+
+## 2026-08-07 Europe/Moscow — Task: Stage 1 warmup on API start
+
+- Goal: avoid multi-minute cold first FE search after API restart.
+- `NALUS_LEGAL_V2_STAGE1_WARMUP_ON_START=1` (stage1 compose): background
+  lifespan task loads BGE-M3 + BM25 (`warmup` encode + BM25 search).
+- `/case-similarity/ready` reports `model_loaded` / `bm25_loaded` /
+  `warmup_status`; when warmup is required, `ready=true` only after warm.
+- Unchanged: retrieval knobs, corpus, ranking; flag default remains off outside
+  stage1 overlay.
+
+## 2026-08-07 Europe/Moscow — Task: Fix Stage 1 full-document FE 404
+
+- Symptom: FE search returned Stage 1 passages, but „Celý rozsudek“ showed
+  „Dokument nebyl nalezen v indexovaném korpusu“ (HTTP 404).
+- Cause: search used `NALUS_LEGAL_V2_QDRANT_COLLECTION` (pilot_600); full-document
+  endpoint used legacy `QDRANT_COLLECTION_NAME` (`nalus_bge_m3_chunks_v1`).
+- Fix: `resolve_full_document_collection_name()` prefers Stage 1 / legal_v2
+  collection when those flags are on; stage1 compose sets both
+  `QDRANT_COLLECTION_NAME` and `NALUS_FULL_DOCUMENT_QDRANT_COLLECTION` to pilot_600;
+  match also on `canonical_document_id`.
+- Unchanged: retrieval ranking, corpus rebuild, ColBERT/CE.
+
+## 2026-08-07 Europe/Moscow — Task: Pilot 600 judgment inventory + Stage 1 eval seed
+
+- Goal: full list of indexed pilot judgments (~622 ECLI) with topic description
+  and 2 natural search questions each; prepare Stage 1 HTTP eval.
+- Generator: `scripts/legal_v2/build_pilot_600_judgment_inventory.py`
+  (offline heuristics, no paid LLM).
+- Outputs:
+  - `artifacts/legal_v2/pilot_600_judgment_inventory/pilot_600_judgment_inventory.json`
+  - `artifacts/legal_v2/pilot_600_judgment_inventory/pilot_600_judgment_inventory.md`
+  - `artifacts/legal_v2/pilot_600_judgment_inventory/pilot_600_search_queries.jsonl` (1244 rows)
+- Quality: 622 docs, 0 missing case numbers; ~96 still weakly tagged; q1=topic,
+  q2=topic+case cue. Spot-check II.ÚS 859/23 #2 q2 retrieves expected ECLI @1.
+- Eval runner: `scripts/legal_v2/evaluate_pilot_600_inventory_stage1.py`
+  (Hit@K / MRR against Stage 1 API). Full 1244-query run left for local PowerShell.
+- Unchanged: Qdrant/BM25 corpus, Stage 1 retrieval knobs, no ColBERT/CE.
+
+## 2026-08-06 Europe/Moscow — Task: Stage 1 result window up to 50
+
+- Goal: keep first viewport at TOP 10, allow loading more candidates up to 50.
+- Backend: `NALUS_LEGAL_V2_MAX_RESULT_LIMIT=50`, `CANDIDATE_DOCUMENTS=50`.
+- Frontend: Stage 1 requests `limit=50`; ResultList shows 10 then “Načíst další”.
+- Unchanged: retrieval model/BM25/RRF knobs aside from aggregation pool size;
+  no ColBERT/CE; no corpus rebuild.
+
 ## 2026-08-06 Europe/Moscow — Task: Deploy Stage 1 case-similarity API + FE
 
 - Goal:

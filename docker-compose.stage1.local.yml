@@ -14,13 +14,20 @@ services:
     environment:
       # Explicit container DNS — avoid resolving to this worktree's empty `qdrant` service.
       QDRANT_URL: http://nalus-scraper-qdrant-1:6333
+      # Keep full-document reconstruction on the same corpus as Stage 1 search.
+      QDRANT_COLLECTION_NAME: nalus_legal_paragraph_chunks_v2_pilot_600
+      NALUS_FULL_DOCUMENT_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_pilot_600
       NALUS_LEGAL_V2_SEARCH_ENABLED: "1"
       NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED: "1"
+      NALUS_LEGAL_V2_STAGE1_WARMUP_ON_START: "1"
+      NALUS_LEGAL_V2_LONG_INPUT_ENABLED: "0"
+      NALUS_LEGAL_V2_LONG_INPUT_METHOD: extractive
       NALUS_LEGAL_V2_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_pilot_600
       NALUS_LEGAL_V2_BM25_SIDECAR_PATH: /app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_pilot_600.sqlite
       NALUS_LEGAL_V2_BM25_INDEX_ID: nalus_legal_paragraph_bm25_v2_pilot_600
       NALUS_LEGAL_V2_DEFAULT_RESULT_LIMIT: "10"
-      NALUS_LEGAL_V2_MAX_RESULT_LIMIT: "20"
+      NALUS_LEGAL_V2_MAX_RESULT_LIMIT: "50"
+      NALUS_LEGAL_V2_CANDIDATE_DOCUMENTS: "50"
       NALUS_LEGAL_V2_DEBUG: "0"
       EMBEDDING_MODEL_NAME: /root/.cache/huggingface/hub/models--BAAI--bge-m3/snapshots/5617a9f61b028005a4858fdac845db406aefb181
       EMBEDDING_LOCAL_FILES_ONLY: "1"
