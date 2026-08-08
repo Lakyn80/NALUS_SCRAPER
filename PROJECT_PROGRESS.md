@@ -10,6 +10,12 @@
 - Eval: `evaluate_case_similarity_golden_v1.py --profile fast|fast_ce` +
   `export_ce_confusable_review_v1.py` (UNREVIEWED labels only).
 - Model: `BAAI/bge-reranker-v2-m3`; download gated by `CE_ALLOW_DOWNLOAD`.
+- Untuned A/B (CPU): FAST `20260808T190653Z` vs CE `20260808T190938Z`.
+  - FAST: Hit@1=0.60 Hit@10=1.0 MRR≈0.701 HN=0.0
+  - CE: Hit@1=0.75 Hit@10=0.9 MRR≈0.806 HN≈0.053
+  - gained Hit@1: 003,006,009,013,018; lost Hit@1 (+ Hit@10): 004,016
+- **Verdict: `CE_REGRESSION`** (Hit@10 and HN gate failed despite Hit@1/MRR gains).
+  Keep CE OFF; next: expand reviewed confusable set / try alternate CE or ColBERT.
 - Unchanged: Qdrant/BM25/BGE-M3 embeddings, RRF, golden labels, FE default.
 
 ## 2026-08-08 Europe/Moscow — Task: Long-input SearchBrief preprocessing (OFF by default)
