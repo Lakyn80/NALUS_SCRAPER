@@ -1262,6 +1262,10 @@ class CaseSimilarityStage1DocumentResult(BaseModel):
     bm25_rank: int | None = None
     rrf_score: float | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    stage1_rank: int | None = None
+    stage1_score: float | None = None
+    ce_rank: int | None = None
+    ce_score: float | None = None
 
 
 class CaseSimilarityStage1SearchResponse(BaseModel):
@@ -1286,6 +1290,7 @@ class CaseSimilarityStage1ReadyResponse(BaseModel):
     warmup_status: str | None = None
     warmup_required: bool | None = None
     warmup_latency_ms: float | None = None
+    cross_encoder: dict[str, Any] | None = None
 
 
 @router.get(
@@ -1321,6 +1326,7 @@ def case_similarity_stage1_ready() -> CaseSimilarityStage1ReadyResponse:
         warmup_status=payload.get("warmup_status"),
         warmup_required=payload.get("warmup_required"),
         warmup_latency_ms=payload.get("warmup_latency_ms"),
+        cross_encoder=payload.get("cross_encoder"),
     )
 
 
@@ -1430,6 +1436,10 @@ def case_similarity_stage1_search(
                 bm25_rank=item.bm25_rank,
                 rrf_score=item.rrf_score,
                 metadata=item.metadata,
+                stage1_rank=item.stage1_rank,
+                stage1_score=item.stage1_score,
+                ce_rank=item.ce_rank,
+                ce_score=item.ce_score,
             )
             for item in result.results
         ],
@@ -1456,6 +1466,7 @@ def case_similarity_stage1_search(
                 "retrieval_status",
                 "original_query_length",
                 "input_processing",
+                "rerank",
             }
         },
     )

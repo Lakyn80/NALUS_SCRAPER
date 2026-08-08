@@ -82,6 +82,31 @@ SEARCH_BRIEF_CHARS = Histogram(
     buckets=(50, 100, 200, 500, 1000, 1500, 3000, 8000),
 )
 
+RERANK_REQUESTS_TOTAL = Counter(
+    "nalus_legal_v2_rerank_requests_total",
+    "Legal v2 Cross-Encoder rerank requests.",
+    ("status", "device_class"),
+)
+
+RERANK_FAILURES_TOTAL = Counter(
+    "nalus_legal_v2_rerank_failures_total",
+    "Legal v2 Cross-Encoder rerank failures.",
+    ("status", "device_class"),
+)
+
+RERANK_DURATION_SECONDS = Histogram(
+    "nalus_legal_v2_rerank_duration_seconds",
+    "Legal v2 Cross-Encoder rerank duration.",
+    ("status", "device_class"),
+)
+
+RERANK_PAIRS = Histogram(
+    "nalus_legal_v2_rerank_pairs",
+    "Legal v2 Cross-Encoder query/passage pair counts.",
+    ("device_class",),
+    buckets=(1, 3, 10, 30, 60, 90, 150, 300),
+)
+
 
 def record_request(*, endpoint: str, status: str) -> None:
     REQUESTS_TOTAL.labels(endpoint=endpoint, status=status).inc()
@@ -116,4 +141,22 @@ def record_long_input(
             CONDENSATION_FAILURES_TOTAL.labels(method=safe_method, status=safe_status).inc()
         CONDENSED_INPUT_CHARS.labels(method=safe_method).observe(max(0, original_chars))
         SEARCH_BRIEF_CHARS.labels(method=safe_method).observe(max(0, brief_chars))
+
+
+def record_rerank(
+    *,
+    status: str,
+    device_class: str,
+    latency_ms: float,
+    pair_count: int,
+) -> None:
+    safe_status = (status or "unknown")[:40]
+    safe_device = (device_class or "unknown")[:40]
+    RERANK_REQUESTS_TOTAL.labels(status=safe_status, device_class=safe_device).inc()
+    RERANK_DURATION_SECONDS.labels(status=safe_status, device_class=safe_device).observe(
+        max(0.0, latency_ms / 1000.0)
+    )
+    RERANK_PAIRS.labels(device_class=safe_device).observe(max(0, pair_count))
+    if safe_status != "ok":
+        RERANK_FAILURES_TOTAL.labels(status=safe_status, device_class=safe_device).inc()
 

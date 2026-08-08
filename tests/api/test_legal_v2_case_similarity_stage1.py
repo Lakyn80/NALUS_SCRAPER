@@ -398,3 +398,74 @@ def test_probe_not_ready_while_warmup_required_and_cold(monkeypatch: pytest.Monk
     assert payload["ready"] is False
     assert payload["status"] == "cold"
     assert payload["warmup_required"] is True
+    assert payload["cross_encoder"]["status"] == "disabled"
+
+
+def test_ce_disabled_preserves_stage1_order(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CE OFF must keep Stage 1 ordering bit-identical (no rerank side effects)."""
+    from app.rag.legal_v2.retrieve import case_similarity_search as module
+    from app.rag.legal_v2.retrieve.retriever import LegalV2RetrievalResult
+
+    monkeypatch.setenv("NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED", "0")
+
+    class _Para:
+        def __init__(self, text: str, pid: str) -> None:
+            self.normalized_text = text
+            self.original_text = text
+            self.paragraph_id = pid
+            self.section_type = "facts"
+
+    class _Doc:
+        def __init__(self, ecli: str, score: float) -> None:
+            self.document_id = ecli
+            self.score = score
+            self.paragraphs = [_Para(f"text {ecli}", f"c-{ecli}")]
+            self.metadata = {"ecli": ecli}
+            self.dense_rank = 1
+            self.bm25_rank = 1
+            self.rrf_score = score
+
+    ordered = [
+        _Doc("ECLI:CZ:US:2025:1.US.1111.25.1", 0.9),
+        _Doc("ECLI:CZ:US:2025:1.US.2222.25.1", 0.8),
+        _Doc("ECLI:CZ:US:2025:1.US.3333.25.1", 0.7),
+    ]
+
+    class _FakeRetriever:
+        def retrieve(self, query_spec):
+            return LegalV2RetrievalResult(
+                documents=ordered,  # type: ignore[arg-type]
+                dense_results=[],
+                bm25_results=[],
+                fused_results=[],
+                diagnostics={
+                    "dense_latency_ms": 1.0,
+                    "bm25_latency_ms": 1.0,
+                    "rrf_latency_ms": 1.0,
+                    "total_retrieval_latency_ms": 3.0,
+                    "dense_candidate_chunks": 3,
+                    "bm25_candidate_chunks": 3,
+                    "fused_candidate_chunks": 3,
+                    "candidate_documents": 3,
+                },
+            )
+
+    runtime = CaseSimilarityStage1Runtime(
+        retriever=_FakeRetriever(),  # type: ignore[arg-type]
+        config=MagicMock(
+            qdrant_collection="nalus_legal_paragraph_chunks_v2_pilot_600",
+            bm25_index_id="nalus_legal_paragraph_bm25_v2_pilot_600",
+        ),
+        ready=True,
+    )
+    result = module.search_case_similarity_stage1(
+        query="krátký testovací dotaz",
+        limit=2,
+        runtime=runtime,
+    )
+    assert [row.ecli for row in result.results] == [
+        "ECLI:CZ:US:2025:1.US.1111.25.1",
+        "ECLI:CZ:US:2025:1.US.2222.25.1",
+    ]
+    assert result.diagnostics["rerank"]["rerank_applied"] is False
+    assert result.results[0].ce_rank is None

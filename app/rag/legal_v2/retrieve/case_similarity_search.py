@@ -96,6 +96,10 @@ class Stage1DocumentResult:
     bm25_rank: int | None = None
     rrf_score: float | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    stage1_rank: int | None = None
+    stage1_score: float | None = None
+    ce_rank: int | None = None
+    ce_score: float | None = None
 
 
 @dataclass(frozen=True)
@@ -278,6 +282,21 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
         raise
 
 
+def _cross_encoder_readiness_payload() -> dict[str, Any]:
+    from app.rag.legal_v2.rerank.service import get_cross_encoder_reranking_service
+
+    try:
+        return get_cross_encoder_reranking_service().readiness()
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "enabled": False,
+            "status": "unavailable",
+            "model": None,
+            "device": None,
+            "error_type": exc.__class__.__name__,
+        }
+
+
 def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
     """Readiness probe. With warmup-on-start, ready means model+BM25 are loaded."""
     try:
@@ -293,6 +312,7 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
             "bm25_loaded": False,
             "warmup_status": "failed",
             "warmup_required": stage1_warmup_on_start_enabled(),
+            "cross_encoder": _cross_encoder_readiness_payload(),
         }
 
     model_loaded = _embedder_is_loaded(runtime)
@@ -325,6 +345,7 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
         "warmup_required": warmup_required,
         "warmup_latency_ms": runtime.warmup_latency_ms,
         "error_type": runtime.warmup_error_type if not ready else None,
+        "cross_encoder": _cross_encoder_readiness_payload(),
     }
 
 
@@ -371,10 +392,101 @@ def search_case_similarity_stage1(
     query_spec = query_spec_builder(cleaned)
     query_ms = (time.perf_counter() - query_started) * 1000.0
     retrieval = active.retriever.retrieve(query_spec)
-    documents = [
-        _to_stage1_document(document, rank=index)
-        for index, document in enumerate(retrieval.documents[:resolved_limit], start=1)
-    ]
+
+    from app.rag.legal_v2.rerank.config import cross_encoder_config_from_env
+    from app.rag.legal_v2.rerank.errors import (
+        RerankerInferenceError,
+        RerankerInvalidCandidateError,
+        RerankerModelLoadError,
+        RerankerUnavailableError,
+    )
+    from app.rag.legal_v2.rerank.service import get_cross_encoder_reranking_service
+
+    ce_config = cross_encoder_config_from_env()
+    rerank_diagnostics: dict[str, Any] | None = None
+
+    if not ce_config.enabled:
+        # FAST path — bit-identical truncation before DTO mapping.
+        documents = [
+            _to_stage1_document(document, rank=index)
+            for index, document in enumerate(retrieval.documents[:resolved_limit], start=1)
+        ]
+    else:
+        shortlist_n = min(
+            ce_config.candidate_documents,
+            len(retrieval.documents),
+        )
+        shortlist = [
+            _to_stage1_document(document, rank=index)
+            for index, document in enumerate(retrieval.documents[:shortlist_n], start=1)
+        ]
+        by_ecli = {item.ecli: item for item in shortlist}
+        service = get_cross_encoder_reranking_service(ce_config)
+        try:
+            reranked = service.rerank(cleaned, shortlist, require_success=True)
+            rerank_diagnostics = reranked.diagnostics.as_dict()
+            documents = []
+            for item in reranked.documents[:resolved_limit]:
+                source = by_ecli.get(item.ecli)
+                if source is None:
+                    continue
+                documents.append(
+                    Stage1DocumentResult(
+                        rank=item.ce_rank if item.ce_rank <= resolved_limit else len(documents) + 1,
+                        document_id=source.document_id,
+                        canonical_document_id=source.canonical_document_id,
+                        ecli=source.ecli,
+                        court=source.court,
+                        case_number=source.case_number,
+                        decision_date=source.decision_date,
+                        document_type=source.document_type,
+                        score=source.score,
+                        relevant_passages=list(source.relevant_passages),
+                        source_document_id=source.source_document_id,
+                        dense_rank=source.dense_rank,
+                        bm25_rank=source.bm25_rank,
+                        rrf_score=source.rrf_score,
+                        metadata=dict(source.metadata),
+                        stage1_rank=item.stage1_rank,
+                        stage1_score=item.stage1_score,
+                        ce_rank=item.ce_rank,
+                        ce_score=item.ce_score,
+                    )
+                )
+            # Re-number public ranks 1..N after truncation.
+            documents = [
+                Stage1DocumentResult(
+                    rank=index,
+                    document_id=doc.document_id,
+                    canonical_document_id=doc.canonical_document_id,
+                    ecli=doc.ecli,
+                    court=doc.court,
+                    case_number=doc.case_number,
+                    decision_date=doc.decision_date,
+                    document_type=doc.document_type,
+                    score=doc.score,
+                    relevant_passages=list(doc.relevant_passages),
+                    source_document_id=doc.source_document_id,
+                    dense_rank=doc.dense_rank,
+                    bm25_rank=doc.bm25_rank,
+                    rrf_score=doc.rrf_score,
+                    metadata=dict(doc.metadata),
+                    stage1_rank=doc.stage1_rank,
+                    stage1_score=doc.stage1_score,
+                    ce_rank=doc.ce_rank,
+                    ce_score=doc.ce_score,
+                )
+                for index, doc in enumerate(documents, start=1)
+            ]
+        except (
+            RerankerUnavailableError,
+            RerankerModelLoadError,
+            RerankerInferenceError,
+            RerankerInvalidCandidateError,
+        ) as exc:
+            # Experimental CE mode: fail clearly (no silent FAST claim).
+            raise ValueError(f"cross-encoder reranking failed: {exc}") from exc
+
     for document in documents:
         _assert_ecli_identity(document)
 
@@ -406,6 +518,12 @@ def search_case_similarity_stage1(
         "input_processing": prepared.input_processing_diagnostics(
             include_brief_text=False
         ),
+        "rerank": rerank_diagnostics
+        or {
+            "rerank_enabled": False,
+            "rerank_applied": False,
+            "experiment_mode": "fast",
+        },
     }
     if include_debug and stage1_debug_allowed():
         diagnostics["debug"] = _safe_debug_payload(query_spec, retrieval)
@@ -479,6 +597,7 @@ def _to_stage1_document(document, *, rank: int) -> Stage1DocumentResult:
         )
     passages = [item for item in passages if item.text]
 
+    stage1_score = float(document.score or 0.0)
     return Stage1DocumentResult(
         rank=rank,
         document_id=ecli,
@@ -494,7 +613,7 @@ def _to_stage1_document(document, *, rank: int) -> Stage1DocumentResult:
         document_type=_optional_str(
             metadata.get("document_type") or metadata.get("decision_type") or metadata.get("title")
         ),
-        score=float(document.score or 0.0),
+        score=stage1_score,
         relevant_passages=passages,
         source_document_id=source_id,
         dense_rank=document.dense_rank,
@@ -515,6 +634,10 @@ def _to_stage1_document(document, *, rank: int) -> Stage1DocumentResult:
                 "source_document_id",
             }
         },
+        stage1_rank=rank,
+        stage1_score=stage1_score,
+        ce_rank=None,
+        ce_score=None,
     )
 
 
