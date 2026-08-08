@@ -115,6 +115,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=int(os.getenv("NALUS_LEGAL_V2_CE_PASSAGES_PER_DOCUMENT", "3")),
     )
     parser.add_argument(
+        "--ce-passage-selector",
+        default=os.getenv(
+            "NALUS_LEGAL_V2_CE_PASSAGE_SELECTOR",
+            "first_n_stage1_order_v1",
+        ),
+        help="Passage selector policy id (e.g. diversified_stage1_evidence_v1).",
+    )
+    parser.add_argument(
+        "--ce-evidence-pool-limit",
+        type=int,
+        default=int(os.getenv("NALUS_LEGAL_V2_CE_EVIDENCE_POOL_LIMIT", "40")),
+        help="Max Stage-1 evidence chunks retained per candidate for CE selection.",
+    )
+    parser.add_argument(
+        "--ce-experiment-name",
+        default=os.getenv("NALUS_LEGAL_V2_CE_EXPERIMENT_NAME", ""),
+        help="Optional experiment label written into CE manifest (e.g. ce_bge_v2m3_p7_diverse_v1).",
+    )
+    parser.add_argument(
         "--ce-model",
         default=os.getenv("NALUS_LEGAL_V2_CROSS_ENCODER_MODEL", "BAAI/bge-reranker-v2-m3"),
     )
@@ -135,11 +154,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     started = time.perf_counter()
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    default_root = (
-        "case_similarity_ce_v1"
-        if args.profile == "fast_ce"
-        else "case_similarity_golden_v1_baseline"
-    )
+    if args.profile == "fast_ce":
+        experiment_label = str(args.ce_experiment_name or "").strip()
+        default_root = experiment_label or "case_similarity_ce_v1"
+    else:
+        default_root = "case_similarity_golden_v1_baseline"
     output_dir = args.output_dir or (
         PROJECT_ROOT
         / "artifacts"
@@ -190,6 +209,15 @@ def main(argv: list[str] | None = None) -> int:
         "ce_candidate_documents": args.ce_candidate_documents if args.profile == "fast_ce" else None,
         "ce_passages_per_document": (
             args.ce_passages_per_document if args.profile == "fast_ce" else None
+        ),
+        "ce_passage_selector": (
+            args.ce_passage_selector if args.profile == "fast_ce" else None
+        ),
+        "ce_evidence_pool_limit": (
+            args.ce_evidence_pool_limit if args.profile == "fast_ce" else None
+        ),
+        "ce_experiment_name": (
+            args.ce_experiment_name if args.profile == "fast_ce" else None
         ),
         "aggregation": "group_fused_chunks_by_document_id_best_chunk_rrf_plus_evidence_bonus",
         "feature_flags": {
@@ -340,6 +368,8 @@ def main(argv: list[str] | None = None) -> int:
                 max_length=int(os.getenv("NALUS_LEGAL_V2_CE_MAX_LENGTH", "512")),
                 allow_download=allow_download,
                 local_files_only=not allow_download,
+                passage_selector=args.ce_passage_selector,
+                evidence_pool_limit=args.ce_evidence_pool_limit,
             )
         )
         # Fail fast if model cannot load (no silent FAST fallback in CE benchmark).
@@ -421,6 +451,10 @@ def main(argv: list[str] | None = None) -> int:
                     if args.profile == "fast_ce"
                     else args.top_k
                 ),
+                evidence_limit=(
+                    args.ce_evidence_pool_limit if args.profile == "fast_ce" else 5
+                ),
+                prefer_chunk_evidence=args.profile == "fast_ce",
             )
             ranked_rows: list[tuple[str, float | None, float | None, float | None]] = []
             if args.profile == "fast_ce":
@@ -522,17 +556,37 @@ def main(argv: list[str] | None = None) -> int:
         blocked_reason=None,
     )
     if args.profile == "fast_ce":
+        ce_ready = ce_service.readiness() if ce_service is not None else {}
+        provider = ce_service._get_provider() if ce_service is not None else None
         manifest = {
             "experiment_id": run_id,
+            "experiment_name": str(args.ce_experiment_name or "").strip() or None,
             "profile": "fast_plus_ce_experiment",
             "git_commit": git_commit,
             "timestamp": run_id,
             "model_id": args.ce_model,
+            "model_revision": getattr(provider, "model_revision", None),
+            "dtype": getattr(provider, "dtype", None),
+            "device": ce_ready.get("device") or os.getenv("NALUS_LEGAL_V2_CE_DEVICE", "auto"),
+            "max_length": int(os.getenv("NALUS_LEGAL_V2_CE_MAX_LENGTH", "512")),
+            "batch_size": int(os.getenv("NALUS_LEGAL_V2_CE_BATCH_SIZE", "16")),
             "candidate_documents": args.ce_candidate_documents,
             "passages_per_document": args.ce_passages_per_document,
+            "passage_selector": args.ce_passage_selector,
+            "evidence_pool_limit": args.ce_evidence_pool_limit,
+            "document_aggregation": "max",
             "aggregation": "max",
             "stage1_collection": args.qdrant_collection,
             "bm25_index_id": args.bm25_index_id,
+            "stage1_config_fingerprint": {
+                "dense_candidate_chunks": args.dense_candidate_chunks,
+                "bm25_candidate_chunks": args.bm25_candidate_chunks,
+                "fused_candidate_chunks": args.fused_candidate_chunks,
+                "candidate_documents": args.candidate_documents,
+                "rrf_k": LEGAL_V2_PROFILE.rrf_k,
+                "bm25_k1": LEGAL_V2_PROFILE.bm25_k1,
+                "bm25_b": LEGAL_V2_PROFILE.bm25_b,
+            },
             "benchmark_sha256": benchmark_sha,
             "metrics": {
                 "hit_at_1": metrics.hit_at_1,
@@ -569,6 +623,13 @@ def main(argv: list[str] | None = None) -> int:
 class _EvalStage1Passage:
     text: str
     chunk_id: str
+    section: str | None = None
+    page: int | None = None
+    dense_rank: int | None = None
+    bm25_rank: int | None = None
+    rrf_rank: int | None = None
+    retrieval_channels: tuple[str, ...] = ()
+    chunk_position: int | None = None
 
 
 @dataclass
@@ -581,9 +642,16 @@ class _EvalStage1Doc:
     dense_rank: int | None = None
     bm25_rank: int | None = None
     metadata: dict[str, Any] | None = None
+    chunk_evidence: list[dict[str, Any]] | None = None
 
 
-def _stage1_docs_from_retrieval(documents: list[Any], *, limit: int) -> list[_EvalStage1Doc]:
+def _stage1_docs_from_retrieval(
+    documents: list[Any],
+    *,
+    limit: int,
+    evidence_limit: int = 5,
+    prefer_chunk_evidence: bool = False,
+) -> list[_EvalStage1Doc]:
     out: list[_EvalStage1Doc] = []
     for index, doc in enumerate(list(documents)[: max(0, limit)], start=1):
         raw_id = str(getattr(doc, "document_id", "") or "")
@@ -592,21 +660,51 @@ def _stage1_docs_from_retrieval(documents: list[Any], *, limit: int) -> list[_Ev
         ecli = normalize_ecli(ecli_raw) if is_valid_ecli(ecli_raw) else ""
         if not ecli:
             continue
+        chunk_evidence_raw = [
+            dict(item)
+            for item in list(getattr(doc, "chunk_evidence", None) or [])[
+                : max(0, int(evidence_limit))
+            ]
+            if isinstance(item, dict)
+        ]
         passages: list[_EvalStage1Passage] = []
-        for paragraph in list(getattr(doc, "paragraphs", None) or [])[:5]:
-            text = str(
-                getattr(paragraph, "normalized_text", None)
-                or getattr(paragraph, "original_text", None)
-                or ""
-            ).strip()
-            if not text:
-                continue
-            passages.append(
-                _EvalStage1Passage(
-                    text=text,
-                    chunk_id=str(getattr(paragraph, "paragraph_id", "") or f"p-{len(passages)}"),
+        if prefer_chunk_evidence and chunk_evidence_raw:
+            for item in chunk_evidence_raw:
+                text = str(item.get("text") or "").strip()
+                if not text:
+                    continue
+                passages.append(
+                    _EvalStage1Passage(
+                        text=text,
+                        chunk_id=str(item.get("chunk_id") or f"p-{len(passages)}"),
+                        section=item.get("section"),
+                        page=item.get("page"),
+                        dense_rank=item.get("dense_rank"),
+                        bm25_rank=item.get("bm25_rank"),
+                        rrf_rank=item.get("rrf_rank"),
+                        retrieval_channels=tuple(item.get("retrieval_channels") or ()),
+                        chunk_position=item.get("chunk_position"),
+                    )
                 )
-            )
+        else:
+            for paragraph in list(getattr(doc, "paragraphs", None) or [])[
+                : max(0, int(evidence_limit))
+            ]:
+                text = str(
+                    getattr(paragraph, "normalized_text", None)
+                    or getattr(paragraph, "original_text", None)
+                    or ""
+                ).strip()
+                if not text:
+                    continue
+                passages.append(
+                    _EvalStage1Passage(
+                        text=text,
+                        chunk_id=str(
+                            getattr(paragraph, "paragraph_id", "") or f"p-{len(passages)}"
+                        ),
+                    )
+                )
         out.append(
             _EvalStage1Doc(
                 ecli=ecli,
@@ -617,6 +715,7 @@ def _stage1_docs_from_retrieval(documents: list[Any], *, limit: int) -> list[_Ev
                 dense_rank=getattr(doc, "dense_rank", None),
                 bm25_rank=getattr(doc, "bm25_rank", None),
                 metadata=meta,
+                chunk_evidence=chunk_evidence_raw,
             )
         )
     return out
