@@ -1,5 +1,17 @@
 # Project Progress
 
+## 2026-08-08 Europe/Moscow — Task: Cross-Encoder rerank experiment (OFF by default)
+
+- Goal: additive local CE rerank above frozen Stage 1 shortlist (`FAST+CE`),
+  measure ranking benefit without changing Stage 1 knobs/corpus.
+- Added `app/rag/legal_v2/rerank/` (provider Protocol, ST CrossEncoder,
+  passage select, max aggregation, service).
+- Flag `NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED=0`; CE OFF path keeps Stage 1 order.
+- Eval: `evaluate_case_similarity_golden_v1.py --profile fast|fast_ce` +
+  `export_ce_confusable_review_v1.py` (UNREVIEWED labels only).
+- Model: `BAAI/bge-reranker-v2-m3`; download gated by `CE_ALLOW_DOWNLOAD`.
+- Unchanged: Qdrant/BM25/BGE-M3 embeddings, RRF, golden labels, FE default.
+
 ## 2026-08-08 Europe/Moscow — Task: Long-input SearchBrief preprocessing (OFF by default)
 
 - Goal: modular pre-retrieval layer for long pasted legal text without changing

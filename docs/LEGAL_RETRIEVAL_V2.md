@@ -11,7 +11,10 @@ queries pass through unchanged. Active provider: extractive (no LLM).
 ## Stage 1 case-similarity search (production-testable)
 
 Status: **deployed for local Docker pilot testing**. Candidate retrieval only —
-no ColBERT, no cross-encoder, no paid LLM on this path.
+no ColBERT, no paid LLM on this path. Cross-Encoder rerank is an **optional
+experiment** (`NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED=0` by default): when OFF,
+Stage 1 ordering is unchanged; when ON, CE reranks the Stage 1 shortlist only
+(`FAST_PLUS_CE_EXPERIMENT`, not a user-facing PRECISE profile yet).
 
 ### Pipeline
 

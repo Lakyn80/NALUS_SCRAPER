@@ -39,4 +39,5 @@ docker run --rm `
   python scripts/legal_v2/evaluate_case_similarity_golden_v1.py `
   --qdrant-url $QdrantUrl `
   --bm25-sidecar-path $Bm25Path `
-  --bm25-index-id $Bm25Id
+  --bm25-index-id $Bm25Id `
+  @args

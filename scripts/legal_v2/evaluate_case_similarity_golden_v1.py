@@ -16,6 +16,7 @@ import os
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -98,6 +99,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--candidate-documents", type=int, default=40)
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument(
+        "--profile",
+        choices=("fast", "fast_ce"),
+        default="fast",
+        help="fast = Stage 1 only; fast_ce = Stage 1 shortlist + Cross-Encoder rerank.",
+    )
+    parser.add_argument(
+        "--ce-candidate-documents",
+        type=int,
+        default=int(os.getenv("NALUS_LEGAL_V2_CE_CANDIDATE_DOCUMENTS", "30")),
+    )
+    parser.add_argument(
+        "--ce-passages-per-document",
+        type=int,
+        default=int(os.getenv("NALUS_LEGAL_V2_CE_PASSAGES_PER_DOCUMENT", "3")),
+    )
+    parser.add_argument(
+        "--ce-model",
+        default=os.getenv("NALUS_LEGAL_V2_CROSS_ENCODER_MODEL", "BAAI/bge-reranker-v2-m3"),
+    )
+    parser.add_argument(
         "--allow-scoring-with-missing-primaries",
         action="store_true",
         help="Run retrieval even when primary documents are missing from the index.",
@@ -114,11 +135,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     started = time.perf_counter()
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    default_root = (
+        "case_similarity_ce_v1"
+        if args.profile == "fast_ce"
+        else "case_similarity_golden_v1_baseline"
+    )
     output_dir = args.output_dir or (
         PROJECT_ROOT
         / "artifacts"
         / "legal_v2"
-        / "case_similarity_golden_v1_baseline"
+        / default_root
         / run_id
     )
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -157,11 +183,21 @@ def main(argv: list[str] | None = None) -> int:
         "fused_candidate_chunks": args.fused_candidate_chunks,
         "candidate_documents": args.candidate_documents,
         "top_k_documents": args.top_k,
-        "reranker": None,
+        "profile": args.profile,
+        "reranker": (
+            f"cross_encoder:{args.ce_model}" if args.profile == "fast_ce" else None
+        ),
+        "ce_candidate_documents": args.ce_candidate_documents if args.profile == "fast_ce" else None,
+        "ce_passages_per_document": (
+            args.ce_passages_per_document if args.profile == "fast_ce" else None
+        ),
         "aggregation": "group_fused_chunks_by_document_id_best_chunk_rrf_plus_evidence_bonus",
         "feature_flags": {
             "NALUS_LEGAL_V2_SEARCH_ENABLED": os.getenv("NALUS_LEGAL_V2_SEARCH_ENABLED"),
             "NALUS_LEGAL_V2_QDRANT_COLLECTION": os.getenv("NALUS_LEGAL_V2_QDRANT_COLLECTION"),
+            "NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED": os.getenv(
+                "NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED"
+            ),
         },
         "paid_provider_calls": False,
     }
@@ -282,6 +318,33 @@ def main(argv: list[str] | None = None) -> int:
     embedder = BgeM3Embedder(_embedder_config(retriever_config))
     retriever = build_live_legal_v2_retriever(client, embedder, retriever_config)
 
+    ce_service = None
+    if args.profile == "fast_ce":
+        from app.rag.legal_v2.rerank.config import CrossEncoderConfig
+        from app.rag.legal_v2.rerank.service import CrossEncoderRerankingService
+
+        allow_download = os.getenv("NALUS_LEGAL_V2_CE_ALLOW_DOWNLOAD", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        ce_service = CrossEncoderRerankingService(
+            CrossEncoderConfig(
+                enabled=True,
+                model_id=args.ce_model,
+                candidate_documents=args.ce_candidate_documents,
+                passages_per_document=args.ce_passages_per_document,
+                batch_size=int(os.getenv("NALUS_LEGAL_V2_CE_BATCH_SIZE", "16")),
+                device=os.getenv("NALUS_LEGAL_V2_CE_DEVICE", "auto"),
+                max_length=int(os.getenv("NALUS_LEGAL_V2_CE_MAX_LENGTH", "512")),
+                allow_download=allow_download,
+                local_files_only=not allow_download,
+            )
+        )
+        # Fail fast if model cannot load (no silent FAST fallback in CE benchmark).
+        ce_service._get_provider().load()
+
     results: list[CaseSimilarityQueryEvalResult] = []
     for item in items:
         primary_ecli = normalize_ecli(item.expected_primary_ecli) if item.expected_primary_ecli else None
@@ -351,29 +414,51 @@ def main(argv: list[str] | None = None) -> int:
                     "collection drift: "
                     f"{retrieval.diagnostics.get('collection')} != {args.qdrant_collection}"
                 )
+            stage1_docs = _stage1_docs_from_retrieval(
+                retrieval.documents,
+                limit=(
+                    args.ce_candidate_documents
+                    if args.profile == "fast_ce"
+                    else args.top_k
+                ),
+            )
+            ranked_rows: list[tuple[str, float | None, float | None, float | None]] = []
+            if args.profile == "fast_ce":
+                assert ce_service is not None
+                reranked = ce_service.rerank(item.query, stage1_docs, require_success=True)
+                for row in reranked.documents:
+                    ranked_rows.append(
+                        (row.ecli, row.stage1_score, row.rrf_score, row.ce_score)
+                    )
+            else:
+                for doc in stage1_docs:
+                    ranked_rows.append(
+                        (doc.ecli, doc.score, getattr(doc, "rrf_score", None), None)
+                    )
+
             ranked_eclis: list[str] = []
             retrieved_results: list[RetrievedDocumentScore] = []
             missing_ecli = False
-            for doc in retrieval.documents:
-                ecli = normalize_ecli(doc.document_id) if is_valid_ecli(doc.document_id) else ""
-                if not ecli:
+            for ecli, stage1_score, rrf_score, ce_score in ranked_rows:
+                if not ecli or not is_valid_ecli(ecli):
                     missing_ecli = True
                     continue
-                if ecli in ranked_eclis:
+                ecli_n = normalize_ecli(ecli)
+                if ecli_n in ranked_eclis:
                     continue
-                ranked_eclis.append(ecli)
+                ranked_eclis.append(ecli_n)
                 retrieved_results.append(
                     RetrievedDocumentScore(
                         rank=len(retrieved_results) + 1,
-                        document_id=ecli,
-                        ecli=ecli,
-                        canonical_document_id=ecli,
+                        document_id=ecli_n,
+                        ecli=ecli_n,
+                        canonical_document_id=ecli_n,
                         source_document_id=None,
-                        score=getattr(doc, "score", None),
+                        score=stage1_score,
                         dense_score=None,
                         sparse_score=None,
-                        fusion_score=getattr(doc, "rrf_score", None),
-                        reranker_score=None,
+                        fusion_score=rrf_score,
+                        reranker_score=ce_score,
                     )
                 )
                 if len(ranked_eclis) >= args.top_k:
@@ -436,6 +521,32 @@ def main(argv: list[str] | None = None) -> int:
         elapsed_s=time.perf_counter() - started,
         blocked_reason=None,
     )
+    if args.profile == "fast_ce":
+        manifest = {
+            "experiment_id": run_id,
+            "profile": "fast_plus_ce_experiment",
+            "git_commit": git_commit,
+            "timestamp": run_id,
+            "model_id": args.ce_model,
+            "candidate_documents": args.ce_candidate_documents,
+            "passages_per_document": args.ce_passages_per_document,
+            "aggregation": "max",
+            "stage1_collection": args.qdrant_collection,
+            "bm25_index_id": args.bm25_index_id,
+            "benchmark_sha256": benchmark_sha,
+            "metrics": {
+                "hit_at_1": metrics.hit_at_1,
+                "hit_at_10": metrics.hit_at_10,
+                "mrr": metrics.mrr,
+                "hn_outrank_rate": metrics.hard_negative_outrank_rate,
+                "evaluable": metrics.evaluable_positive_retrieval_queries,
+                "retrieval_failures": metrics.retrieval_execution_failures,
+            },
+        }
+        (output_dir / "ce_experiment_manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
     print(
         "\n".join(
             [
@@ -452,6 +563,63 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     return 0
+
+
+@dataclass
+class _EvalStage1Passage:
+    text: str
+    chunk_id: str
+
+
+@dataclass
+class _EvalStage1Doc:
+    ecli: str
+    rank: int
+    score: float
+    relevant_passages: list[_EvalStage1Passage]
+    rrf_score: float | None = None
+    dense_rank: int | None = None
+    bm25_rank: int | None = None
+    metadata: dict[str, Any] | None = None
+
+
+def _stage1_docs_from_retrieval(documents: list[Any], *, limit: int) -> list[_EvalStage1Doc]:
+    out: list[_EvalStage1Doc] = []
+    for index, doc in enumerate(list(documents)[: max(0, limit)], start=1):
+        raw_id = str(getattr(doc, "document_id", "") or "")
+        meta = dict(getattr(doc, "metadata", None) or {})
+        ecli_raw = str(meta.get("ecli") or raw_id)
+        ecli = normalize_ecli(ecli_raw) if is_valid_ecli(ecli_raw) else ""
+        if not ecli:
+            continue
+        passages: list[_EvalStage1Passage] = []
+        for paragraph in list(getattr(doc, "paragraphs", None) or [])[:5]:
+            text = str(
+                getattr(paragraph, "normalized_text", None)
+                or getattr(paragraph, "original_text", None)
+                or ""
+            ).strip()
+            if not text:
+                continue
+            passages.append(
+                _EvalStage1Passage(
+                    text=text,
+                    chunk_id=str(getattr(paragraph, "paragraph_id", "") or f"p-{len(passages)}"),
+                )
+            )
+        out.append(
+            _EvalStage1Doc(
+                ecli=ecli,
+                rank=index,
+                score=float(getattr(doc, "score", 0.0) or 0.0),
+                relevant_passages=passages,
+                rrf_score=getattr(doc, "rrf_score", None),
+                dense_rank=getattr(doc, "dense_rank", None),
+                bm25_rank=getattr(doc, "bm25_rank", None),
+                metadata=meta,
+            )
+        )
+    return out
 
 
 def _embedder_config(config: LegalV2RetrieverConfig) -> ProductionRetrievalConfig:
