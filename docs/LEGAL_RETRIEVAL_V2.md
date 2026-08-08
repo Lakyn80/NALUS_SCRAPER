@@ -16,6 +16,40 @@ experiment** (`NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED=0` by default): when OFF,
 Stage 1 ordering is unchanged; when ON, CE reranks the Stage 1 shortlist only
 (`FAST_PLUS_CE_EXPERIMENT`, not a user-facing PRECISE profile yet).
 
+### CE passage coverage experiment (CE-7)
+
+This is a **passage coverage experiment**, not open-ended CE metric tuning.
+
+Why 7 passages: three Stage-1 evidence passages can underrepresent long judicial
+decisions. Seven passages allow two strong evidence opportunities from each major
+Stage 1 retrieval channel (RRF / dense / BM25) plus one diversity/support slot,
+while keeping CE inference bounded (`≤ 30 × 7 = 210` pairs/query).
+
+Selector policy: `diversified_stage1_evidence_v1` (deterministic; no randomness;
+does not read golden labels / expected ECLI). CE-3 reference selector remains
+`first_n_stage1_order_v1`.
+
+Frozen from CE-3: model `BAAI/bge-reranker-v2-m3`, candidate docs `30`,
+document aggregation `max`, `max_length=512`. Only intended quality variable:
+passage policy `3 × first_n` → `7 × diversified`.
+
+Pilot golden result (`ce_bge_v2m3_p7_diverse_v1` / `20260808T214850Z`):
+
+```text
+Hit@1=0.75  Hit@10=1.0  MRR=0.8375  HN outrank=0.0  failures=0
+```
+
+Critical CE-3 misses recovered into TOP 10: `004` (rank 3), `016` (rank 1).
+Classification: `PASSAGE_COVERAGE_FIX_CONFIRMED`. Recommendation:
+`STOP_AT_7_AND_CONTINUE_CE_ARCHITECTURE`. **CE-10 was intentionally not run**
+and requires a separate decision; current evidence does not justify it.
+
+Env knobs (still default OFF for CE):
+
+- `NALUS_LEGAL_V2_CE_PASSAGES_PER_DOCUMENT` (experiment used `7`)
+- `NALUS_LEGAL_V2_CE_PASSAGE_SELECTOR=diversified_stage1_evidence_v1`
+- `NALUS_LEGAL_V2_CE_EVIDENCE_POOL_LIMIT` (experiment used `40`)
+
 ### Pipeline
 
 ```text

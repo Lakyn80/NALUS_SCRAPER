@@ -1,5 +1,25 @@
 # Project Progress
 
+## 2026-08-09 Europe/Moscow — Task: CE-7 diversified passage coverage experiment
+
+- Goal: controlled CE passage-coverage test vs CE-3 (`3 → 7` passages) using
+  deterministic selector `diversified_stage1_evidence_v1` (RRF/dense/BM25 +
+  diversity), not “first 7 chunks”.
+- Frozen: CE model/revision/`max_length`/batch policy, candidates=30,
+  aggregation=`max`, Stage 1 / QuerySpec / BM25 / RRF / golden labels; FE OFF;
+  **CE-10 not run**.
+- Additive Stage-1 `chunk_evidence` provenance for selectors; CE OFF order
+  regression preserved.
+- Artifacts: diagnostics `.../20260808T213610Z_diagnostics_004_016`;
+  full run `ce_bge_v2m3_p7_diverse_v1/20260808T214850Z`;
+  rank-diff `.../20260808T214850Z_vs_fast_ce3`.
+- Metrics vs FAST / CE-3: Hit@1 0.60/0.75/**0.75**; Hit@10 1.0/0.9/**1.0**;
+  MRR ~0.701/~0.806/**0.8375**; HN 0.0/~0.053/**0.0**.
+- 004: CE-3 out of TOP10 → CE-7 rank 3; 016: CE-3 out + HN → CE-7 rank 1.
+- **Verdict: `PASSAGE_COVERAGE_FIX_CONFIRMED`**. Recommendation:
+  `STOP_AT_7_AND_CONTINUE_CE_ARCHITECTURE` (do not auto-run CE-10).
+- CE remains default OFF; next architecture work is not “more passages”.
+
 ## 2026-08-08 Europe/Moscow — Task: Cross-Encoder rerank experiment (OFF by default)
 
 - Goal: additive local CE rerank above frozen Stage 1 shortlist (`FAST+CE`),
