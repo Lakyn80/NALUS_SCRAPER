@@ -7,12 +7,42 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class EvidenceChunkRecord:
+    """Stage-1 chunk provenance available to passage selectors."""
+
+    chunk_id: str
+    text: str
+    dense_rank: int | None = None
+    bm25_rank: int | None = None
+    rrf_rank: int | None = None
+    dense_score: float | None = None
+    bm25_score: float | None = None
+    rrf_score: float | None = None
+    retrieval_channels: tuple[str, ...] = ()
+    chunk_position: int | None = None
+    section: str | None = None
+    page: int | None = None
+
+
+@dataclass(frozen=True)
 class RerankPassage:
     ecli: str
     text: str
     chunk_id: str
     stage1_document_rank: int
     passage_index: int = 0
+    selection_slot: int | None = None
+    selection_reason: str | None = None
+    dense_rank: int | None = None
+    bm25_rank: int | None = None
+    rrf_rank: int | None = None
+    retrieval_channels: tuple[str, ...] = ()
+    chunk_position: int | None = None
+    section: str | None = None
+    page: int | None = None
+    near_duplicate_filtered_count: int = 0
+    requested_passages: int | None = None
+    selected_passages: int | None = None
 
 
 @dataclass(frozen=True)
@@ -34,6 +64,7 @@ class RerankCandidate:
     bm25_rank: int | None = None
     rrf_score: float | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    evidence_pool: tuple[EvidenceChunkRecord, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -67,6 +98,9 @@ class RerankDiagnostics:
     warnings: tuple[str, ...] = ()
     model_revision: str | None = None
     dtype: str | None = None
+    passage_selector: str | None = None
+    requested_passages_per_document: int | None = None
+    mean_selected_passages: float | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -85,6 +119,9 @@ class RerankDiagnostics:
             "warnings": list(self.warnings),
             "model_revision": self.model_revision,
             "dtype": self.dtype,
+            "passage_selector": self.passage_selector,
+            "requested_passages_per_document": self.requested_passages_per_document,
+            "mean_selected_passages": self.mean_selected_passages,
         }
 
 

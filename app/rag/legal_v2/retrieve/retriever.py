@@ -127,7 +127,7 @@ def legal_v2_retriever_config_from_env() -> LegalV2RetrieverConfig:
         dense_candidate_chunks=_int_env("NALUS_LEGAL_V2_DENSE_CANDIDATE_CHUNKS", 80),
         bm25_candidate_chunks=_int_env("NALUS_LEGAL_V2_BM25_CANDIDATE_CHUNKS", 80),
         fused_candidate_chunks=_int_env("NALUS_LEGAL_V2_FUSED_CANDIDATE_CHUNKS", 120),
-        candidate_documents=_int_env("NALUS_LEGAL_V2_CANDIDATE_DOCUMENTS", 40),
+        candidate_documents=_int_env("NALUS_LEGAL_V2_CANDIDATE_DOCUMENTS", 50),
         returned_verified_documents=_int_env("NALUS_LEGAL_V2_RETURNED_VERIFIED_DOCUMENTS", 10),
         evidence_windows_per_constraint=_int_env("NALUS_LEGAL_V2_EVIDENCE_WINDOWS_PER_CONSTRAINT", 2),
     )
@@ -174,6 +174,7 @@ def _aggregate_documents(
 
     dense_rank = {chunk.id: index for index, chunk in enumerate(dense, start=1)}
     bm25_rank = {chunk.id: index for index, chunk in enumerate(bm25, start=1)}
+    rrf_rank = {chunk.id: index for index, chunk in enumerate(fused, start=1)}
     grouped: dict[str, list[RetrievedChunk]] = {}
     display_ids: dict[str, str] = {}
     for chunk in fused:
@@ -190,6 +191,12 @@ def _aggregate_documents(
         paragraphs = _paragraphs_from_chunks(document_id, ordered)
         best = max(chunks, key=lambda chunk: chunk.score)
         evidence_score = _document_evidence_score(chunks, query_spec)
+        chunk_evidence = _chunk_evidence_records(
+            ordered,
+            dense_rank=dense_rank,
+            bm25_rank=bm25_rank,
+            rrf_rank=rrf_rank,
+        )
         documents.append(
             CandidateEvidenceDocument(
                 document_id=document_id,
@@ -200,6 +207,7 @@ def _aggregate_documents(
                 bm25_rank=min((bm25_rank.get(chunk.id, 999999) for chunk in chunks), default=None),
                 rrf_score=float(best.metadata.get("rrf_score") or best.score),
                 chunk_ids=[chunk.id for chunk in ordered],
+                chunk_evidence=chunk_evidence,
             )
         )
     documents.sort(key=lambda doc: (-doc.score, _rank_value(doc.dense_rank), _rank_value(doc.bm25_rank), doc.document_id))
@@ -235,6 +243,60 @@ def _any_token_matches(text: str, value: str) -> bool:
 
 def _rank_value(value: int | None) -> int:
     return value if value is not None else 999999
+
+
+def _chunk_evidence_records(
+    ordered: list[RetrievedChunk],
+    *,
+    dense_rank: dict[str, int],
+    bm25_rank: dict[str, int],
+    rrf_rank: dict[str, int],
+) -> list[dict[str, Any]]:
+    """Bounded per-chunk Stage-1 provenance for CE passage selection."""
+    records: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for position, chunk in enumerate(ordered):
+        chunk_id = str(chunk.id or "")
+        if not chunk_id or chunk_id in seen:
+            continue
+        seen.add(chunk_id)
+        metadata = dict(chunk.metadata or {})
+        text = str(chunk.text or "").strip()
+        if not text:
+            continue
+        d_rank = dense_rank.get(chunk_id)
+        b_rank = bm25_rank.get(chunk_id)
+        r_rank = rrf_rank.get(chunk_id)
+        channels: list[str] = []
+        if r_rank is not None:
+            channels.append("rrf")
+        if d_rank is not None:
+            channels.append("dense")
+        if b_rank is not None:
+            channels.append("bm25")
+        records.append(
+            {
+                "chunk_id": chunk_id,
+                "text": text,
+                "dense_rank": d_rank,
+                "bm25_rank": b_rank,
+                "rrf_rank": r_rank,
+                "dense_score": None,
+                "bm25_score": None,
+                "rrf_score": float(metadata.get("rrf_score") or chunk.score)
+                if r_rank is not None
+                else None,
+                "section": str(metadata.get("section_type") or "") or None,
+                "page": metadata.get("page"),
+                "chunk_position": int(
+                    metadata.get("source_order")
+                    or metadata.get("chunk_index")
+                    or position
+                ),
+                "retrieval_channels": channels,
+            }
+        )
+    return records
 
 
 def _paragraphs_from_chunks(document_id: str, chunks: list[RetrievedChunk]) -> list[LegalParagraph]:

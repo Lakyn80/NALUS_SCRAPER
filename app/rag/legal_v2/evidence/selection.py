@@ -34,6 +34,8 @@ class CandidateEvidenceDocument:
     bm25_rank: int | None = None
     rrf_score: float | None = None
     chunk_ids: list[str] = field(default_factory=list)
+    # Additive Stage-1 evidence provenance for CE selectors (does not affect ranking).
+    chunk_evidence: list[dict[str, Any]] = field(default_factory=list)
 
 
 def select_evidence_windows(

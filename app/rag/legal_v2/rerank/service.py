@@ -23,6 +23,8 @@ from app.rag.legal_v2.rerank.passage_selection import build_candidates_from_stag
 from app.rag.legal_v2.rerank.providers.cross_encoder import (
     SentenceTransformersCrossEncoderProvider,
 )
+from app.rag.legal_v2.rerank.selectors.base import EvidencePassageSelector
+from app.rag.legal_v2.rerank.selectors.policy import get_evidence_passage_selector
 
 
 class CrossEncoderRerankingService:
@@ -31,10 +33,14 @@ class CrossEncoderRerankingService:
         config: CrossEncoderConfig | None = None,
         *,
         provider: Any | None = None,
+        passage_selector: EvidencePassageSelector | None = None,
     ) -> None:
         self._config = config or cross_encoder_config_from_env()
         self._config.validate()
         self._provider = provider
+        self._passage_selector = passage_selector or get_evidence_passage_selector(
+            self._config.passage_selector
+        )
 
     @property
     def config(self) -> CrossEncoderConfig:
@@ -99,12 +105,20 @@ class CrossEncoderRerankingService:
             shortlist,
             max_documents=self._config.candidate_documents,
             max_passages=self._config.passages_per_document,
+            selector=self._passage_selector,
+            passage_selector_name=self._config.passage_selector,
         )
         if not candidates:
             raise RerankerInvalidCandidateError("no valid CE candidates after passage selection")
 
         all_passages = tuple(p for c in candidates for p in c.passages)
         pair_count = len(all_passages)
+        selected_counts = [len(c.passages) for c in candidates]
+        mean_selected = (
+            float(sum(selected_counts)) / float(len(selected_counts))
+            if selected_counts
+            else 0.0
+        )
         batch_count = (
             (pair_count + self._config.batch_size - 1) // self._config.batch_size
             if pair_count
@@ -152,6 +166,11 @@ class CrossEncoderRerankingService:
             warnings=warnings,
             model_revision=getattr(provider, "model_revision", None),
             dtype=getattr(provider, "dtype", None),
+            passage_selector=getattr(
+                self._passage_selector, "policy_id", self._config.passage_selector
+            ),
+            requested_passages_per_document=self._config.passages_per_document,
+            mean_selected_passages=mean_selected,
         )
         return RerankResult(documents=ranked, diagnostics=diagnostics)
 

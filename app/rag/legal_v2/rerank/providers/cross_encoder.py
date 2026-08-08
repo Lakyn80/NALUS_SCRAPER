@@ -94,31 +94,24 @@ class SentenceTransformersCrossEncoderProvider:
                     "sentence-transformers CrossEncoder is unavailable"
                 ) from exc
             try:
+                # sentence-transformers>=5 exposes local_files_only as a top-level
+                # CrossEncoder kwarg; do not also pass it via model_kwargs.
                 try:
                     self._model = CrossEncoder(
                         self.model_id,
                         device=device,
                         max_length=int(self._config.max_length),
                         trust_remote_code=False,
-                        model_kwargs={"local_files_only": local_files_only},
-                        tokenizer_kwargs={"local_files_only": local_files_only},
+                        local_files_only=local_files_only,
                     )
                 except TypeError:
-                    # Older ST signatures may use deprecated kwargs or omit them.
-                    try:
-                        self._model = CrossEncoder(
-                            self.model_id,
-                            device=device,
-                            max_length=int(self._config.max_length),
-                            automodel_args={"local_files_only": local_files_only},
-                            tokenizer_args={"local_files_only": local_files_only},
-                        )
-                    except TypeError:
-                        self._model = CrossEncoder(
-                            self.model_id,
-                            device=device,
-                            max_length=int(self._config.max_length),
-                        )
+                    # Older ST signatures may omit local_files_only.
+                    self._model = CrossEncoder(
+                        self.model_id,
+                        device=device,
+                        max_length=int(self._config.max_length),
+                        trust_remote_code=False,
+                    )
             except Exception as exc:  # noqa: BLE001
                 raise RerankerModelLoadError(
                     f"failed to load cross-encoder model {self.model_id!r}"

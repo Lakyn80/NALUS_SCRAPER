@@ -77,6 +77,11 @@ class Stage1Passage:
     section: str | None = None
     page: int | None = None
     score: float | None = None
+    dense_rank: int | None = None
+    bm25_rank: int | None = None
+    rrf_rank: int | None = None
+    retrieval_channels: tuple[str, ...] = ()
+    chunk_position: int | None = None
 
 
 @dataclass(frozen=True)
@@ -100,6 +105,7 @@ class Stage1DocumentResult:
     stage1_score: float | None = None
     ce_rank: int | None = None
     ce_score: float | None = None
+    chunk_evidence: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -406,7 +412,7 @@ def search_case_similarity_stage1(
     rerank_diagnostics: dict[str, Any] | None = None
 
     if not ce_config.enabled:
-        # FAST path — bit-identical truncation before DTO mapping.
+        # FAST path — preserve historical public passage truncation (first 5 paragraphs).
         documents = [
             _to_stage1_document(document, rank=index)
             for index, document in enumerate(retrieval.documents[:resolved_limit], start=1)
@@ -417,7 +423,12 @@ def search_case_similarity_stage1(
             len(retrieval.documents),
         )
         shortlist = [
-            _to_stage1_document(document, rank=index)
+            _to_stage1_document(
+                document,
+                rank=index,
+                evidence_limit=ce_config.evidence_pool_limit,
+                prefer_chunk_evidence=True,
+            )
             for index, document in enumerate(retrieval.documents[:shortlist_n], start=1)
         ]
         by_ecli = {item.ecli: item for item in shortlist}
@@ -430,6 +441,8 @@ def search_case_similarity_stage1(
                 source = by_ecli.get(item.ecli)
                 if source is None:
                     continue
+                # Public response keeps a short passage preview; CE used the fuller pool.
+                public_passages = list(source.relevant_passages)[:5]
                 documents.append(
                     Stage1DocumentResult(
                         rank=item.ce_rank if item.ce_rank <= resolved_limit else len(documents) + 1,
@@ -441,7 +454,7 @@ def search_case_similarity_stage1(
                         decision_date=source.decision_date,
                         document_type=source.document_type,
                         score=source.score,
-                        relevant_passages=list(source.relevant_passages),
+                        relevant_passages=public_passages,
                         source_document_id=source.source_document_id,
                         dense_rank=source.dense_rank,
                         bm25_rank=source.bm25_rank,
@@ -451,6 +464,7 @@ def search_case_similarity_stage1(
                         stage1_score=item.stage1_score,
                         ce_rank=item.ce_rank,
                         ce_score=item.ce_score,
+                        chunk_evidence=list(source.chunk_evidence),
                     )
                 )
             # Re-number public ranks 1..N after truncation.
@@ -475,6 +489,7 @@ def search_case_similarity_stage1(
                     stage1_score=doc.stage1_score,
                     ce_rank=doc.ce_rank,
                     ce_score=doc.ce_score,
+                    chunk_evidence=list(doc.chunk_evidence),
                 )
                 for index, doc in enumerate(documents, start=1)
             ]
@@ -563,7 +578,13 @@ def search_case_similarity_stage1(
     )
 
 
-def _to_stage1_document(document, *, rank: int) -> Stage1DocumentResult:
+def _to_stage1_document(
+    document,
+    *,
+    rank: int,
+    evidence_limit: int = 5,
+    prefer_chunk_evidence: bool = False,
+) -> Stage1DocumentResult:
     metadata = dict(document.metadata or {})
     ecli_raw = metadata.get("ecli") or document.document_id
     ecli = normalize_ecli(str(ecli_raw)) if is_valid_ecli(str(ecli_raw)) else str(ecli_raw)
@@ -581,20 +602,47 @@ def _to_stage1_document(document, *, rank: int) -> Stage1DocumentResult:
             # Never promote doc-* to the public identity.
             source_id = raw_doc
 
+    chunk_evidence_raw = list(getattr(document, "chunk_evidence", None) or [])
+    chunk_evidence = [
+        dict(item) for item in chunk_evidence_raw[: max(0, int(evidence_limit))] if isinstance(item, dict)
+    ]
+
     passages: list[Stage1Passage] = []
-    for paragraph in list(document.paragraphs or [])[:5]:
-        section = getattr(paragraph.section_type, "value", None) or str(
-            getattr(paragraph, "section_type", "") or ""
-        ) or None
-        passages.append(
-            Stage1Passage(
-                text=str(paragraph.normalized_text or paragraph.original_text or "").strip(),
-                chunk_id=str(paragraph.paragraph_id or ""),
-                section=section,
-                page=None,
-                score=None,
+    if prefer_chunk_evidence and chunk_evidence:
+        for item in chunk_evidence:
+            text = str(item.get("text") or "").strip()
+            if not text:
+                continue
+            channels = tuple(item.get("retrieval_channels") or ())
+            passages.append(
+                Stage1Passage(
+                    text=text,
+                    chunk_id=str(item.get("chunk_id") or ""),
+                    section=item.get("section"),
+                    page=item.get("page"),
+                    score=item.get("rrf_score"),
+                    dense_rank=item.get("dense_rank"),
+                    bm25_rank=item.get("bm25_rank"),
+                    rrf_rank=item.get("rrf_rank"),
+                    retrieval_channels=channels,
+                    chunk_position=item.get("chunk_position"),
+                )
             )
-        )
+    else:
+        # FAST / historical path: first N paragraphs in document source order.
+        for paragraph in list(document.paragraphs or [])[: max(0, int(evidence_limit))]:
+            section = getattr(paragraph.section_type, "value", None) or str(
+                getattr(paragraph, "section_type", "") or ""
+            ) or None
+            passages.append(
+                Stage1Passage(
+                    text=str(paragraph.normalized_text or paragraph.original_text or "").strip(),
+                    chunk_id=str(paragraph.paragraph_id or ""),
+                    section=section,
+                    page=None,
+                    score=None,
+                )
+            )
     passages = [item for item in passages if item.text]
 
     stage1_score = float(document.score or 0.0)
@@ -638,6 +686,7 @@ def _to_stage1_document(document, *, rank: int) -> Stage1DocumentResult:
         stage1_score=stage1_score,
         ce_rank=None,
         ce_score=None,
+        chunk_evidence=chunk_evidence,
     )
 
 

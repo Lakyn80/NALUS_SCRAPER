@@ -5,13 +5,19 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from app.rag.legal_v2.rerank.selectors.names import FIRST_N_STAGE1_ORDER_V1
+from app.rag.legal_v2.rerank.selectors.policy import resolve_passage_selector_name
+
 _TRUTHY = {"1", "true", "yes", "on"}
 
 DEFAULT_CE_MODEL = "BAAI/bge-reranker-v2-m3"
 HARD_MAX_CANDIDATE_DOCUMENTS = 80
-HARD_MAX_PASSAGES_PER_DOCUMENT = 8
+# Hard ceiling allows future CE-10 experiments; this task does not run CE-10.
+HARD_MAX_PASSAGES_PER_DOCUMENT = 10
 HARD_MAX_BATCH_SIZE = 64
 HARD_MAX_LENGTH = 1024
+HARD_MAX_EVIDENCE_POOL = 80
+DEFAULT_EVIDENCE_POOL_LIMIT = 40
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
@@ -41,6 +47,8 @@ class CrossEncoderConfig:
     local_files_only: bool = True
     aggregation: str = "max"
     experiment_mode: str = "fast_plus_ce_experiment"
+    passage_selector: str = FIRST_N_STAGE1_ORDER_V1
+    evidence_pool_limit: int = DEFAULT_EVIDENCE_POOL_LIMIT
 
     def validate(self) -> None:
         if self.candidate_documents < 1 or self.candidate_documents > HARD_MAX_CANDIDATE_DOCUMENTS:
@@ -60,6 +68,11 @@ class CrossEncoderConfig:
             raise ValueError(f"max_length must be 32..{HARD_MAX_LENGTH}")
         if self.aggregation != "max":
             raise ValueError("only aggregation='max' is supported in this experiment")
+        if self.evidence_pool_limit < 1 or self.evidence_pool_limit > HARD_MAX_EVIDENCE_POOL:
+            raise ValueError(
+                f"evidence_pool_limit must be 1..{HARD_MAX_EVIDENCE_POOL}"
+            )
+        resolve_passage_selector_name(self.passage_selector)
 
 
 def cross_encoder_config_from_env() -> CrossEncoderConfig:
@@ -78,6 +91,12 @@ def cross_encoder_config_from_env() -> CrossEncoderConfig:
         local_files_only=not _env_flag("NALUS_LEGAL_V2_CE_ALLOW_DOWNLOAD", False),
         aggregation="max",
         experiment_mode="fast_plus_ce_experiment",
+        passage_selector=resolve_passage_selector_name(
+            os.getenv("NALUS_LEGAL_V2_CE_PASSAGE_SELECTOR", FIRST_N_STAGE1_ORDER_V1)
+        ),
+        evidence_pool_limit=_int_env(
+            "NALUS_LEGAL_V2_CE_EVIDENCE_POOL_LIMIT", DEFAULT_EVIDENCE_POOL_LIMIT
+        ),
     )
     cfg.validate()
     return cfg
