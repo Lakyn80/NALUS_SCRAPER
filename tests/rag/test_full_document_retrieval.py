@@ -4,6 +4,7 @@ import pytest
 
 from app.rag.retrieval.full_document import (
     build_full_document_from_payloads,
+    resolve_full_document_collection_name,
     validate_document_id,
 )
 
@@ -98,3 +99,54 @@ def test_returns_not_found_when_no_matching_payload_exists() -> None:
 def test_validate_document_id_rejects_unsafe_values(document_id: str) -> None:
     with pytest.raises(ValueError):
         validate_document_id(document_id)
+
+
+def test_resolve_full_document_collection_prefers_explicit_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NALUS_FULL_DOCUMENT_QDRANT_COLLECTION", "full-doc-override")
+    monkeypatch.setenv("NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED", "1")
+    monkeypatch.setenv("NALUS_LEGAL_V2_QDRANT_COLLECTION", "legal-v2-pilot")
+    monkeypatch.setenv("QDRANT_COLLECTION_NAME", "legacy")
+    assert resolve_full_document_collection_name() == "full-doc-override"
+
+
+def test_resolve_full_document_collection_follows_stage1_search_corpus(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("NALUS_FULL_DOCUMENT_QDRANT_COLLECTION", raising=False)
+    monkeypatch.setenv("NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED", "1")
+    monkeypatch.setenv("NALUS_LEGAL_V2_QDRANT_COLLECTION", "nalus_legal_paragraph_chunks_v2_pilot_600")
+    monkeypatch.setenv("QDRANT_COLLECTION_NAME", "nalus_bge_m3_chunks_v1")
+    assert (
+        resolve_full_document_collection_name()
+        == "nalus_legal_paragraph_chunks_v2_pilot_600"
+    )
+
+
+def test_resolve_full_document_collection_falls_back_to_legacy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("NALUS_FULL_DOCUMENT_QDRANT_COLLECTION", raising=False)
+    monkeypatch.delenv("NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED", raising=False)
+    monkeypatch.delenv("NALUS_LEGAL_V2_SEARCH_ENABLED", raising=False)
+    monkeypatch.setenv("QDRANT_COLLECTION_NAME", "nalus_bge_m3_chunks_v1")
+    assert resolve_full_document_collection_name() == "nalus_bge_m3_chunks_v1"
+
+
+def test_build_full_document_matches_canonical_document_id() -> None:
+    ecli = "ECLI:CZ:US:2022:2.US.62.22.1"
+    result = build_full_document_from_payloads(
+        document_id=ecli,
+        collection_name="pilot",
+        payloads=[
+            {
+                "original_id": "chunk-0",
+                "canonical_document_id": ecli,
+                "text": "Text z legal_v2 chunku.",
+                "chunk_index": 0,
+            }
+        ],
+    )
+    assert result.full_text_availability_status == "available"
+    assert result.full_text == "Text z legal_v2 chunku."

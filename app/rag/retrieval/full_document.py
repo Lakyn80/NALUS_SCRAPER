@@ -25,11 +25,13 @@ _DEFAULT_MAX_CHUNKS_PER_DOCUMENT = 2_000
 _DOCUMENT_ID_KEYS = (
     "source_document_id",
     "document_id",
+    "canonical_document_id",
     "ecli",
     "case_reference",
     "case_number",
     "reference",
 )
+_TRUTHY_ENV = {"1", "true", "yes", "on"}
 _TEXT_KEYS = ("text", "chunk_text", "content")
 _CONTROL_CHARACTER_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -87,6 +89,49 @@ class _ScrollableQdrantClient(Protocol):
     ) -> tuple[list[Any], Any]: ...
 
 
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in _TRUTHY_ENV
+
+
+def resolve_full_document_collection_name(
+    *,
+    collection_name: str | None = None,
+) -> str:
+    """Resolve the Qdrant collection used for full-document reconstruction.
+
+    Precedence:
+    1. Explicit constructor / call argument
+    2. ``NALUS_FULL_DOCUMENT_QDRANT_COLLECTION``
+    3. Legal v2 / Stage 1 collection when those search flags are enabled
+       (``NALUS_LEGAL_V2_QDRANT_COLLECTION``)
+    4. ``QDRANT_COLLECTION_NAME``
+    5. Default production collection name
+    """
+    if collection_name and str(collection_name).strip():
+        return str(collection_name).strip()
+
+    explicit = os.getenv("NALUS_FULL_DOCUMENT_QDRANT_COLLECTION", "").strip()
+    if explicit:
+        return explicit
+
+    legal_v2_search_active = _env_flag("NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED") or _env_flag(
+        "NALUS_LEGAL_V2_SEARCH_ENABLED"
+    )
+    if legal_v2_search_active:
+        legal_v2_collection = os.getenv("NALUS_LEGAL_V2_QDRANT_COLLECTION", "").strip()
+        if legal_v2_collection:
+            return legal_v2_collection
+        # Keep import local to avoid circular import at module load.
+        from app.rag.legal_v2.ingest.indexing import LEGAL_V2_COLLECTION_NAME
+
+        return LEGAL_V2_COLLECTION_NAME
+
+    legacy = os.getenv("QDRANT_COLLECTION_NAME", "").strip()
+    if legacy:
+        return legacy
+    return DEFAULT_QDRANT_COLLECTION
+
+
 class QdrantFullDocumentStore:
     """Qdrant-backed read-only full-document store."""
 
@@ -100,10 +145,8 @@ class QdrantFullDocumentStore:
         client: _ScrollableQdrantClient | None = None,
     ) -> None:
         self._qdrant_url = qdrant_url or os.getenv("QDRANT_URL", "http://qdrant:6333")
-        self._collection_name = (
-            collection_name
-            or os.getenv("QDRANT_COLLECTION_NAME")
-            or DEFAULT_QDRANT_COLLECTION
+        self._collection_name = resolve_full_document_collection_name(
+            collection_name=collection_name
         )
         self._max_chunks_per_document = (
             max_chunks_per_document
