@@ -24,7 +24,11 @@ logger = get_logger(__name__)
 load_dotenv()
 
 _STARTUP_RETRY_DELAY_SECONDS = float(os.getenv("RAG_STARTUP_RETRY_DELAY_SECONDS", "5"))
+_STAGE1_WARMUP_RETRY_DELAY_SECONDS = float(
+    os.getenv("NALUS_LEGAL_V2_STAGE1_WARMUP_RETRY_DELAY_SECONDS", "10")
+)
 _deferred_ingest_task: asyncio.Task[None] | None = None
+_stage1_warmup_task: asyncio.Task[None] | None = None
 
 def _strict_real_mode_enabled() -> bool:
     raw_value = os.getenv("RAG_STRICT_REAL_MODE", "")
@@ -100,10 +104,43 @@ async def _build_orchestrator_bg() -> None:
             await asyncio.sleep(_STARTUP_RETRY_DELAY_SECONDS)
 
 
+async def _warmup_stage1_bg() -> None:
+    """Preload Stage 1 BGE-M3 + BM25 so the first FE search is not a cold start."""
+    from app.rag.legal_v2.retrieve.case_similarity_search import (
+        case_similarity_stage1_enabled,
+        stage1_warmup_on_start_enabled,
+        warmup_case_similarity_stage1_runtime,
+    )
+
+    if not case_similarity_stage1_enabled() or not stage1_warmup_on_start_enabled():
+        logger.info("[main] stage1 warmup skipped (flag off or stage1 disabled)")
+        return
+
+    while True:
+        try:
+            logger.info("[main] stage1 warmup starting")
+            result = await asyncio.to_thread(warmup_case_similarity_stage1_runtime)
+            logger.info(
+                "[main] stage1 warmup done status=%s latency_ms=%s",
+                result.get("warmup_status"),
+                result.get("warmup_latency_ms"),
+            )
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[main] stage1 warmup failed (%s) — retrying in %.1fs",
+                exc,
+                _STAGE1_WARMUP_RETRY_DELAY_SECONDS,
+            )
+            await asyncio.sleep(_STAGE1_WARMUP_RETRY_DELAY_SECONDS)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import app.api.rag_router as rtr
-    global _deferred_ingest_task
+    global _deferred_ingest_task, _stage1_warmup_task
 
     rtr._live_orchestrator = None
     rtr._live_orchestrator_status = "pending"
@@ -118,7 +155,9 @@ async def lifespan(app: FastAPI):
     rtr._embedding_cache_enabled = False
     rtr._embedding_cache_error = None
     _deferred_ingest_task = None
+    _stage1_warmup_task = None
     startup_task = asyncio.create_task(_build_orchestrator_bg())
+    _stage1_warmup_task = asyncio.create_task(_warmup_stage1_bg())
 
     yield
 
@@ -131,6 +170,13 @@ async def lifespan(app: FastAPI):
         _deferred_ingest_task.cancel()
         try:
             await _deferred_ingest_task
+        except asyncio.CancelledError:
+            pass
+
+    if _stage1_warmup_task is not None and not _stage1_warmup_task.done():
+        _stage1_warmup_task.cancel()
+        try:
+            await _stage1_warmup_task
         except asyncio.CancelledError:
             pass
 
