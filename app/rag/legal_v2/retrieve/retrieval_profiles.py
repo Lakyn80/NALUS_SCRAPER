@@ -6,11 +6,15 @@ register without changing the Stage 1 contract.
 Master-allow policy:
 - ``NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED=1`` makes CE *available*
 - request ``retrieval_profile`` selects the mode (default ``fast`` = no CE)
+
+``retrieval_stage`` is provenance for the ranking that was actually returned —
+derived from runtime rerank outcome, not from configuration intent alone.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Literal
 
 from app.rag.legal_v2.rerank.config import CrossEncoderConfig, cross_encoder_config_from_env
@@ -20,6 +24,30 @@ RetrievalProfileId = Literal["fast", "ce7", "precise"]
 
 DEFAULT_RETRIEVAL_PROFILE: RetrievalProfileId = "fast"
 KNOWN_RETRIEVAL_PROFILES: tuple[RetrievalProfileId, ...] = ("fast", "ce7", "precise")
+
+
+class RetrievalStage(str, Enum):
+    """Public provenance labels for the ranking pipeline that produced results."""
+
+    HYBRID_RRF_STAGE_1 = "hybrid_rrf_stage_1"
+    HYBRID_RRF_CE7 = "hybrid_rrf_ce7"
+    HYBRID_RRF_CE = "hybrid_rrf_ce"
+
+
+def build_retrieval_stage(
+    *,
+    rerank_applied: bool,
+    passages_per_document: int | None = None,
+) -> str:
+    """Map executed rerank outcome to a stable public ``retrieval_stage`` label.
+
+    Uses execution truth (``rerank_applied``), never configuration-only intent.
+    """
+    if not rerank_applied:
+        return RetrievalStage.HYBRID_RRF_STAGE_1.value
+    if passages_per_document == 7:
+        return RetrievalStage.HYBRID_RRF_CE7.value
+    return RetrievalStage.HYBRID_RRF_CE.value
 
 
 @dataclass(frozen=True)

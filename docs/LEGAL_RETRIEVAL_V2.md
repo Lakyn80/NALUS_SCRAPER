@@ -149,6 +149,16 @@ Response (abbreviated):
 }
 ```
 
+`retrieval_stage` is provenance for the **returned ranking**, not configuration intent:
+
+- `hybrid_rrf_stage_1` — Stage 1 BGE-M3 + BM25 + RRF produced the final order
+  (FAST profile, or CE not applied)
+- `hybrid_rrf_ce7` — Stage 1 candidates were successfully reranked by the validated
+  seven-passage Cross-Encoder pipeline (`rerank_applied=true`, 7 passages/document)
+
+CE-7 remains a validated experimental rerank profile; do not treat it as globally
+production-proven.
+
 ### Local Docker startup (reuse existing Qdrant data)
 
 Do **not** start the worktree `qdrant` service for Stage 1 — use the existing

@@ -469,3 +469,4 @@ def test_ce_disabled_preserves_stage1_order(monkeypatch: pytest.MonkeyPatch) -> 
     ]
     assert result.diagnostics["rerank"]["rerank_applied"] is False
     assert result.results[0].ce_rank is None
+    assert result.retrieval_stage == "hybrid_rrf_stage_1"

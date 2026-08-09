@@ -1,5 +1,15 @@
 # Project Progress
 
+## 2026-08-09 Europe/Moscow — Task: report applied retrieval_stage
+
+- Goal: `retrieval_stage` must describe the pipeline that produced the returned
+  ranking (provenance), not configuration intent.
+- Source of truth: `diagnostics.rerank.rerank_applied` (+ passages/document for
+  CE-7 label). Helper: `build_retrieval_stage` / `RetrievalStage`.
+- Labels: `hybrid_rrf_stage_1` (FAST / CE not applied);
+  `hybrid_rrf_ce7` (successful 7-passage CE rerank).
+- Unchanged: ranking, CE scores, Stage 1 retrieval, QuerySpec, Qdrant/BM25/RRF.
+
 ## 2026-08-09 Europe/Moscow — Task: FE retrieval profile switcher (FAST / CE-7)
 
 - Goal: modular UI switch for Stage 1 profiles without activating CE globally.

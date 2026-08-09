@@ -13,6 +13,10 @@ from app.core.tracing import trace_event
 from app.rag.legal_v2.identity import is_valid_ecli, normalize_ecli
 from app.rag.legal_v2.indexing import LEGAL_V2_PROFILE
 from app.rag.legal_v2.query_spec import QuerySpecV2, build_query_spec_v2
+from app.rag.legal_v2.retrieve.retrieval_profiles import (
+    RetrievalStage,
+    build_retrieval_stage,
+)
 from app.rag.legal_v2.retrieve.retriever import (
     LegalV2HybridRetriever,
     LegalV2RetrievalResult,
@@ -26,7 +30,7 @@ from app.rag.retrieval.errors import RetrievalConfigurationError
 
 logger = get_logger(__name__)
 
-STAGE_1_RETRIEVAL = "hybrid_rrf_stage_1"
+STAGE_1_RETRIEVAL = RetrievalStage.HYBRID_RRF_STAGE_1.value
 DEFAULT_RESULT_LIMIT = 10
 MAX_RESULT_LIMIT = 50
 MAX_QUERY_LENGTH = 8000
@@ -553,6 +557,18 @@ def search_case_similarity_stage1(
         },
         "retrieval_profile": profile.profile_id,
     }
+    rerank_payload = diagnostics["rerank"]
+    passages_per_document = rerank_payload.get("requested_passages_per_document")
+    if not isinstance(passages_per_document, int):
+        passages_per_document = (
+            ce_config.passages_per_document
+            if bool(rerank_payload.get("rerank_applied")) and ce_config is not None
+            else None
+        )
+    retrieval_stage = build_retrieval_stage(
+        rerank_applied=bool(rerank_payload.get("rerank_applied")),
+        passages_per_document=passages_per_document,
+    )
     if include_debug and stage1_debug_allowed():
         diagnostics["debug"] = _safe_debug_payload(query_spec, retrieval)
         diagnostics["debug"]["input_processing"] = prepared.input_processing_diagnostics(
@@ -585,7 +601,7 @@ def search_case_similarity_stage1(
     return Stage1SearchResult(
         query=cleaned,
         result_count=len(documents),
-        retrieval_stage=STAGE_1_RETRIEVAL,
+        retrieval_stage=retrieval_stage,
         results=documents,
         diagnostics=diagnostics,
     )
