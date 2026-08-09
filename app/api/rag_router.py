@@ -1228,6 +1228,9 @@ class CaseSimilarityStage1SearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=100_000)
     limit: int | None = Field(default=None, ge=1, le=50)
     include_debug: bool = False
+    # Request-level profile: fast (default) | ce7 | precise(reserved).
+    # CE profiles also require NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED=1 (master-allow).
+    retrieval_profile: str | None = Field(default="fast", max_length=32)
 
     @field_validator("query")
     @classmethod
@@ -1369,12 +1372,14 @@ def case_similarity_stage1_search(
         query_length=len(req.query),
         limit=req.limit,
         include_debug=include_debug,
+        retrieval_profile=req.retrieval_profile,
     )
     try:
         result = search_case_similarity_stage1(
             query=req.query,
             limit=req.limit,
             include_debug=include_debug,
+            retrieval_profile=req.retrieval_profile,
         )
     except ValueError as exc:
         record_request(endpoint=endpoint_label, status="validation_error")

@@ -362,6 +362,7 @@ def search_case_similarity_stage1(
     include_debug: bool = False,
     runtime: CaseSimilarityStage1Runtime | None = None,
     query_spec_builder=build_query_spec_v2,
+    retrieval_profile: str | None = None,
 ) -> Stage1SearchResult:
     from app.rag.legal_v2.query_input.errors import (
         InputTooLargeError,
@@ -399,7 +400,6 @@ def search_case_similarity_stage1(
     query_ms = (time.perf_counter() - query_started) * 1000.0
     retrieval = active.retriever.retrieve(query_spec)
 
-    from app.rag.legal_v2.rerank.config import cross_encoder_config_from_env
     from app.rag.legal_v2.rerank.errors import (
         RerankerInferenceError,
         RerankerInvalidCandidateError,
@@ -407,16 +407,26 @@ def search_case_similarity_stage1(
         RerankerUnavailableError,
     )
     from app.rag.legal_v2.rerank.service import get_cross_encoder_reranking_service
+    from app.rag.legal_v2.retrieve.retrieval_profiles import resolve_retrieval_profile
 
-    ce_config = cross_encoder_config_from_env()
+    # Env alone no longer forces CE on every API call; request profile selects mode.
+    # Master-allow still gates CE via resolve_retrieval_profile (ce7 requires env ON).
+    profile = resolve_retrieval_profile(retrieval_profile)
+    ce_config = profile.cross_encoder_config
     rerank_diagnostics: dict[str, Any] | None = None
 
-    if not ce_config.enabled:
+    if not profile.use_cross_encoder or ce_config is None:
         # FAST path — preserve historical public passage truncation (first 5 paragraphs).
         documents = [
             _to_stage1_document(document, rank=index)
             for index, document in enumerate(retrieval.documents[:resolved_limit], start=1)
         ]
+        rerank_diagnostics = {
+            "rerank_enabled": False,
+            "rerank_applied": False,
+            "experiment_mode": "fast",
+            "retrieval_profile": profile.profile_id,
+        }
     else:
         shortlist_n = min(
             ce_config.candidate_documents,
@@ -436,6 +446,7 @@ def search_case_similarity_stage1(
         try:
             reranked = service.rerank(cleaned, shortlist, require_success=True)
             rerank_diagnostics = reranked.diagnostics.as_dict()
+            rerank_diagnostics["retrieval_profile"] = profile.profile_id
             documents = []
             for item in reranked.documents[:resolved_limit]:
                 source = by_ecli.get(item.ecli)
@@ -538,7 +549,9 @@ def search_case_similarity_stage1(
             "rerank_enabled": False,
             "rerank_applied": False,
             "experiment_mode": "fast",
+            "retrieval_profile": profile.profile_id,
         },
+        "retrieval_profile": profile.profile_id,
     }
     if include_debug and stage1_debug_allowed():
         diagnostics["debug"] = _safe_debug_payload(query_spec, retrieval)
