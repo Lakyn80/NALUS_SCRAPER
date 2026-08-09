@@ -22,17 +22,74 @@ _HEADING_RE = re.compile(r"^\s*(I{1,3}|IV|V|VI{0,3}|IX|X)?\.?\s*([A-ZÁČĎÉĚ�
 _HEADING_PREFIX_RE = re.compile(r"^\s*(?:(?:I{1,3}|IV|V|VI{0,3}|IX|X)[.)]\s+)?(.+?)\s*:?\s*$", re.IGNORECASE)
 _SENTENCE_BOUNDARY_RE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ0-9])")
 
+# Body-keyword cues used ONLY when sticky section is HEADER/OTHER.
+# HEADER must never be inferred from body keywords (e.g. "Ústavní soud posoudil…").
 _SECTION_KEYWORDS: tuple[tuple[SectionType, tuple[str, ...]], ...] = (
-    (SectionType.HEADER, ("ústavní soud", "nejvyšší soud", "česká republika")),
     (SectionType.PARTICIPANTS, ("účastní", "stěžovatel", "navrhovatel", "odpůrce")),
-    (SectionType.PROCEDURAL_HISTORY, ("řízení", "dosavadní průběh", "napadeným rozhodnutím")),
-    (SectionType.FACTS, ("skutkov", "zjistil", "vyplývá", "stalo")),
-    (SectionType.PARTY_ARGUMENTS, ("namít", "tvrdí", "argument", "vyjádření")),
-    (SectionType.LEGAL_FRAMEWORK, ("zákon", "ustanovení", "čl.", "§", "úmluv")),
-    (SectionType.CITED_CASE, ("judikatur", "srov.", "nález", "rozsudek")),
-    (SectionType.COURT_REASONING, ("ústavní soud dospěl", "soud shledal", "posoudil")),
-    (SectionType.OPERATIVE_PART, ("takto", "výrok", "návrh se", "ústavní stížnost se")),
-    (SectionType.INSTRUCTION, ("poučení", "opravný prostředek")),
+    (SectionType.PROCEDURAL_HISTORY, ("dosavadní průběh", "napadeným rozhodnutím")),
+    (SectionType.FACTS, ("skutkový stav", "skutková zjištění")),
+    (SectionType.PARTY_ARGUMENTS, ("namítá", "namítají", "v odvolání", "v dovolání")),
+    (SectionType.LEGAL_FRAMEWORK, ("právní úprava", "relevantní právo")),
+    (SectionType.CITED_CASE, ("citovaná judikatura", "srov. nález", "srov. rozsudek")),
+    (
+        SectionType.COURT_REASONING,
+        (
+            "ústavní soud dospěl",
+            "ústavní soud předně",
+            "soud shledal",
+            "soud posoudil",
+            "právní posouzení",
+            "dospěl k závěru",
+        ),
+    ),
+    (SectionType.OPERATIVE_PART, ("návrh se odmítá", "ústavní stížnost se", "rozsudek se potvrzuje")),
+    (SectionType.INSTRUCTION, ("poučení:", "opravný prostředek")),
+)
+
+_STICKY_BODY_SECTIONS = frozenset(
+    {
+        SectionType.PARTICIPANTS,
+        SectionType.PROCEDURAL_HISTORY,
+        SectionType.FACTS,
+        SectionType.PARTY_ARGUMENTS,
+        SectionType.LEGAL_FRAMEWORK,
+        SectionType.CITED_CASE,
+        SectionType.COURT_REASONING,
+        SectionType.OPERATIVE_PART,
+        SectionType.INSTRUCTION,
+    }
+)
+
+_REASONING_BODY_CUES_RE = re.compile(
+    r"\b(?:"
+    r"předně\s+posoudil|dospěl\s+k\s+závěru|soud\s+shledal|soud\s+posoudil|"
+    r"právní\s+posouzení|ústavní\s+soud\s+uvádí|ústavní\s+soud\s+konstatuje|"
+    r"vzhledem\s+ke\s+shora|jako\s+návrh\s+zjevně|odmítl\s+podle"
+    r")\b",
+    re.IGNORECASE,
+)
+_TRUE_HEADER_LINE_RE = re.compile(
+    r"^(?:"
+    r"NALUS\s*-\s*databáze.*"
+    r"|Česká republika"
+    r"|Ústavní soud"
+    r"|Ústavního soudu"
+    r"|Nejvyšší soud(?:\s+České republiky)?"
+    r"|Vrchní soud v (?:Praze|Olomouci)"
+    r"|Jménem republiky"
+    r"|(?:USNESENÍ|NÁLEZ|ROZSUDEK)(?:\s+JMÉNEM REPUBLIKY)?"
+    r"|[IVXLCDM]+\.?\s*ÚS\s+\d+/\d+\s+ze dne\b.*"
+    r")$",
+    re.IGNORECASE,
+)
+_CLOSING_SIGNATURE_RE = re.compile(
+    r"^(?:"
+    r"V Brně dne\s+\d{1,2}\.\s*\d{1,2}\.\s*\d{4}"
+    r"|V Praze dne\s+\d{1,2}\.\s*\d{1,2}\.\s*\d{4}"
+    r"|(?:soudce zpravodaj|soudkyně zpravodajka|předseda senátu|předsedkyně senátu)"
+    r"|.*\bv\.\s*r\.\s*$"
+    r")$",
+    re.IGNORECASE,
 )
 
 _HEADING_SECTION_HINTS: tuple[tuple[SectionType, tuple[str, ...]], ...] = (
@@ -797,11 +854,90 @@ def _heading_section_from_text(text: str) -> SectionType | None:
     return None
 
 
+def _is_true_header_line(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped:
+        return False
+    if _NALUS_US_HEADER_RE.match(stripped) or _US_CASE_DATE_RE.match(stripped):
+        return True
+    if _US_STATE_RE.match(stripped) or _US_DECISION_TYPE_RE.match(stripped):
+        return True
+    if _US_COURT_TITLE_RE.match(stripped) or _REPUBLIC_TITLE_RE.match(stripped):
+        return True
+    if _TRUE_HEADER_LINE_RE.match(stripped):
+        return True
+    # Short court banner lines only.
+    if len(stripped) <= 80 and _TRUE_HEADER_LINE_RE.match(stripped.split("\n", 1)[0]):
+        return True
+    return False
+
+
+def _is_closing_signature_line(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped:
+        return False
+    if _BRNO_DATE_RE.match(stripped) or _SIGNATURE_ROLE_RE.match(stripped):
+        return True
+    if _SIGNATURE_NAME_RE.search(stripped) and len(stripped) <= 80:
+        return True
+    return bool(_CLOSING_SIGNATURE_RE.match(stripped))
+
+
+def _is_numbered_paragraph(text: str) -> bool:
+    return bool(_NUMBERED_RE.match(text) or _ROMAN_RE.match(text))
+
+
 def _section_from_text(text: str, current: SectionType) -> SectionType:
+    """Infer section for non-heading prose.
+
+    Sticky body sections win. HEADER is never assigned from body keywords.
+    """
+    if _INSTRUCTION_START_RE.match(text):
+        return SectionType.INSTRUCTION
+    if _REASONING_HEADING_RE.match(text):
+        return SectionType.COURT_REASONING
+    if _is_true_header_line(text):
+        return SectionType.HEADER
+    if _is_closing_signature_line(text):
+        # Closing lines must not re-open HEADER sticky contamination.
+        if current in (SectionType.COURT_REASONING, SectionType.INSTRUCTION, SectionType.OPERATIVE_PART):
+            return SectionType.INSTRUCTION
+        return current if current != SectionType.OTHER else SectionType.INSTRUCTION
+
+    numbered = _is_numbered_paragraph(text)
+    if current in _STICKY_BODY_SECTIONS:
+        # Upgrade weak structural zones into reasoning when cues are clear.
+        if (
+            numbered
+            and current
+            in {
+                SectionType.PROCEDURAL_HISTORY,
+                SectionType.PARTICIPANTS,
+                SectionType.FACTS,
+                SectionType.LEGAL_FRAMEWORK,
+                SectionType.CITED_CASE,
+            }
+            and _REASONING_BODY_CUES_RE.search(text)
+        ):
+            return SectionType.COURT_REASONING
+        if (
+            numbered
+            and current == SectionType.PARTICIPANTS
+            and any(cue in text.lower() for cue in ("namítá", "v odvolání", "v dovolání", "domáhal"))
+        ):
+            return SectionType.PARTY_ARGUMENTS
+        return current
+
+    # current is HEADER or OTHER: infer carefully without HEADER keyword traps.
+    if numbered and _REASONING_BODY_CUES_RE.search(text):
+        return SectionType.COURT_REASONING
     lowered = text.lower()
     for section, keywords in _SECTION_KEYWORDS:
         if any(keyword in lowered for keyword in keywords):
             return section
+    if numbered and len(text) >= 80:
+        # Long numbered body after banners is almost never a header.
+        return SectionType.COURT_REASONING
     return current
 
 
@@ -811,18 +947,26 @@ def _constitutional_section_from_text(text: str, current: SectionType) -> Sectio
     if current == SectionType.OPERATIVE_PART:
         if _REASONING_HEADING_RE.match(text):
             return SectionType.COURT_REASONING
+        if _INSTRUCTION_START_RE.match(text):
+            return SectionType.INSTRUCTION
+        # Roman / numbered operative items stay operative until Odůvodnění.
         return SectionType.OPERATIVE_PART
     if current == SectionType.COURT_REASONING:
         if _INSTRUCTION_START_RE.match(text):
             return SectionType.INSTRUCTION
-        if _BRNO_DATE_RE.match(text) or _SIGNATURE_NAME_RE.search(text) or _SIGNATURE_ROLE_RE.match(text):
-            return SectionType.HEADER
+        if _is_closing_signature_line(text):
+            return SectionType.INSTRUCTION
         return SectionType.COURT_REASONING
+    if current == SectionType.INSTRUCTION:
+        if _is_closing_signature_line(text) or _INSTRUCTION_START_RE.match(text):
+            return SectionType.INSTRUCTION
+        # Keep closing block sticky.
+        if _is_true_header_line(text):
+            return SectionType.HEADER
+        return SectionType.INSTRUCTION
     if _INSTRUCTION_START_RE.match(text):
         return SectionType.INSTRUCTION
-    if _BRNO_DATE_RE.match(text) or _SIGNATURE_NAME_RE.search(text) or _SIGNATURE_ROLE_RE.match(text):
-        return SectionType.HEADER
-    if _NALUS_US_HEADER_RE.match(text) or _US_CASE_DATE_RE.match(text) or _US_STATE_RE.match(text):
+    if _is_true_header_line(text):
         return SectionType.HEADER
     return _section_from_text(text, current)
 

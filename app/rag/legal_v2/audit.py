@@ -9,7 +9,7 @@ from typing import Any
 from app.rag.legal_v2.ingest.adapters import LegalAdapterRegistry, LegalSourceDocument
 from app.rag.legal_v2.ingest.chunking import HierarchicalChunkConfig, build_hierarchical_chunks
 
-PARSER_VERSION = "legal-decision-parser.cz-courts.v7"
+PARSER_VERSION = "legal-decision-parser.cz-courts.v8"
 CHUNKER_VERSION = "legal_v2_hierarchical_chunker_v1"
 
 

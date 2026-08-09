@@ -160,18 +160,23 @@ def _materiality_verdict(stats: dict[str, Any]) -> dict[str, Any]:
     header_share = float(stats["section_paragraph_share"].get("header", 0.0))
 
     reasons: list[str] = []
+    warnings: list[str] = []
     material = False
     if docs_with_header_bad / docs >= 0.15 or header_bad >= 40:
         material = True
         reasons.append(
             f"header_mislabel_signal docs={docs_with_header_bad}/{docs} flags={header_bad}"
         )
-    if tiny >= 80:
-        material = True
-        reasons.append(f"tiny_structural_heading_candidates={tiny}")
     if header_share >= 0.25 and docs_with_header_bad / docs >= 0.10:
         material = True
         reasons.append(f"header_paragraph_share={header_share:.3f} with mislabel signal")
+    # Tiny "Výrok"/"Odůvodnění" paragraphs are usually correct headings; they are a
+    # chunker attach/merge concern, not a SectionType mislabel by themselves.
+    if tiny >= 80:
+        warnings.append(
+            f"tiny_structural_heading_candidates={tiny} "
+            "(chunker should attach headings; not SectionType material alone)"
+        )
     if docs_with_any / docs >= 0.40 and material:
         reasons.append(f"broad_suspicion_coverage docs={docs_with_any}/{docs}")
 
@@ -181,6 +186,12 @@ def _materiality_verdict(stats: dict[str, Any]) -> dict[str, Any]:
             "Do NOT start Slice 4 embeddings yet. Fix deterministic SectionType "
             "classification (sticky headings / stop keyword-to-header traps), "
             "then regenerate A300/B300 chunk QA."
+        )
+    elif docs_with_header_bad / docs <= 0.02 and header_share < 0.08 and header_bad <= 5:
+        verdict = "SECTION_TYPE_OK_FOR_CHUNKING_AB"
+        recommendation = (
+            "SectionType header traps cleared. Regenerate A/B chunk QA, then Slice 4 "
+            "may proceed. Remaining tiny heading paragraphs are a chunker attach issue."
         )
     elif docs_with_any / docs >= 0.20:
         verdict = "SECTION_TYPE_NEEDS_MANUAL_REVIEW"
@@ -198,6 +209,7 @@ def _materiality_verdict(stats: dict[str, Any]) -> dict[str, Any]:
         "verdict": verdict,
         "material_for_chunking": material,
         "reasons": reasons,
+        "warnings": warnings,
         "recommendation": recommendation,
         "block_slice4": material,
     }

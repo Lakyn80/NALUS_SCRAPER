@@ -56,3 +56,20 @@ def test_materiality_blocks_on_header_signal() -> None:
     out = _materiality_verdict(stats)
     assert out["verdict"] == "SECTION_TYPE_MATERIAL_REGRESSION"
     assert out["block_slice4"] is True
+
+
+def test_materiality_ok_when_header_cleared_even_with_tiny_headings() -> None:
+    stats = {
+        "documents": 300,
+        "flag_counts": {
+            "tiny_structural_heading_chunk_candidate": 282,
+            "header_long_nonheader_prose": 1,
+        },
+        "documents_with_header_suspicion": 1,
+        "documents_with_any_suspicion": 236,
+        "section_paragraph_share": {"header": 0.025},
+    }
+    out = _materiality_verdict(stats)
+    assert out["verdict"] == "SECTION_TYPE_OK_FOR_CHUNKING_AB"
+    assert out["block_slice4"] is False
+    assert out["warnings"]

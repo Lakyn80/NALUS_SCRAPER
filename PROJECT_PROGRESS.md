@@ -1,5 +1,22 @@
 # Project Progress
 
+## 2026-08-10 Europe/Moscow — Task: SectionType parser v8 fix
+
+- Goal: stop keyword/`HEADER` sticky contamination so same-section chunking
+  boundaries are trustworthy before A/B embeddings.
+- Parser `legal-decision-parser.cz-courts.v8`:
+  - HEADER never inferred from body keywords (`ústavní soud` trap removed)
+  - sticky body sections preserved; reasoning cues can upgrade weak zones
+  - closing signatures → `instruction`, not `header`
+- Re-audit on same 300 inventory (`section_type_audit_v8`):
+  - header share **34.3% → 2.5%**
+  - header-suspicion docs **289/300 → 1/300**
+  - court_reasoning share **2.5% → 73.2%**
+  - verdict **`SECTION_TYPE_OK_FOR_CHUNKING_AB`** (`block_slice4=false`)
+- Remaining warning: tiny heading paragraphs (`Výrok`/`Odůvodnění`) — chunker
+  attach concern, not SectionType material.
+- Next: regenerate full A/B chunk QA on 300, then Slice 4 embeddings.
+
 ## 2026-08-10 Europe/Moscow — Task: SectionType audit (block Slice 4)
 
 - Goal: before A/B embeddings, quantify whether `SectionType` labels are

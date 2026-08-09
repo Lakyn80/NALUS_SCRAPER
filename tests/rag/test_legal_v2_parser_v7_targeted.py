@@ -94,8 +94,8 @@ def _analyze(review_number: int) -> dict[str, Any]:
     }
 
 
-def test_parser_profile_is_v7() -> None:
-    assert PARSER_VERSION == "legal-decision-parser.cz-courts.v7"
+def test_parser_profile_is_v8() -> None:
+    assert PARSER_VERSION == "legal-decision-parser.cz-courts.v8"
 
 
 @pytest.mark.parametrize(
