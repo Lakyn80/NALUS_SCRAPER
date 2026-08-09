@@ -1,5 +1,21 @@
 # Project Progress
 
+## 2026-08-10 Europe/Moscow — Task: SectionType audit (block Slice 4)
+
+- Goal: before A/B embeddings, quantify whether `SectionType` labels are
+  trustworthy hard boundaries for hierarchical / contextual-packed chunking.
+- Inventory: frozen `chunking_ab_pilot_300_v1` (hash
+  `89233b9fe9b06eda8dea00abd99a48aa54940e616aa88c00860ced4ae49c011b`).
+- Runner: `scripts/legal_v2/run_section_type_audit_pilot_300.py` (no embeddings).
+- Key signals on 300 docs / 16602 paragraphs:
+  - `header` share **34.3%** vs `court_reasoning` only **2.5%**
+  - header-suspicion docs **289/300**; header reasoning/prose flags **3713**
+  - tiny structural heading candidates **282**
+- Artifacts: `artifacts/legal_v2/chunking_ab_pilot_300_v1/section_type_audit/`
+- **Verdict: `SECTION_TYPE_MATERIAL_REGRESSION`** → **block Slice 4**.
+- Next: fix deterministic SectionType sticky/heading logic, regenerate A/B
+  chunk QA, only then BGE-M3 + BM25 A/B indexes.
+
 ## 2026-08-09 Europe/Moscow — Task: report applied retrieval_stage
 
 - Goal: `retrieval_stage` must describe the pipeline that produced the returned
