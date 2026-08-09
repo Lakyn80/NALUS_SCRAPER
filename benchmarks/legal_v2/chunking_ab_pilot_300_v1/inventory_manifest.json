@@ -1,0 +1,4985 @@
+{
+  "inventory_id": "chunking_ab_pilot_300_v1",
+  "generated_at": "2026-08-09T13:22:23Z",
+  "target_count": 300,
+  "document_count": 300,
+  "sample_seed": 20260809,
+  "source_pilot_inventory": "C:/Users/lukas/Desktop/PYTHON_PROJECTS_DESKTOP/PYTHON_PROJECTS/nalus-scraper-parser-fix/artifacts/legal_v2/pilot_600_judgment_inventory/pilot_600_judgment_inventory.json",
+  "source_golden": "C:/Users/lukas/Desktop/PYTHON_PROJECTS_DESKTOP/PYTHON_PROJECTS/nalus-scraper-parser-fix/benchmarks/legal_v2/case_similarity_golden_v1_pilot.jsonl",
+  "source_identity": "C:/Users/lukas/Desktop/PYTHON_PROJECTS_DESKTOP/PYTHON_PROJECTS/nalus-scraper-parser-fix/benchmarks/legal_v2/case_similarity_document_identity_v1.json",
+  "mandatory_count": 22,
+  "stratified_fill_count": 278,
+  "ordered_eclis": [
+    "ECLI:CZ:US:2024:3.US.3203.24.1",
+    "ECLI:CZ:VSOL:2024:1.Co.2.2024.1",
+    "ECLI:CZ:US:2025:3.US.3352.25.1",
+    "ECLI:CZ:US:2024:1.US.3299.24.1",
+    "ECLI:CZ:US:2026:4.US.1310.26.1",
+    "ECLI:CZ:US:2025:1.US.3575.25.1",
+    "ECLI:CZ:US:2026:4.US.650.26.1",
+    "ECLI:CZ:US:2026:3.US.1566.26.1",
+    "ECLI:CZ:VSOL:2022:1.Co.15.2022.1",
+    "ECLI:CZ:VSOL:2024:1.Co.1.2024.1",
+    "ECLI:CZ:US:2026:4.US.823.26.1",
+    "ECLI:CZ:VSPH:2026:2.Cmo.32.2026.1",
+    "ECLI:CZ:US:2026:1.US.1213.26.1",
+    "ECLI:CZ:US:2024:3.US.1972.24.1",
+    "ECLI:CZ:VSPH:2026:2.Cmo.28.2026.1",
+    "ECLI:CZ:VSPH:2026:3.Co.25.2025.1",
+    "ECLI:CZ:VSPH:2026:2.Cmo.22.2026.1",
+    "ECLI:CZ:VSPH:2026:9.Cmo.219.2025",
+    "ECLI:CZ:VSOL:2022:6.TO.80.2021.1",
+    "ECLI:CZ:VSOL:2025:6.To.41.2024.1",
+    "ECLI:CZ:VSOL:2025:6.To.42.2024.1",
+    "ECLI:CZ:VSOL:2025:4.Co.44.2025.1",
+    "ECLI:CZ:US:2023:3.US.1664.23.1",
+    "ECLI:CZ:US:2023:3.US.3517.22.1",
+    "ECLI:CZ:US:2024:Pl.US.8.23.1",
+    "ECLI:CZ:NS:2024:23.CDO.271.2024.1",
+    "ECLI:CZ:NS:2024:25.CDO.2348.2024.1",
+    "ECLI:CZ:NS:2024:20.NCU.177.2024.1",
+    "ECLI:CZ:US:2025:Pl.US-st.61.25.1",
+    "ECLI:CZ:US:2022:Pl.US-st.57.22.1",
+    "ECLI:CZ:NS:2024:3.TDO.980.2024.1",
+    "ECLI:CZ:NS:2024:3.TDO.984.2024.1",
+    "ECLI:CZ:NS:2025:29.ND.3.2025.1",
+    "ECLI:CZ:US:2024:3.US.3161.23.1",
+    "ECLI:CZ:US:2025:2.US.2027.24.1",
+    "ECLI:CZ:US:2022:1.US.503.22.1",
+    "ECLI:CZ:US:2021:Pl.US.2.21.1",
+    "ECLI:CZ:US:2022:4.US.412.22.3",
+    "ECLI:CZ:US:2022:4.US.1777.22.1",
+    "ECLI:CZ:US:2024:Pl.US.4.23.2",
+    "ECLI:CZ:NS:2024:30.CDO.844.2024.1",
+    "ECLI:CZ:NS:2025:20.NCU.165.2024.1",
+    "ECLI:CZ:US:2025:Pl.US-st.62.25.1",
+    "ECLI:CZ:NS:2024:5.TDO.318.2024.1",
+    "ECLI:CZ:NS:2025:3.TDO.19.2025.1",
+    "ECLI:CZ:NS:2025:20.NCU.199.2024.1",
+    "ECLI:CZ:US:2026:2.US.899.26.1",
+    "ECLI:CZ:US:2021:4.US.515.21.1",
+    "ECLI:CZ:US:2024:3.US.420.24.1",
+    "ECLI:CZ:US:2020:2.US.2446.19.1",
+    "ECLI:CZ:US:2026:3.US.3466.24.1",
+    "ECLI:CZ:US:2022:1.US.868.21.1",
+    "ECLI:CZ:US:2026:Pl.US.5.25.1",
+    "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+    "ECLI:CZ:NS:2025:20.NCU.185.2024.1",
+    "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+    "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+    "ECLI:CZ:NS:2024:24.CDO.671.2024.1",
+    "ECLI:CZ:US:2023:3.US.1254.22.1",
+    "ECLI:CZ:US:2024:2.US.999.24.1",
+    "ECLI:CZ:US:2024:2.US.1041.24.1",
+    "ECLI:CZ:US:2020:2.US.1866.20.1",
+    "ECLI:CZ:US:2025:4.US.1342.24.1",
+    "ECLI:CZ:US:2021:Pl.US.22.17.2",
+    "ECLI:CZ:NS:2025:22.CDO.1151.2024.1",
+    "ECLI:CZ:NS:2024:25.CDO.3217.2023.1",
+    "ECLI:CZ:NS:2024:3.TDO.650.2024.1",
+    "ECLI:CZ:NS:2024:4.TDO.1018.2024.1",
+    "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+    "ECLI:CZ:US:2021:4.US.556.21.2",
+    "ECLI:CZ:US:2024:4.US.828.23.2",
+    "ECLI:CZ:US:2026:4.US.1011.26.1",
+    "ECLI:CZ:US:2023:4.US.652.22.2",
+    "ECLI:CZ:US:2025:Pl.US.47.23.1",
+    "ECLI:CZ:NS:2024:26.CDO.2198.2024.1",
+    "ECLI:CZ:NS:2024:28.CDO.2670.2024.3",
+    "ECLI:CZ:NS:2025:4.TDO.1056.2024.1",
+    "ECLI:CZ:NS:2025:6.TDO.1057.2024.1",
+    "ECLI:CZ:NS:2024:22.ND.435.2024.1",
+    "ECLI:CZ:US:2024:4.US.3012.23.1",
+    "ECLI:CZ:US:2021:4.US.1615.21.1",
+    "ECLI:CZ:US:2022:3.US.3266.22.1",
+    "ECLI:CZ:US:2021:4.US.1480.21.2",
+    "ECLI:CZ:US:2023:Pl.US.22.22.1",
+    "ECLI:CZ:NS:2024:24.CDO.2633.2024.1",
+    "ECLI:CZ:NS:2025:11.TDO.1114.2024.1",
+    "ECLI:CZ:NS:2025:6.TDO.1113.2024.1",
+    "ECLI:CZ:NS:2024:26.CDO.125.2024.1",
+    "ECLI:CZ:US:2021:4.US.1432.21.1",
+    "ECLI:CZ:US:2023:4.US.1152.23.1",
+    "ECLI:CZ:US:2024:1.US.910.24.1",
+    "ECLI:CZ:US:2025:2.US.1279.25.1",
+    "ECLI:CZ:US:2021:Pl.US.21.19.1",
+    "ECLI:CZ:NS:2024:29.CDO.1793.2023.3",
+    "ECLI:CZ:NS:2024:6.TDO.827.2024.1",
+    "ECLI:CZ:NS:2025:21.CDO.2841.2024.1",
+    "ECLI:CZ:NS:2024:20.CDO.2839.2024.1",
+    "ECLI:CZ:US:2022:Pl.US.41.21.1",
+    "ECLI:CZ:US:2020:3.US.2242.20.1",
+    "ECLI:CZ:US:2022:3.US.3456.21.1",
+    "ECLI:CZ:US:2021:Pl.US.97.20.1",
+    "ECLI:CZ:US:2021:Pl.US.6.21.1",
+    "ECLI:CZ:NS:2025:26.CDO.1854.2024.1",
+    "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+    "ECLI:CZ:NS:2024:24.CDO.3225.2024.1",
+    "ECLI:CZ:NS:2025:20.ND.18.2025.1",
+    "ECLI:CZ:US:2025:2.US.3057.25.1",
+    "ECLI:CZ:US:2024:2.US.2240.24.1",
+    "ECLI:CZ:US:2023:2.US.859.23.1",
+    "ECLI:CZ:US:2023:4.US.2827.22.1",
+    "ECLI:CZ:US:2025:Pl.US.22.24.1",
+    "ECLI:CZ:NS:2025:22.CDO.108.2025.1",
+    "ECLI:CZ:NS:2025:5.TDO.1128.2024.1",
+    "ECLI:CZ:NS:2025:6.TDO.21.2025.1",
+    "ECLI:CZ:NS:2024:24.CDO.3087.2024.1",
+    "ECLI:CZ:US:2025:3.US.235.25.1",
+    "ECLI:CZ:US:2026:3.US.3829.25.1",
+    "ECLI:CZ:US:2024:4.US.2996.24.1",
+    "ECLI:CZ:US:2022:Pl.US.10.22.1",
+    "ECLI:CZ:US:2021:Pl.US.44.17.1",
+    "ECLI:CZ:NS:2024:6.TDO.936.2024.1",
+    "ECLI:CZ:NS:2025:11.PZO.7.2024.1",
+    "ECLI:CZ:NS:2025:28.CDO.3321.2024.1",
+    "ECLI:CZ:US:2026:4.US.1078.26.1",
+    "ECLI:CZ:US:2024:1.US.1613.24.1",
+    "ECLI:CZ:US:2022:2.US.2990.22.1",
+    "ECLI:CZ:US:2021:Pl.US.112.20.1",
+    "ECLI:CZ:US:2025:Pl.US.15.24.1",
+    "ECLI:CZ:NS:2025:33.CDO.79.2024.1",
+    "ECLI:CZ:NS:2025:20.CDO.3371.2024.1",
+    "ECLI:CZ:US:2021:1.US.1405.20.1",
+    "ECLI:CZ:US:2024:1.US.308.24.1",
+    "ECLI:CZ:US:2024:1.US.598.24.1",
+    "ECLI:CZ:US:2023:2.US.1931.21.1",
+    "ECLI:CZ:US:2022:Pl.US.39.18.1",
+    "ECLI:CZ:NS:2025:4.TDO.1100.2024.1",
+    "ECLI:CZ:NS:2025:20.CDO.30.2025.1",
+    "ECLI:CZ:US:2025:Pl.US.2.25.2",
+    "ECLI:CZ:US:2025:4.US.1047.25.1",
+    "ECLI:CZ:US:2021:2.US.862.21.1",
+    "ECLI:CZ:US:2021:3.US.2116.21.1",
+    "ECLI:CZ:US:2020:Pl.US.33.16.2",
+    "ECLI:CZ:NS:2025:11.TDO.1127.2024.1",
+    "ECLI:CZ:NS:2025:21.CDO.245.2024.1",
+    "ECLI:CZ:US:2026:1.US.2699.25.1",
+    "ECLI:CZ:US:2023:1.US.3171.22.1",
+    "ECLI:CZ:US:2022:2.US.3271.22.1",
+    "ECLI:CZ:US:2021:2.US.2191.20.2",
+    "ECLI:CZ:US:2023:Pl.US.25.22.1",
+    "ECLI:CZ:NS:2025:4.TDO.1137.2024.1",
+    "ECLI:CZ:NS:2025:29.ND.541.2024.1",
+    "ECLI:CZ:US:2025:2.US.1068.24.1",
+    "ECLI:CZ:US:2021:4.US.2425.21.1",
+    "ECLI:CZ:US:2022:2.US.3158.21.1",
+    "ECLI:CZ:US:2023:2.US.859.23.2",
+    "ECLI:CZ:US:2022:Pl.US.43.18.1",
+    "ECLI:CZ:NS:2025:30.CDO.3197.2024.1",
+    "ECLI:CZ:NS:2025:21.CDO.2658.2024.3",
+    "ECLI:CZ:US:2025:3.US.2342.25.1",
+    "ECLI:CZ:US:2022:1.US.3378.21.1",
+    "ECLI:CZ:US:2020:3.US.22.20.2",
+    "ECLI:CZ:US:2026:4.US.1394.24.1",
+    "ECLI:CZ:NS:2024:29.ICDO.3.2023.1",
+    "ECLI:CZ:NS:2024:29.ND.461.2024.1",
+    "ECLI:CZ:US:2023:2.US.2755.23.1",
+    "ECLI:CZ:US:2026:1.US.46.26.1",
+    "ECLI:CZ:US:2024:1.US.1393.24.1",
+    "ECLI:CZ:US:2024:Pl.US.41.23.1",
+    "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+    "ECLI:CZ:NS:2025:29.CDO.275.2024.1",
+    "ECLI:CZ:US:2021:4.US.1622.21.1",
+    "ECLI:CZ:US:2024:2.US.2721.24.1",
+    "ECLI:CZ:US:2026:3.US.2614.25.2",
+    "ECLI:CZ:US:2025:Pl.US.21.21.2",
+    "ECLI:CZ:NS:2025:5.TDO.1071.2024.1",
+    "ECLI:CZ:NS:2025:7.TD.6.2025.1",
+    "ECLI:CZ:US:2020:1.US.3376.19.1",
+    "ECLI:CZ:US:2020:3.US.3274.20.1",
+    "ECLI:CZ:US:2025:Pl.US.13.24.1",
+    "ECLI:CZ:US:2025:Pl.US.17.24.5",
+    "ECLI:CZ:NS:2025:7.PZO.5.2024.1",
+    "ECLI:CZ:NS:2025:30.CDO.3406.2024.1",
+    "ECLI:CZ:US:2022:3.US.1736.22.1",
+    "ECLI:CZ:US:2020:2.US.3156.20.1",
+    "ECLI:CZ:US:2023:Pl.US.38.22.1",
+    "ECLI:CZ:US:2025:Pl.US.26.24.1",
+    "ECLI:CZ:NS:2025:8.TDO.1085.2024.1",
+    "ECLI:CZ:NS:2024:23.CDO.3170.2024.1",
+    "ECLI:CZ:US:2023:4.US.2267.23.1",
+    "ECLI:CZ:US:2024:1.US.3138.23.1",
+    "ECLI:CZ:US:2026:2.US.3645.25.1",
+    "ECLI:CZ:US:2021:Pl.US.18.21.1",
+    "ECLI:CZ:NS:2025:23.CDO.1409.2024.1",
+    "ECLI:CZ:NS:2025:20.CDO.3450.2024.1",
+    "ECLI:CZ:US:2021:2.US.2133.21.1",
+    "ECLI:CZ:US:2023:2.US.525.23.1",
+    "ECLI:CZ:US:2023:2.US.3322.21.1",
+    "ECLI:CZ:US:2021:4.US.541.21.1",
+    "ECLI:CZ:NS:2024:6.TDO.991.2024.1",
+    "ECLI:CZ:NS:2024:27.CDO.2094.2024.1",
+    "ECLI:CZ:US:2020:3.US.2588.20.1",
+    "ECLI:CZ:US:2025:1.US.2564.25.1",
+    "ECLI:CZ:US:2026:4.US.2338.25.1",
+    "ECLI:CZ:US:2025:Pl.US.31.24.1",
+    "ECLI:CZ:NS:2025:23.CDO.938.2024.1",
+    "ECLI:CZ:NS:2025:30.CDO.106.2025.1",
+    "ECLI:CZ:US:2025:3.US.1919.25.1",
+    "ECLI:CZ:US:2020:4.US.2222.20.1",
+    "ECLI:CZ:US:2026:1.US.1507.25.1",
+    "ECLI:CZ:US:2025:4.US.2118.24.1",
+    "ECLI:CZ:NS:2025:3.TDO.53.2025.1",
+    "ECLI:CZ:NS:2025:30.CDO.3461.2024.1",
+    "ECLI:CZ:US:2024:4.US.3178.24.1",
+    "ECLI:CZ:US:2022:2.US.1748.22.1",
+    "ECLI:CZ:US:2021:2.US.2148.21.1",
+    "ECLI:CZ:US:2024:Pl.US.15.22.1",
+    "ECLI:CZ:NS:2025:3.TDO.1120.2024.1",
+    "ECLI:CZ:NS:2024:23.CDO.707.2024.1",
+    "ECLI:CZ:US:2024:2.US.1288.24.1",
+    "ECLI:CZ:US:2021:1.US.1704.21.1",
+    "ECLI:CZ:US:2024:Pl.US.39.21.1",
+    "ECLI:CZ:US:2023:Pl.US.38.23.1",
+    "ECLI:CZ:NS:2024:8.TDO.1022.2024.1",
+    "ECLI:CZ:NS:2025:20.NCU.160.2024.1",
+    "ECLI:CZ:US:2020:2.US.1048.20.1",
+    "ECLI:CZ:US:2026:4.US.1065.26.1",
+    "ECLI:CZ:US:2026:3.US.3031.24.1",
+    "ECLI:CZ:US:2021:Pl.US.40.17.2",
+    "ECLI:CZ:NS:2025:22.CDO.3556.2024.1",
+    "ECLI:CZ:NS:2025:25.ND.86.2025.1",
+    "ECLI:CZ:US:2022:3.US.148.22.1",
+    "ECLI:CZ:US:2022:1.US.1435.21.1",
+    "ECLI:CZ:US:2021:3.US.3877.19.1",
+    "ECLI:CZ:US:2025:Pl.US.19.25.1",
+    "ECLI:CZ:NS:2025:7.TDO.1096.2024.1",
+    "ECLI:CZ:NS:2025:26.ND.406.2024.1",
+    "ECLI:CZ:US:2022:2.US.62.22.1",
+    "ECLI:CZ:US:2024:3.US.181.24.1",
+    "ECLI:CZ:US:2026:3.US.3062.25.1",
+    "ECLI:CZ:US:2026:Pl.US.39.25.1",
+    "ECLI:CZ:NS:2025:24.CDO.3585.2024.1",
+    "ECLI:CZ:NS:2025:21.CDO.44.2025.1",
+    "ECLI:CZ:US:2026:4.US.851.26.1",
+    "ECLI:CZ:US:2022:3.US.1078.22.1",
+    "ECLI:CZ:US:2021:1.US.1486.20.1",
+    "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
+    "ECLI:CZ:NS:2025:29.NSCR.70.2024.1",
+    "ECLI:CZ:US:2020:4.US.2478.20.1",
+    "ECLI:CZ:US:2022:1.US.1619.22.1",
+    "ECLI:CZ:US:2021:2.US.1022.21.1",
+    "ECLI:CZ:NS:2025:23.CDO.1728.2024.1",
+    "ECLI:CZ:NS:2025:11.TCU.9.2025.1",
+    "ECLI:CZ:US:2022:4.US.2291.22.1",
+    "ECLI:CZ:US:2022:1.US.2985.22.1",
+    "ECLI:CZ:US:2025:Pl.US.24.24.1",
+    "ECLI:CZ:NS:2025:21.CDO.1566.2024.1",
+    "ECLI:CZ:NS:2024:28.CDO.2866.2024.1",
+    "ECLI:CZ:US:2024:2.US.3294.23.1",
+    "ECLI:CZ:US:2025:2.US.2977.25.1",
+    "ECLI:CZ:US:2022:Pl.US.7.22.1",
+    "ECLI:CZ:NS:2025:20.CDO.875.2024.1",
+    "ECLI:CZ:NS:2024:27.CDO.681.2024.1",
+    "ECLI:CZ:US:2021:2.US.714.21.1",
+    "ECLI:CZ:US:2024:3.US.805.24.1",
+    "ECLI:CZ:US:2026:Pl.US.18.25.1",
+    "ECLI:CZ:NS:2024:11.TVO.22.2024.1",
+    "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+    "ECLI:CZ:US:2024:1.US.1411.24.1",
+    "ECLI:CZ:US:2023:2.US.1182.23.1",
+    "ECLI:CZ:US:2026:3.US.643.24.2",
+    "ECLI:CZ:NS:2025:11.TDO.875.2024.1",
+    "ECLI:CZ:NS:2025:28.CDO.3185.2024.1",
+    "ECLI:CZ:US:2024:4.US.2820.24.1",
+    "ECLI:CZ:US:2023:2.US.489.23.1",
+    "ECLI:CZ:US:2022:Pl.US.49.18.1",
+    "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+    "ECLI:CZ:NS:2025:20.CDO.2831.2024.1",
+    "ECLI:CZ:US:2026:3.US.148.26.1",
+    "ECLI:CZ:US:2024:4.US.1427.24.1",
+    "ECLI:CZ:US:2024:Pl.US.30.23.2",
+    "ECLI:CZ:NS:2024:6.TDO.976.2024.1",
+    "ECLI:CZ:NS:2025:6.TDO.85.2025.1",
+    "ECLI:CZ:US:2024:1.US.3163.23.1",
+    "ECLI:CZ:US:2024:3.US.123.24.1",
+    "ECLI:CZ:US:2021:3.US.361.21.1",
+    "ECLI:CZ:NS:2025:26.CDO.84.2025.1",
+    "ECLI:CZ:US:2021:3.US.931.21.1",
+    "ECLI:CZ:US:2020:3.US.22.20.1",
+    "ECLI:CZ:US:2022:Pl.US.12.19.1",
+    "ECLI:CZ:NS:2025:26.CDO.737.2024.1",
+    "ECLI:CZ:US:2024:3.US.1352.24.1",
+    "ECLI:CZ:US:2024:1.US.219.24.1",
+    "ECLI:CZ:US:2022:2.US.1626.22.1",
+    "ECLI:CZ:NS:2025:29.ND.63.2025.1",
+    "ECLI:CZ:US:2021:3.US.922.20.1",
+    "ECLI:CZ:US:2022:1.US.1417.22.1",
+    "ECLI:CZ:US:2021:Pl.US.2.20.1",
+    "ECLI:CZ:NS:2025:24.ND.34.2025.1",
+    "ECLI:CZ:US:2022:4.US.2021.22.1",
+    "ECLI:CZ:US:2022:1.US.2983.22.1"
+  ],
+  "inventory_hash_sha256": "89233b9fe9b06eda8dea00abd99a48aa54940e616aa88c00860ced4ae49c011b",
+  "golden_query_evaluability": {
+    "query_count": 20,
+    "evaluable_count": 20,
+    "blocked_count": 0,
+    "queries": [
+      {
+        "benchmark_id": "nalus-cs-pilot-001",
+        "expected_primary_ecli": "ECLI:CZ:US:2024:3.US.3203.24.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-002",
+        "expected_primary_ecli": "ECLI:CZ:US:2024:1.US.3299.24.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-003",
+        "expected_primary_ecli": "ECLI:CZ:US:2025:3.US.3352.25.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-004",
+        "expected_primary_ecli": "ECLI:CZ:US:2025:1.US.3575.25.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-005",
+        "expected_primary_ecli": "ECLI:CZ:US:2026:4.US.650.26.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-006",
+        "expected_primary_ecli": "ECLI:CZ:US:2026:4.US.823.26.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-007",
+        "expected_primary_ecli": "ECLI:CZ:US:2026:1.US.1213.26.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-008",
+        "expected_primary_ecli": "ECLI:CZ:US:2026:3.US.1566.26.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-009",
+        "expected_primary_ecli": "ECLI:CZ:US:2026:4.US.1310.26.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-010",
+        "expected_primary_ecli": "ECLI:CZ:US:2024:3.US.1972.24.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-011",
+        "expected_primary_ecli": "ECLI:CZ:VSPH:2026:2.Cmo.28.2026.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-012",
+        "expected_primary_ecli": "ECLI:CZ:VSPH:2026:2.Cmo.32.2026.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-013",
+        "expected_primary_ecli": "ECLI:CZ:VSPH:2026:2.Cmo.22.2026.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-014",
+        "expected_primary_ecli": "ECLI:CZ:VSPH:2026:3.Co.25.2025.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-015",
+        "expected_primary_ecli": "ECLI:CZ:VSPH:2026:9.Cmo.219.2025",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-016",
+        "expected_primary_ecli": "ECLI:CZ:VSOL:2022:6.TO.80.2021.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-017",
+        "expected_primary_ecli": "ECLI:CZ:VSOL:2022:1.Co.15.2022.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-018",
+        "expected_primary_ecli": "ECLI:CZ:VSOL:2024:1.Co.1.2024.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-019",
+        "expected_primary_ecli": "ECLI:CZ:VSOL:2024:1.Co.2.2024.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      },
+      {
+        "benchmark_id": "nalus-cs-pilot-020",
+        "expected_primary_ecli": "ECLI:CZ:VSOL:2025:4.Co.44.2025.1",
+        "evaluable": true,
+        "missing_accepted_alts": [],
+        "missing_hard_negatives": []
+      }
+    ]
+  },
+  "documents": [
+    {
+      "ecli": "ECLI:CZ:US:2024:3.US.3203.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:3.US.3203.24.1",
+      "case_number": "III.ÚS 3203/24",
+      "court": "constitutional_court",
+      "decision_date": "2024-12-20",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_primary:nalus-cs-pilot-001",
+        "golden_hard_negative:nalus-cs-pilot-003",
+        "golden_hard_negative:nalus-cs-pilot-007",
+        "golden_hard_negative:nalus-cs-pilot-010",
+        "golden_hard_negative:nalus-cs-pilot-019"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSOL:2024:1.Co.2.2024.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2024:1.Co.2.2024.1",
+      "case_number": "1 Co 2/2024-156",
+      "court": "high_court_olomouc",
+      "decision_date": "2024-09-25",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 17,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-001",
+        "golden_primary:nalus-cs-pilot-019",
+        "golden_hard_negative:nalus-cs-pilot-020"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:3.US.3352.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:3.US.3352.25.1",
+      "case_number": "III.ÚS 3352/25",
+      "court": "constitutional_court",
+      "decision_date": "2025-12-18",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-001",
+        "golden_primary:nalus-cs-pilot-003"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:1.US.3299.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.3299.24.1",
+      "case_number": "I.ÚS 3299/24",
+      "court": "constitutional_court",
+      "decision_date": "2024-12-20",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 5,
+      "length_bucket": "short",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_primary:nalus-cs-pilot-002",
+        "golden_hard_negative:nalus-cs-pilot-004",
+        "golden_hard_negative:nalus-cs-pilot-009"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:4.US.1310.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.1310.26.1",
+      "case_number": "IV.ÚS 1310/26",
+      "court": "constitutional_court",
+      "decision_date": "2026-07-01",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-002",
+        "golden_hard_negative:nalus-cs-pilot-006",
+        "golden_primary:nalus-cs-pilot-009"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:1.US.3575.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:1.US.3575.25.1",
+      "case_number": "I.ÚS 3575/25",
+      "court": "constitutional_court",
+      "decision_date": "2025-12-22",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-002",
+        "golden_primary:nalus-cs-pilot-004",
+        "golden_hard_negative:nalus-cs-pilot-008",
+        "golden_hard_negative:nalus-cs-pilot-009"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:4.US.650.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.650.26.1",
+      "case_number": "IV.ÚS 650/26",
+      "court": "constitutional_court",
+      "decision_date": "2026-07-22",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 27,
+      "length_bucket": "long",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-003",
+        "golden_primary:nalus-cs-pilot-005",
+        "golden_hard_negative:nalus-cs-pilot-017",
+        "golden_hard_negative:nalus-cs-pilot-018"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:3.US.1566.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:3.US.1566.26.1",
+      "case_number": "III.ÚS 1566/26",
+      "court": "constitutional_court",
+      "decision_date": "2026-07-01",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-004",
+        "golden_primary:nalus-cs-pilot-008",
+        "golden_hard_negative:nalus-cs-pilot-010"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSOL:2022:1.Co.15.2022.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2022:1.Co.15.2022.1",
+      "case_number": "1 CO 15/2022-234",
+      "court": "high_court_olomouc",
+      "decision_date": "2022-11-23",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-005",
+        "golden_hard_negative:nalus-cs-pilot-013",
+        "golden_primary:nalus-cs-pilot-017",
+        "golden_hard_negative:nalus-cs-pilot-018"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSOL:2024:1.Co.1.2024.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2024:1.Co.1.2024.1",
+      "case_number": "1 Co 1/2024-860",
+      "court": "high_court_olomouc",
+      "decision_date": "2024-12-04",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 37,
+      "length_bucket": "long",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-005",
+        "golden_hard_negative:nalus-cs-pilot-017",
+        "golden_primary:nalus-cs-pilot-018"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:4.US.823.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.823.26.1",
+      "case_number": "IV.ÚS 823/26",
+      "court": "constitutional_court",
+      "decision_date": "2026-07-22",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 26,
+      "length_bucket": "long",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_primary:nalus-cs-pilot-006",
+        "golden_hard_negative:nalus-cs-pilot-007",
+        "golden_hard_negative:nalus-cs-pilot-012",
+        "golden_hard_negative:nalus-cs-pilot-015"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSPH:2026:2.Cmo.32.2026.1",
+      "canonical_document_id": "ECLI:CZ:VSPH:2026:2.Cmo.32.2026.1",
+      "case_number": "2 Cmo 32/2026-268",
+      "court": "high_court_prague",
+      "decision_date": "2026-05-12",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-006",
+        "golden_hard_negative:nalus-cs-pilot-011",
+        "golden_primary:nalus-cs-pilot-012",
+        "golden_hard_negative:nalus-cs-pilot-013",
+        "golden_hard_negative:nalus-cs-pilot-015"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:1.US.1213.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:1.US.1213.26.1",
+      "case_number": "I.ÚS 1213/26",
+      "court": "constitutional_court",
+      "decision_date": "2026-07-02",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 18,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_primary:nalus-cs-pilot-007"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:3.US.1972.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:3.US.1972.24.1",
+      "case_number": "III.ÚS 1972/24",
+      "court": "constitutional_court",
+      "decision_date": "2024-12-20",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 17,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-008",
+        "golden_primary:nalus-cs-pilot-010"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSPH:2026:2.Cmo.28.2026.1",
+      "canonical_document_id": "ECLI:CZ:VSPH:2026:2.Cmo.28.2026.1",
+      "case_number": "2 Cmo 28/2026-127",
+      "court": "high_court_prague",
+      "decision_date": "2026-05-12",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 22,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_primary:nalus-cs-pilot-011",
+        "golden_hard_negative:nalus-cs-pilot-014"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSPH:2026:3.Co.25.2025.1",
+      "canonical_document_id": "ECLI:CZ:VSPH:2026:3.Co.25.2025.1",
+      "case_number": "3 Co 25/2025-224",
+      "court": "high_court_prague",
+      "decision_date": "2026-03-30",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 25,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-011",
+        "golden_primary:nalus-cs-pilot-014",
+        "golden_hard_negative:nalus-cs-pilot-020"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSPH:2026:2.Cmo.22.2026.1",
+      "canonical_document_id": "ECLI:CZ:VSPH:2026:2.Cmo.22.2026.1",
+      "case_number": "2 Cmo 22/2026-116",
+      "court": "high_court_prague",
+      "decision_date": "2026-05-25",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-012",
+        "golden_primary:nalus-cs-pilot-013"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSPH:2026:9.Cmo.219.2025",
+      "canonical_document_id": "ECLI:CZ:VSPH:2026:9.Cmo.219.2025",
+      "case_number": "9 Cmo 219/2025-0",
+      "court": "high_court_prague",
+      "decision_date": "2026-04-07",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-014",
+        "golden_primary:nalus-cs-pilot-015"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSOL:2022:6.TO.80.2021.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2022:6.TO.80.2021.1",
+      "case_number": "6 TO 80/2021-4552",
+      "court": "high_court_olomouc",
+      "decision_date": "2022-10-06",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 131,
+      "length_bucket": "very_long",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_primary:nalus-cs-pilot-016",
+        "golden_hard_negative:nalus-cs-pilot-019"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSOL:2025:6.To.41.2024.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2025:6.To.41.2024.1",
+      "case_number": "6 To 41/2024",
+      "court": "high_court_olomouc",
+      "decision_date": "2025-02-20",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 69,
+      "length_bucket": "very_long",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-016"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSOL:2025:6.To.42.2024.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2025:6.To.42.2024.1",
+      "case_number": "6 To 42/2024",
+      "court": "high_court_olomouc",
+      "decision_date": "2025-02-27",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 116,
+      "length_bucket": "very_long",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_hard_negative:nalus-cs-pilot-016"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:VSOL:2025:4.Co.44.2025.1",
+      "canonical_document_id": "ECLI:CZ:VSOL:2025:4.Co.44.2025.1",
+      "case_number": "4 Co 44/2025-214",
+      "court": "high_court_olomouc",
+      "decision_date": "2025-12-11",
+      "document_type": null,
+      "chunk_count_in_pilot_a": 21,
+      "length_bucket": "medium",
+      "selection_reason": "mandatory_golden_or_hn",
+      "selection_details": [
+        "golden_primary:nalus-cs-pilot-020"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:3.US.1664.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:3.US.1664.23.1",
+      "case_number": "III.ÚS 1664/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "17. 10. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 44,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:3.US.3517.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:3.US.3517.22.1",
+      "case_number": "III.ÚS 3517/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "9. 5. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 25,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:Pl.US.8.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:Pl.US.8.23.1",
+      "case_number": "Pl.ÚS 8/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "7. 5. 2024",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 78,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:23.CDO.271.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:23.CDO.271.2024.1",
+      "case_number": "23 Cdo 271/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-11-21",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 27,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:25.CDO.2348.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:25.CDO.2348.2024.1",
+      "case_number": "25 Cdo 2348/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-11-27",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:20.NCU.177.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:20.NCU.177.2024.1",
+      "case_number": "20 Ncu 177/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-11",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US-st.61.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US-st.61.25.1",
+      "case_number": "Pl.ÚS-st. 61/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "12. 11. 2025",
+      "document_type": "Stanovisko pléna",
+      "chunk_count_in_pilot_a": 31,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Stanovisko pléna|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:Pl.US-st.57.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:Pl.US-st.57.22.1",
+      "case_number": "Pl.ÚS-st. 57/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "29. 11. 2022",
+      "document_type": "Stanovisko pléna",
+      "chunk_count_in_pilot_a": 79,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Stanovisko pléna|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:3.TDO.980.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:3.TDO.980.2024.1",
+      "case_number": "3 Tdo 980/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-19",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 31,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:3.TDO.984.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:3.TDO.984.2024.1",
+      "case_number": "3 Tdo 984/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-11-27",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 25,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:29.ND.3.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:29.ND.3.2025.1",
+      "case_number": "29 Nd 3/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-28",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 6,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:3.US.3161.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:3.US.3161.23.1",
+      "case_number": "III.ÚS 3161/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "18. 6. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 36,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:2.US.2027.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:2.US.2027.24.1",
+      "case_number": "II.ÚS 2027/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "3. 2. 2025",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 25,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:1.US.503.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:1.US.503.22.1",
+      "case_number": "I.ÚS 503/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "25. 4. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 6,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:Pl.US.2.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:Pl.US.2.21.1",
+      "case_number": "Pl.ÚS 2/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "26. 1. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 53,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:4.US.412.22.3",
+      "canonical_document_id": "ECLI:CZ:US:2022:4.US.412.22.3",
+      "case_number": "IV.ÚS 412/22 #3",
+      "court": "Ústavní soud",
+      "decision_date": "29. 11. 2022",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 27,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:4.US.1777.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:4.US.1777.22.1",
+      "case_number": "IV.ÚS 1777/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 11. 2022",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 23,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:Pl.US.4.23.2",
+      "canonical_document_id": "ECLI:CZ:US:2024:Pl.US.4.23.2",
+      "case_number": "Pl.ÚS 4/23 #2",
+      "court": "Ústavní soud",
+      "decision_date": "15. 5. 2024",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 81,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:30.CDO.844.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:30.CDO.844.2024.1",
+      "case_number": "30 Cdo 844/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-03",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:20.NCU.165.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:20.NCU.165.2024.1",
+      "case_number": "20 Ncu 165/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-29",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 2,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US-st.62.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US-st.62.25.1",
+      "case_number": "Pl.ÚS-st. 62/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "17. 12. 2025",
+      "document_type": "Stanovisko pléna",
+      "chunk_count_in_pilot_a": 53,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Stanovisko pléna|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:5.TDO.318.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:5.TDO.318.2024.1",
+      "case_number": "5 Tdo 318/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-10-16",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 43,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:3.TDO.19.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:3.TDO.19.2025.1",
+      "case_number": "3 Tdo 19/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-12",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 25,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:20.NCU.199.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:20.NCU.199.2024.1",
+      "case_number": "20 Ncu 199/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-03",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:2.US.899.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:2.US.899.26.1",
+      "case_number": "II.ÚS 899/26 #1",
+      "court": "Ústavní soud",
+      "decision_date": "29. 4. 2026",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 26,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:4.US.515.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:4.US.515.21.1",
+      "case_number": "IV.ÚS 515/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "30. 3. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 19,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:3.US.420.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:3.US.420.24.1",
+      "case_number": "III.ÚS 420/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "28. 2. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:2.US.2446.19.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:2.US.2446.19.1",
+      "case_number": "II.ÚS 2446/19 #1",
+      "court": "Ústavní soud",
+      "decision_date": "10. 12. 2020",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 60,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:3.US.3466.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:3.US.3466.24.1",
+      "case_number": "III.ÚS 3466/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "3. 2. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 30,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:1.US.868.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:1.US.868.21.1",
+      "case_number": "I.ÚS 868/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "23. 8. 2022",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 18,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:Pl.US.5.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:Pl.US.5.25.1",
+      "case_number": "Pl.ÚS 5/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "4. 2. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 87,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:26.CDO.439.2024.1",
+      "case_number": "26 Cdo 439/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-11-26",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:20.NCU.185.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:20.NCU.185.2024.1",
+      "case_number": "20 Ncu 185/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-14",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:11.TDO.75.2025.1",
+      "case_number": "11 Tdo 75/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-19",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 39,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:11.TDO.765.2024.1",
+      "case_number": "11 Tdo 765/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-11-20",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 18,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:24.CDO.671.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:24.CDO.671.2024.1",
+      "case_number": "24 Cdo 671/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-03",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:3.US.1254.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:3.US.1254.22.1",
+      "case_number": "III.ÚS 1254/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "24. 1. 2023",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 26,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:2.US.999.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:2.US.999.24.1",
+      "case_number": "II.ÚS 999/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "4. 9. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 19,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:2.US.1041.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:2.US.1041.24.1",
+      "case_number": "II.ÚS 1041/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "13. 11. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:2.US.1866.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:2.US.1866.20.1",
+      "case_number": "II.ÚS 1866/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "1. 9. 2020",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 31,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:4.US.1342.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:4.US.1342.24.1",
+      "case_number": "IV.ÚS 1342/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "17. 9. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 25,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:Pl.US.22.17.2",
+      "canonical_document_id": "ECLI:CZ:US:2021:Pl.US.22.17.2",
+      "case_number": "Pl.ÚS 22/17 #2",
+      "court": "Ústavní soud",
+      "decision_date": "26. 1. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 97,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:22.CDO.1151.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:22.CDO.1151.2024.1",
+      "case_number": "22 Cdo 1151/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-28",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:25.CDO.3217.2023.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:25.CDO.3217.2023.1",
+      "case_number": "25 Cdo 3217/2023",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-18",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:3.TDO.650.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:3.TDO.650.2024.1",
+      "case_number": "3 Tdo 650/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-17",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 31,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:4.TDO.1018.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:4.TDO.1018.2024.1",
+      "case_number": "4 Tdo 1018/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-17",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 16,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:5.TDO.1086.2024.1",
+      "case_number": "5 Tdo 1086/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-08",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:4.US.556.21.2",
+      "canonical_document_id": "ECLI:CZ:US:2021:4.US.556.21.2",
+      "case_number": "IV.ÚS 556/21 #2",
+      "court": "Ústavní soud",
+      "decision_date": "31. 8. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 27,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:4.US.828.23.2",
+      "canonical_document_id": "ECLI:CZ:US:2024:4.US.828.23.2",
+      "case_number": "IV.ÚS 828/23 #2",
+      "court": "Ústavní soud",
+      "decision_date": "30. 4. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:4.US.1011.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.1011.26.1",
+      "case_number": "IV.ÚS 1011/26 #1",
+      "court": "Ústavní soud",
+      "decision_date": "20. 5. 2026",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:4.US.652.22.2",
+      "canonical_document_id": "ECLI:CZ:US:2023:4.US.652.22.2",
+      "case_number": "IV.ÚS 652/22 #2",
+      "court": "Ústavní soud",
+      "decision_date": "8. 11. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 37,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.47.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.47.23.1",
+      "case_number": "Pl.ÚS 47/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "4. 6. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 143,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:26.CDO.2198.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:26.CDO.2198.2024.1",
+      "case_number": "26 Cdo 2198/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-11",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:28.CDO.2670.2024.3",
+      "canonical_document_id": "ECLI:CZ:NS:2024:28.CDO.2670.2024.3",
+      "case_number": "28 Cdo 2670/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-04",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:4.TDO.1056.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:4.TDO.1056.2024.1",
+      "case_number": "4 Tdo 1056/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-15",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 27,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:6.TDO.1057.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:6.TDO.1057.2024.1",
+      "case_number": "6 Tdo 1057/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-30",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:22.ND.435.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:22.ND.435.2024.1",
+      "case_number": "22 Nd 435/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-17",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 5,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:4.US.3012.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:4.US.3012.23.1",
+      "case_number": "IV.ÚS 3012/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "22. 5. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 28,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:4.US.1615.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:4.US.1615.21.1",
+      "case_number": "IV.ÚS 1615/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "21. 7. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:3.US.3266.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:3.US.3266.22.1",
+      "case_number": "III.ÚS 3266/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "14. 12. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 5,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:4.US.1480.21.2",
+      "canonical_document_id": "ECLI:CZ:US:2021:4.US.1480.21.2",
+      "case_number": "IV.ÚS 1480/21 #2",
+      "court": "Ústavní soud",
+      "decision_date": "14. 9. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 27,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:Pl.US.22.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:Pl.US.22.22.1",
+      "case_number": "Pl.ÚS 22/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "9. 5. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 68,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:24.CDO.2633.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:24.CDO.2633.2024.1",
+      "case_number": "24 Cdo 2633/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-11-29",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:11.TDO.1114.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:11.TDO.1114.2024.1",
+      "case_number": "11 Tdo 1114/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-12",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 32,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:6.TDO.1113.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:6.TDO.1113.2024.1",
+      "case_number": "6 Tdo 1113/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-22",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 16,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:26.CDO.125.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:26.CDO.125.2024.1",
+      "case_number": "26 Cdo 125/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-17",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:4.US.1432.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:4.US.1432.21.1",
+      "case_number": "IV.ÚS 1432/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "24. 8. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 33,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:4.US.1152.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:4.US.1152.23.1",
+      "case_number": "IV.ÚS 1152/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "16. 5. 2023",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 14,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:1.US.910.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.910.24.1",
+      "case_number": "I.ÚS 910/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "2. 10. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:2.US.1279.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:2.US.1279.25.1",
+      "case_number": "II.ÚS 1279/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "26. 8. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 41,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:Pl.US.21.19.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:Pl.US.21.19.1",
+      "case_number": "Pl.ÚS 21/19 #1",
+      "court": "Ústavní soud",
+      "decision_date": "12. 1. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 64,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:29.CDO.1793.2023.3",
+      "canonical_document_id": "ECLI:CZ:NS:2024:29.CDO.1793.2023.3",
+      "case_number": "29 Cdo 1793/2023",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-30",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 16,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:6.TDO.827.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:6.TDO.827.2024.1",
+      "case_number": "6 Tdo 827/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-10-31",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 27,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:21.CDO.2841.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:21.CDO.2841.2024.1",
+      "case_number": "21 Cdo 2841/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-03-13",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:20.CDO.2839.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:20.CDO.2839.2024.1",
+      "case_number": "20 Cdo 2839/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-11-27",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 6,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:Pl.US.41.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:Pl.US.41.21.1",
+      "case_number": "Pl.ÚS 41/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "25. 1. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 43,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:3.US.2242.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:3.US.2242.20.1",
+      "case_number": "III.ÚS 2242/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "18. 8. 2020",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:3.US.3456.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:3.US.3456.21.1",
+      "case_number": "III.ÚS 3456/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "27. 1. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:Pl.US.97.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:Pl.US.97.20.1",
+      "case_number": "Pl.ÚS 97/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "18. 5. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 50,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:Pl.US.6.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:Pl.US.6.21.1",
+      "case_number": "Pl.ÚS 6/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "22. 6. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 52,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:26.CDO.1854.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:26.CDO.1854.2024.1",
+      "case_number": "26 Cdo 1854/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-14",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 11,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:4.TDO.1044.2024.1",
+      "case_number": "4 Tdo 1044/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-17",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 29,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:24.CDO.3225.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:24.CDO.3225.2024.1",
+      "case_number": "24 Cdo 3225/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-11",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 11,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:20.ND.18.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:20.ND.18.2025.1",
+      "case_number": "20 Nd 18/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-22",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 5,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:2.US.3057.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:2.US.3057.25.1",
+      "case_number": "II.ÚS 3057/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "26. 11. 2025",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 29,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:2.US.2240.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:2.US.2240.24.1",
+      "case_number": "II.ÚS 2240/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "17. 9. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 11,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:2.US.859.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:2.US.859.23.1",
+      "case_number": "II.ÚS 859/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "26. 4. 2023",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:4.US.2827.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:4.US.2827.22.1",
+      "case_number": "IV.ÚS 2827/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 11. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 36,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.22.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.22.24.1",
+      "case_number": "Pl.ÚS 22/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "25. 6. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 91,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:22.CDO.108.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:22.CDO.108.2025.1",
+      "case_number": "22 Cdo 108/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-28",
+      "document_type": "ROZSUDEK",
+      "chunk_count_in_pilot_a": 11,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=ROZSUDEK|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:5.TDO.1128.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:5.TDO.1128.2024.1",
+      "case_number": "5 Tdo 1128/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-29",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 32,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:6.TDO.21.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:6.TDO.21.2025.1",
+      "case_number": "6 Tdo 21/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-05",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 22,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:24.CDO.3087.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:24.CDO.3087.2024.1",
+      "case_number": "24 Cdo 3087/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-16",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:3.US.235.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:3.US.235.25.1",
+      "case_number": "III.ÚS 235/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "3. 4. 2025",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 30,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:3.US.3829.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:3.US.3829.25.1",
+      "case_number": "III.ÚS 3829/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "22. 5. 2026",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 14,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:4.US.2996.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:4.US.2996.24.1",
+      "case_number": "IV.ÚS 2996/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "4. 12. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:Pl.US.10.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:Pl.US.10.22.1",
+      "case_number": "Pl.ÚS 10/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "14. 6. 2022",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 45,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:Pl.US.44.17.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:Pl.US.44.17.1",
+      "case_number": "Pl.ÚS 44/17 #1",
+      "court": "Ústavní soud",
+      "decision_date": "2. 2. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 175,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:6.TDO.936.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:6.TDO.936.2024.1",
+      "case_number": "6 Tdo 936/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-11-26",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 26,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:11.PZO.7.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:11.PZO.7.2024.1",
+      "case_number": "11 Pzo 7/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-22",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 11,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:28.CDO.3321.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:28.CDO.3321.2024.1",
+      "case_number": "28 Cdo 3321/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-27",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:4.US.1078.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.1078.26.1",
+      "case_number": "IV.ÚS 1078/26 #1",
+      "court": "Ústavní soud",
+      "decision_date": "3. 6. 2026",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 27,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:1.US.1613.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.1613.24.1",
+      "case_number": "I.ÚS 1613/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "3. 7. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 11,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:2.US.2990.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:2.US.2990.22.1",
+      "case_number": "II.ÚS 2990/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 11. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:Pl.US.112.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:Pl.US.112.20.1",
+      "case_number": "Pl.ÚS 112/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "27. 7. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 46,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.15.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.15.24.1",
+      "case_number": "Pl.ÚS 15/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "2. 4. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 115,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:33.CDO.79.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:33.CDO.79.2024.1",
+      "case_number": "33 Cdo 79/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-29",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:20.CDO.3371.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:20.CDO.3371.2024.1",
+      "case_number": "20 Cdo 3371/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-21",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:1.US.1405.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:1.US.1405.20.1",
+      "case_number": "I.ÚS 1405/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "5. 10. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 28,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:1.US.308.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.308.24.1",
+      "case_number": "I.ÚS 308/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "27. 6. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 23,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:1.US.598.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.598.24.1",
+      "case_number": "I.ÚS 598/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "11. 3. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:2.US.1931.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:2.US.1931.21.1",
+      "case_number": "II.ÚS 1931/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "19. 9. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 31,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:Pl.US.39.18.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:Pl.US.39.18.1",
+      "case_number": "Pl.ÚS 39/18 #1",
+      "court": "Ústavní soud",
+      "decision_date": "22. 3. 2022",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 146,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:4.TDO.1100.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:4.TDO.1100.2024.1",
+      "case_number": "4 Tdo 1100/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-15",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 17,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:20.CDO.30.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:20.CDO.30.2025.1",
+      "case_number": "20 Cdo 30/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-19",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.2.25.2",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.2.25.2",
+      "case_number": "Pl.ÚS 2/25 #2",
+      "court": "Ústavní soud",
+      "decision_date": "7. 5. 2025",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 49,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:4.US.1047.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:4.US.1047.25.1",
+      "case_number": "IV.ÚS 1047/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "30. 6. 2025",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 17,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:2.US.862.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:2.US.862.21.1",
+      "case_number": "II.ÚS 862/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "13. 4. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:3.US.2116.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:3.US.2116.21.1",
+      "case_number": "III.ÚS 2116/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "19. 10. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 36,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:Pl.US.33.16.2",
+      "canonical_document_id": "ECLI:CZ:US:2020:Pl.US.33.16.2",
+      "case_number": "Pl.ÚS 33/16 #2",
+      "court": "Ústavní soud",
+      "decision_date": "10. 11. 2020",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 171,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:11.TDO.1127.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:11.TDO.1127.2024.1",
+      "case_number": "11 Tdo 1127/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-22",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 19,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:21.CDO.245.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:21.CDO.245.2024.1",
+      "case_number": "21 Cdo 245/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-23",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:1.US.2699.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:1.US.2699.25.1",
+      "case_number": "I.ÚS 2699/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 4. 2026",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 27,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:1.US.3171.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:1.US.3171.22.1",
+      "case_number": "I.ÚS 3171/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "19. 4. 2023",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 25,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:2.US.3271.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:2.US.3271.22.1",
+      "case_number": "II.ÚS 3271/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "20. 12. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:2.US.2191.20.2",
+      "canonical_document_id": "ECLI:CZ:US:2021:2.US.2191.20.2",
+      "case_number": "II.ÚS 2191/20 #2",
+      "court": "Ústavní soud",
+      "decision_date": "25. 10. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 41,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:Pl.US.25.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:Pl.US.25.22.1",
+      "case_number": "Pl.ÚS 25/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "11. 4. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 64,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:4.TDO.1137.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:4.TDO.1137.2024.1",
+      "case_number": "4 Tdo 1137/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-15",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 20,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:29.ND.541.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:29.ND.541.2024.1",
+      "case_number": "29 Nd 541/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-29",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:2.US.1068.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:2.US.1068.24.1",
+      "case_number": "II.ÚS 1068/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "3. 3. 2025",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 27,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:4.US.2425.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:4.US.2425.21.1",
+      "case_number": "IV.ÚS 2425/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "30. 9. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:2.US.3158.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:2.US.3158.21.1",
+      "case_number": "II.ÚS 3158/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "4. 1. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:2.US.859.23.2",
+      "canonical_document_id": "ECLI:CZ:US:2023:2.US.859.23.2",
+      "case_number": "II.ÚS 859/23 #2",
+      "court": "Ústavní soud",
+      "decision_date": "23. 8. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 37,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:Pl.US.43.18.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:Pl.US.43.18.1",
+      "case_number": "Pl.ÚS 43/18 #1",
+      "court": "Ústavní soud",
+      "decision_date": "18. 1. 2022",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 58,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:30.CDO.3197.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:30.CDO.3197.2024.1",
+      "case_number": "30 Cdo 3197/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-21",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:21.CDO.2658.2024.3",
+      "canonical_document_id": "ECLI:CZ:NS:2025:21.CDO.2658.2024.3",
+      "case_number": "21 Cdo 2658/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-20",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:3.US.2342.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:3.US.2342.25.1",
+      "case_number": "III.ÚS 2342/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "18. 9. 2025",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:1.US.3378.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:1.US.3378.21.1",
+      "case_number": "I.ÚS 3378/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 3. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:3.US.22.20.2",
+      "canonical_document_id": "ECLI:CZ:US:2020:3.US.22.20.2",
+      "case_number": "III.ÚS 22/20 #2",
+      "court": "Ústavní soud",
+      "decision_date": "29. 9. 2020",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 46,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:4.US.1394.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.1394.24.1",
+      "case_number": "IV.ÚS 1394/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "9. 4. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 91,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:29.ICDO.3.2023.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:29.ICDO.3.2023.1",
+      "case_number": "29 ICdo 3/2023",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-19",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:29.ND.461.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:29.ND.461.2024.1",
+      "case_number": "29 Nd 461/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-19",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:2.US.2755.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:2.US.2755.23.1",
+      "case_number": "II.ÚS 2755/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "5. 12. 2023",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 14,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:1.US.46.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:1.US.46.26.1",
+      "case_number": "I.ÚS 46/26 #1",
+      "court": "Ústavní soud",
+      "decision_date": "11. 3. 2026",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:1.US.1393.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.1393.24.1",
+      "case_number": "I.ÚS 1393/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 10. 2024",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 40,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:Pl.US.41.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:Pl.US.41.23.1",
+      "case_number": "Pl.ÚS 41/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "4. 12. 2024",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 159,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:8.TDO.760.2024.1",
+      "case_number": "8 Tdo 760/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-10-30",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 25,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:29.CDO.275.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:29.CDO.275.2024.1",
+      "case_number": "29 Cdo 275/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-26",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 5,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:4.US.1622.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:4.US.1622.21.1",
+      "case_number": "IV.ÚS 1622/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "20. 7. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 14,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:2.US.2721.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:2.US.2721.24.1",
+      "case_number": "II.ÚS 2721/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "24. 10. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:3.US.2614.25.2",
+      "canonical_document_id": "ECLI:CZ:US:2026:3.US.2614.25.2",
+      "case_number": "III.ÚS 2614/25 #2",
+      "court": "Ústavní soud",
+      "decision_date": "11. 6. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 34,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.21.21.2",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.21.21.2",
+      "case_number": "Pl.ÚS 21/21 #2",
+      "court": "Ústavní soud",
+      "decision_date": "12. 3. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 104,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:5.TDO.1071.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:5.TDO.1071.2024.1",
+      "case_number": "5 Tdo 1071/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-29",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:7.TD.6.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:7.TD.6.2025.1",
+      "case_number": "7 Td 6/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-29",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 5,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:1.US.3376.19.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:1.US.3376.19.1",
+      "case_number": "I.ÚS 3376/19 #1",
+      "court": "Ústavní soud",
+      "decision_date": "22. 9. 2020",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 18,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:3.US.3274.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:3.US.3274.20.1",
+      "case_number": "III.ÚS 3274/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "1. 12. 2020",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.13.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.13.24.1",
+      "case_number": "Pl.ÚS 13/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "26. 3. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 36,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.17.24.5",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.17.24.5",
+      "case_number": "Pl.ÚS 17/24 #5",
+      "court": "Ústavní soud",
+      "decision_date": "19. 3. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 105,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:7.PZO.5.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:7.PZO.5.2024.1",
+      "case_number": "7 Pzo 5/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-22",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:30.CDO.3406.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:30.CDO.3406.2024.1",
+      "case_number": "30 Cdo 3406/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-10",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:3.US.1736.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:3.US.1736.22.1",
+      "case_number": "III.ÚS 1736/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "6. 9. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 16,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:2.US.3156.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:2.US.3156.20.1",
+      "case_number": "II.ÚS 3156/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "4. 12. 2020",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:Pl.US.38.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:Pl.US.38.22.1",
+      "case_number": "Pl.ÚS 38/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "20. 6. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 36,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.26.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.26.24.1",
+      "case_number": "Pl.ÚS 26/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 1. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 97,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:8.TDO.1085.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:8.TDO.1085.2024.1",
+      "case_number": "8 Tdo 1085/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-15",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 17,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:23.CDO.3170.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:23.CDO.3170.2024.1",
+      "case_number": "23 Cdo 3170/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-11-28",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:4.US.2267.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:4.US.2267.23.1",
+      "case_number": "IV.ÚS 2267/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "17. 10. 2023",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 18,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:1.US.3138.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.3138.23.1",
+      "case_number": "I.ÚS 3138/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "21. 2. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:2.US.3645.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:2.US.3645.25.1",
+      "case_number": "II.ÚS 3645/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "3. 6. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 47,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:Pl.US.18.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:Pl.US.18.21.1",
+      "case_number": "Pl.ÚS 18/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "30. 11. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 52,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:23.CDO.1409.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:23.CDO.1409.2024.1",
+      "case_number": "23 Cdo 1409/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-28",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:20.CDO.3450.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:20.CDO.3450.2024.1",
+      "case_number": "20 Cdo 3450/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-04",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:2.US.2133.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:2.US.2133.21.1",
+      "case_number": "II.ÚS 2133/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "7. 9. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:2.US.525.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:2.US.525.23.1",
+      "case_number": "II.ÚS 525/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "13. 4. 2023",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:2.US.3322.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:2.US.3322.21.1",
+      "case_number": "II.ÚS 3322/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "18. 7. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 45,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:4.US.541.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:4.US.541.21.1",
+      "case_number": "IV.ÚS 541/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "26. 10. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 66,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:6.TDO.991.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:6.TDO.991.2024.1",
+      "case_number": "6 Tdo 991/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-04",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:27.CDO.2094.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:27.CDO.2094.2024.1",
+      "case_number": "27 Cdo 2094/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-17",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:3.US.2588.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:3.US.2588.20.1",
+      "case_number": "III.ÚS 2588/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "20. 10. 2020",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 17,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:1.US.2564.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:1.US.2564.25.1",
+      "case_number": "I.ÚS 2564/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "18. 9. 2025",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:4.US.2338.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.2338.25.1",
+      "case_number": "IV.ÚS 2338/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "23. 4. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 45,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.31.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.31.24.1",
+      "case_number": "Pl.ÚS 31/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "26. 11. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 73,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:23.CDO.938.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:23.CDO.938.2024.1",
+      "case_number": "23 Cdo 938/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-28",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 14,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:30.CDO.106.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:30.CDO.106.2025.1",
+      "case_number": "30 Cdo 106/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-21",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 6,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:3.US.1919.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:3.US.1919.25.1",
+      "case_number": "III.ÚS 1919/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "17. 7. 2025",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:4.US.2222.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:4.US.2222.20.1",
+      "case_number": "IV.ÚS 2222/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "11. 8. 2020",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:1.US.1507.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:1.US.1507.25.1",
+      "case_number": "I.ÚS 1507/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 5. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 41,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:4.US.2118.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:4.US.2118.24.1",
+      "case_number": "IV.ÚS 2118/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "22. 1. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 56,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:3.TDO.53.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:3.TDO.53.2025.1",
+      "case_number": "3 Tdo 53/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-18",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 14,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:30.CDO.3461.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:30.CDO.3461.2024.1",
+      "case_number": "30 Cdo 3461/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-16",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:4.US.3178.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:4.US.3178.24.1",
+      "case_number": "IV.ÚS 3178/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "11. 12. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 14,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:2.US.1748.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:2.US.1748.22.1",
+      "case_number": "II.ÚS 1748/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "26. 7. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:2.US.2148.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:2.US.2148.21.1",
+      "case_number": "II.ÚS 2148/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "7. 10. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 48,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:Pl.US.15.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:Pl.US.15.22.1",
+      "case_number": "Pl.ÚS 15/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 5. 2024",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 186,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:3.TDO.1120.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:3.TDO.1120.2024.1",
+      "case_number": "3 Tdo 1120/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-15",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 20,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:23.CDO.707.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:23.CDO.707.2024.1",
+      "case_number": "23 Cdo 707/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-17",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:2.US.1288.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:2.US.1288.24.1",
+      "case_number": "II.ÚS 1288/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "7. 8. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:1.US.1704.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:1.US.1704.21.1",
+      "case_number": "I.ÚS 1704/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "27. 7. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:Pl.US.39.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:Pl.US.39.21.1",
+      "case_number": "Pl.ÚS 39/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "31. 7. 2024",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 47,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:Pl.US.38.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:Pl.US.38.23.1",
+      "case_number": "Pl.ÚS 38/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "6. 12. 2023",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 69,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:8.TDO.1022.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:8.TDO.1022.2024.1",
+      "case_number": "8 Tdo 1022/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-17",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 23,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:20.NCU.160.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:20.NCU.160.2024.1",
+      "case_number": "20 Ncu 160/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-15",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:2.US.1048.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:2.US.1048.20.1",
+      "case_number": "II.ÚS 1048/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "1. 9. 2020",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:4.US.1065.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.1065.26.1",
+      "case_number": "IV.ÚS 1065/26 #1",
+      "court": "Ústavní soud",
+      "decision_date": "29. 4. 2026",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:3.US.3031.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:3.US.3031.24.1",
+      "case_number": "III.ÚS 3031/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "21. 4. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 36,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:Pl.US.40.17.2",
+      "canonical_document_id": "ECLI:CZ:US:2021:Pl.US.40.17.2",
+      "case_number": "Pl.ÚS 40/17 #2",
+      "court": "Ústavní soud",
+      "decision_date": "24. 8. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 73,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:22.CDO.3556.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:22.CDO.3556.2024.1",
+      "case_number": "22 Cdo 3556/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-29",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:25.ND.86.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:25.ND.86.2025.1",
+      "case_number": "25 Nd 86/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-03-05",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 5,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:3.US.148.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:3.US.148.22.1",
+      "case_number": "III.ÚS 148/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "1. 2. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:1.US.1435.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:1.US.1435.21.1",
+      "case_number": "I.ÚS 1435/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "16. 8. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:3.US.3877.19.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:3.US.3877.19.1",
+      "case_number": "III.ÚS 3877/19 #1",
+      "court": "Ústavní soud",
+      "decision_date": "1. 6. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 33,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.19.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.19.25.1",
+      "case_number": "Pl.ÚS 19/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "1. 10. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 128,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:7.TDO.1096.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:7.TDO.1096.2024.1",
+      "case_number": "7 Tdo 1096/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-29",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 23,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:26.ND.406.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:26.ND.406.2024.1",
+      "case_number": "26 Nd 406/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-15",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 6,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:2.US.62.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:2.US.62.22.1",
+      "case_number": "II.ÚS 62/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "31. 3. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 14,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:3.US.181.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:3.US.181.24.1",
+      "case_number": "III.ÚS 181/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "7. 2. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:3.US.3062.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:3.US.3062.25.1",
+      "case_number": "III.ÚS 3062/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "2. 4. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 32,
+      "length_bucket": "long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:Pl.US.39.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:Pl.US.39.25.1",
+      "case_number": "Pl.ÚS 39/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "24. 6. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 61,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:24.CDO.3585.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:24.CDO.3585.2024.1",
+      "case_number": "24 Cdo 3585/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-25",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 18,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:21.CDO.44.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:21.CDO.44.2025.1",
+      "case_number": "21 Cdo 44/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-13",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:4.US.851.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:4.US.851.26.1",
+      "case_number": "IV.ÚS 851/26 #1",
+      "court": "Ústavní soud",
+      "decision_date": "29. 4. 2026",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:3.US.1078.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:3.US.1078.22.1",
+      "case_number": "III.ÚS 1078/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "10. 5. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:1.US.1486.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:1.US.1486.20.1",
+      "case_number": "I.ÚS 1486/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "27. 4. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 52,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:21.CDO.372.2024.1",
+      "case_number": "21 Cdo 372/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-17",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:29.NSCR.70.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:29.NSCR.70.2024.1",
+      "case_number": "29 Cdo 2652/2020",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-26",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 6,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:4.US.2478.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:4.US.2478.20.1",
+      "case_number": "IV.ÚS 2478/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "6. 10. 2020",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:1.US.1619.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:1.US.1619.22.1",
+      "case_number": "I.ÚS 1619/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "9. 8. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:2.US.1022.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:2.US.1022.21.1",
+      "case_number": "II.ÚS 1022/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "11. 10. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 54,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:23.CDO.1728.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:23.CDO.1728.2024.1",
+      "case_number": "23 Cdo 1728/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-25",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 11,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:11.TCU.9.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:11.TCU.9.2025.1",
+      "case_number": "11 Tcu 9/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-12",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 6,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:4.US.2291.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:4.US.2291.22.1",
+      "case_number": "IV.ÚS 2291/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "20. 9. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 19,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:1.US.2985.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:1.US.2985.22.1",
+      "case_number": "I.ÚS 2985/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "22. 11. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:Pl.US.24.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:Pl.US.24.24.1",
+      "case_number": "Pl.ÚS 24/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "23. 4. 2025",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 72,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:21.CDO.1566.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:21.CDO.1566.2024.1",
+      "case_number": "21 Cdo 1566/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-27",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 11,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:28.CDO.2866.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:28.CDO.2866.2024.1",
+      "case_number": "28 Cdo 2866/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-03",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:2.US.3294.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:2.US.3294.23.1",
+      "case_number": "II.ÚS 3294/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "14. 2. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2025:2.US.2977.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2025:2.US.2977.25.1",
+      "case_number": "II.ÚS 2977/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "30. 10. 2025",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:Pl.US.7.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:Pl.US.7.22.1",
+      "case_number": "Pl.ÚS 7/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "13. 9. 2022",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 138,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:20.CDO.875.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:20.CDO.875.2024.1",
+      "case_number": "20 Cdo 875/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-12",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 11,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:27.CDO.681.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:27.CDO.681.2024.1",
+      "case_number": "27 Cdo 681/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-18",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:2.US.714.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:2.US.714.21.1",
+      "case_number": "II.ÚS 714/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "29. 3. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 12,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:3.US.805.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:3.US.805.24.1",
+      "case_number": "III.ÚS 805/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "14. 5. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 8,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:Pl.US.18.25.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:Pl.US.18.25.1",
+      "case_number": "Pl.ÚS 18/25 #1",
+      "court": "Ústavní soud",
+      "decision_date": "24. 6. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 101,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:11.TVO.22.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:11.TVO.22.2024.1",
+      "case_number": "11 Tvo 22/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-17",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 18,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:29.NSCR.1.2025.1",
+      "case_number": "29 Cdo 2652/2020",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-27",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 5,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:1.US.1411.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.1411.24.1",
+      "case_number": "I.ÚS 1411/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "24. 7. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 21,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:2.US.1182.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:2.US.1182.23.1",
+      "case_number": "II.ÚS 1182/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "31. 5. 2023",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:3.US.643.24.2",
+      "canonical_document_id": "ECLI:CZ:US:2026:3.US.643.24.2",
+      "case_number": "III.ÚS 643/24 #2",
+      "court": "Ústavní soud",
+      "decision_date": "22. 4. 2026",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 51,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:11.TDO.875.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:11.TDO.875.2024.1",
+      "case_number": "11 Tdo 875/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-12",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:28.CDO.3185.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:28.CDO.3185.2024.1",
+      "case_number": "28 Cdo 3185/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-08",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:4.US.2820.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:4.US.2820.24.1",
+      "case_number": "IV.ÚS 2820/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "20. 11. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 14,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2023:2.US.489.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2023:2.US.489.23.1",
+      "case_number": "II.ÚS 489/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "7. 3. 2023",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 10,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:Pl.US.49.18.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:Pl.US.49.18.1",
+      "case_number": "Pl.ÚS 49/18 #1",
+      "court": "Ústavní soud",
+      "decision_date": "26. 4. 2022",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 147,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:11.TDO.679.2024.1",
+      "case_number": "11 Tdo 679/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-18",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 19,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:20.CDO.2831.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:20.CDO.2831.2024.1",
+      "case_number": "20 Cdo 2831/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-23",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2026:3.US.148.26.1",
+      "canonical_document_id": "ECLI:CZ:US:2026:3.US.148.26.1",
+      "case_number": "III.ÚS 148/26 #1",
+      "court": "Ústavní soud",
+      "decision_date": "2. 4. 2026",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:4.US.1427.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:4.US.1427.24.1",
+      "case_number": "IV.ÚS 1427/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "21. 6. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 6,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:Pl.US.30.23.2",
+      "canonical_document_id": "ECLI:CZ:US:2024:Pl.US.30.23.2",
+      "case_number": "Pl.ÚS 30/23 #2",
+      "court": "Ústavní soud",
+      "decision_date": "17. 1. 2024",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 185,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2024:6.TDO.976.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2024:6.TDO.976.2024.1",
+      "case_number": "6 Tdo 976/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2024-12-05",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 16,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:6.TDO.85.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:6.TDO.85.2025.1",
+      "case_number": "6 Tdo 85/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-20",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 6,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:1.US.3163.23.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.3163.23.1",
+      "case_number": "I.ÚS 3163/23 #1",
+      "court": "Ústavní soud",
+      "decision_date": "27. 11. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 25,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:3.US.123.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:3.US.123.24.1",
+      "case_number": "III.ÚS 123/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "17. 4. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:3.US.361.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:3.US.361.21.1",
+      "case_number": "III.ÚS 361/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "30. 11. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 54,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:26.CDO.84.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:26.CDO.84.2025.1",
+      "case_number": "26 Cdo 84/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-03-12",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:3.US.931.21.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:3.US.931.21.1",
+      "case_number": "III.ÚS 931/21 #1",
+      "court": "Ústavní soud",
+      "decision_date": "22. 6. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 19,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2020:3.US.22.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2020:3.US.22.20.1",
+      "case_number": "III.ÚS 22/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "18. 8. 2020",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:Pl.US.12.19.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:Pl.US.12.19.1",
+      "case_number": "Pl.ÚS 12/19 #1",
+      "court": "Ústavní soud",
+      "decision_date": "19. 7. 2022",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 74,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:26.CDO.737.2024.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:26.CDO.737.2024.1",
+      "case_number": "26 Cdo 737/2024",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-03-11",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:3.US.1352.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:3.US.1352.24.1",
+      "case_number": "III.ÚS 1352/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "30. 5. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 19,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2024:1.US.219.24.1",
+      "canonical_document_id": "ECLI:CZ:US:2024:1.US.219.24.1",
+      "case_number": "I.ÚS 219/24 #1",
+      "court": "Ústavní soud",
+      "decision_date": "28. 2. 2024",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:2.US.1626.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:2.US.1626.22.1",
+      "case_number": "II.ÚS 1626/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 8. 2022",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 59,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:29.ND.63.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:29.ND.63.2025.1",
+      "case_number": "29 Nd 63/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-02-25",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 4,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:3.US.922.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:3.US.922.20.1",
+      "case_number": "III.ÚS 922/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "12. 1. 2021",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 13,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:1.US.1417.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:1.US.1417.22.1",
+      "case_number": "I.ÚS 1417/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "23. 8. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 6,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2021:Pl.US.2.20.1",
+      "canonical_document_id": "ECLI:CZ:US:2021:Pl.US.2.20.1",
+      "case_number": "Pl.ÚS 2/20 #1",
+      "court": "Ústavní soud",
+      "decision_date": "9. 11. 2021",
+      "document_type": "Nález",
+      "chunk_count_in_pilot_a": 99,
+      "length_bucket": "very_long",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Nález|very_long"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:NS:2025:24.ND.34.2025.1",
+      "canonical_document_id": "ECLI:CZ:NS:2025:24.ND.34.2025.1",
+      "case_number": "24 Nd 34/2025",
+      "court": "Nejvyšší soud",
+      "decision_date": "2025-01-30",
+      "document_type": "USNESENÍ",
+      "chunk_count_in_pilot_a": 7,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=USNESENÍ|short"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:4.US.2021.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:4.US.2021.22.1",
+      "case_number": "IV.ÚS 2021/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "6. 9. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 15,
+      "length_bucket": "medium",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|medium"
+      ]
+    },
+    {
+      "ecli": "ECLI:CZ:US:2022:1.US.2983.22.1",
+      "canonical_document_id": "ECLI:CZ:US:2022:1.US.2983.22.1",
+      "case_number": "I.ÚS 2983/22 #1",
+      "court": "Ústavní soud",
+      "decision_date": "15. 11. 2022",
+      "document_type": "Usnesení",
+      "chunk_count_in_pilot_a": 9,
+      "length_bucket": "short",
+      "selection_reason": "stratified_fill",
+      "selection_details": [
+        "seed=20260809",
+        "stratum=Usnesení|short"
+      ]
+    }
+  ],
+  "notes": [
+    "Immutable A/B experiment inventory.",
+    "A300/B300 metrics are paired only; do not compare absolute scores to A622.",
+    "Do not modify after seeing retrieval metrics."
+  ]
+}
