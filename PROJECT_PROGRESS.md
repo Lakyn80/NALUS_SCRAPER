@@ -1,5 +1,16 @@
 # Project Progress
 
+## 2026-08-09 Europe/Moscow — Task: FE retrieval profile switcher (FAST / CE-7)
+
+- Goal: modular UI switch for Stage 1 profiles without activating CE globally.
+- Backend: request field `retrieval_profile` (`fast` default, `ce7`, `precise` reserved).
+  CE master-allow remains `NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED`; CE only runs when
+  profile=`ce7`.
+- FE (NalusFE): `RetrievalProfileSwitcher` + registry `retrievalProfiles.ts`;
+  wired through `/api/retrieval/documents` → Stage 1 search.
+- Stage1 compose sets CE master-allow ON so CE-7 button works; default UI stays FAST.
+- Unchanged: Stage 1 knobs, golden labels, CE-10 not introduced.
+
 ## 2026-08-09 Europe/Moscow — Task: CE-7 diversified passage coverage experiment
 
 - Goal: controlled CE passage-coverage test vs CE-3 (`3 → 7` passages) using

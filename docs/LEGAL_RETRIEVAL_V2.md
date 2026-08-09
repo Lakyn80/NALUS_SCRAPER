@@ -79,6 +79,9 @@ hard-negative outrank: 0.0
 
 This validates **pilot candidate recall**, not final legal ranking precision.
 Exact order inside TOP 10 is provisional until ColBERT / cross-encoder stages.
+Optional request field ``retrieval_profile`` selects ``fast`` (default) or
+``ce7`` (requires ``NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED=1`` master-allow).
+``precise`` is reserved for a later phase.
 
 ### Live assets (do not recreate)
 
