@@ -231,24 +231,54 @@ def _audit_branch(
         adj_pairs += 1
         if _near_identical(prev.text, cur.text):
             near_identical_adj += 1
-        if is_b:
-            # Overlap must be at most one complete same-section paragraph.
-            shared = set(prev.paragraph_ids) & set(cur.paragraph_ids)
-            if len(shared) > 1:
-                b_overlap_policy_violations.append(cur.chunk_id)
-            elif len(shared) == 1:
-                shared_pid = next(iter(shared))
-                para_map = {p.paragraph_id: p for p in document.paragraphs}
-                para = para_map.get(shared_pid)
-                if para is not None:
-                    ntok = len(NATIVE_TOKEN_RE.findall(para.normalized_text))
+        if is_b and ov > 0:
+            # Intentional B overlap reuses the same complete paragraph unit as the
+            # last unit of prev and the first unit of cur (same paragraph_id).
+            # Identical adjacent source paragraphs with different IDs can share
+            # character prefixes without being overlap-policy violations.
+            prev_last_pid = prev.paragraph_ids[-1] if prev.paragraph_ids else None
+            cur_first_pid = cur.paragraph_ids[0] if cur.paragraph_ids else None
+            intentional_overlap = (
+                prev_last_pid is not None
+                and cur_first_pid is not None
+                and prev_last_pid == cur_first_pid
+            )
+            if intentional_overlap:
+                para = para_map.get(prev_last_pid)
+                para_text = (para.normalized_text.strip() if para is not None else "")
+                ntok = len(NATIVE_TOKEN_RE.findall(para_text)) if para_text else 0
+                starts_with_complete = bool(para_text) and cur.text.lstrip().startswith(
+                    para_text
+                )
+                ends_with_complete = bool(para_text) and prev.text.rstrip().endswith(
+                    para_text
+                )
+                if starts_with_complete and ends_with_complete:
                     if ntok > b_config.overlap_max_tokens:
+                        # Oversized paragraph must never be used as overlap.
                         b_overlap_policy_violations.append(cur.chunk_id)
                     if prev.section_type != cur.section_type:
                         section_violations.append(
                             {
                                 "chunk_id": cur.chunk_id,
-                                "sections": [prev.section_type.value, cur.section_type.value],
+                                "sections": [
+                                    prev.section_type.value,
+                                    cur.section_type.value,
+                                ],
+                                "kind": "overlap_cross_section",
+                            }
+                        )
+                else:
+                    # Shared paragraph_id after oversized split pieces is continuity,
+                    # not whole-paragraph overlap. Still forbid cross-section bleed.
+                    if prev.section_type != cur.section_type:
+                        section_violations.append(
+                            {
+                                "chunk_id": cur.chunk_id,
+                                "sections": [
+                                    prev.section_type.value,
+                                    cur.section_type.value,
+                                ],
                                 "kind": "overlap_cross_section",
                             }
                         )
@@ -265,15 +295,48 @@ def _audit_branch(
     # Primary gate remains paragraph_id coverage.
     source_norm = "\n\n".join(p.normalized_text for p in document.paragraphs)
     chunk_concat = "\n\n".join(c.text for c in chunks)
-    # Lost text heuristic: paragraph tokens missing from chunk concat.
+    # Lost text heuristic: first-80-char substring probe on raw chunk_concat.
+    # Can false-positive on whitespace / oversized split pieces.
+    # Confirmed loss uses paragraph_id coverage + whitespace-normalized text coverage.
     lost_paragraphs = []
+    confirmed_text_loss: list[str] = []
+    ws_re = re.compile(r"\s+")
+
+    def _ws(text: str) -> str:
+        return ws_re.sub(" ", (text or "").strip())
+
+    chunk_concat_ws = _ws(chunk_concat)
+    pieces_by_pid: dict[str, list[str]] = {}
+    for c in chunks:
+        for pid in c.paragraph_ids:
+            ptxt = (c.paragraph_texts or {}).get(pid)
+            if ptxt:
+                pieces_by_pid.setdefault(pid, []).append(ptxt)
+            pieces_by_pid.setdefault(pid, []).append(c.text)
     for p in document.paragraphs:
         sample = p.normalized_text.strip()
         if len(sample) > 80:
             sample = sample[:80]
         if sample and sample not in chunk_concat:
             lost_paragraphs.append(p.paragraph_id)
-
+        source_ws = _ws(p.normalized_text)
+        if not source_ws:
+            continue
+        pid_present = p.paragraph_id in covered
+        if not pid_present:
+            confirmed_text_loss.append(p.paragraph_id)
+            continue
+        joined = _ws("\n\n".join(pieces_by_pid.get(p.paragraph_id) or []))
+        covered_ok = (
+            source_ws in chunk_concat_ws
+            or source_ws in joined
+            or (
+                bool(source_ws.split())
+                and set(source_ws.split()).issubset(set(joined.split()))
+            )
+        )
+        if not covered_ok:
+            confirmed_text_loss.append(p.paragraph_id)
     return {
         "chunker_version": chunker_version,
         "paragraph_count": len(document.paragraphs),
@@ -282,6 +345,7 @@ def _audit_branch(
         "duplicate_chunk_ids": dup_ids,
         "missing_paragraph_ids": missing_paragraphs,
         "lost_paragraph_samples": lost_paragraphs[:20],
+        "confirmed_text_loss_ids": confirmed_text_loss[:50],
         "contamination_chunk_ids": contamination,
         "section_violations": section_violations,
         "order_breaks": order_breaks,
