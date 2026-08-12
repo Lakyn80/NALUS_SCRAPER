@@ -1,5 +1,23 @@
 # Project Progress
 
+## 2026-08-12 Europe/Moscow — Task: FAST A/B retrieval on Slice 4 indexes
+
+- Goal: run FAST-only case-similarity golden eval on isolated chunk_ab_v8 A/B
+  indexes; produce readable MD/JSON/HTML comparison; **no CE**.
+- Runner: `evaluate_case_similarity_golden_v1.py --profile fast` (canonical).
+- Collections:
+  - A `nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_300` + BM25 A
+  - B `nalus_legal_paragraph_chunks_v2_chunk_ab_v8_b_contextual_300` + BM25 B
+- Results (n=20, evaluable=20, retrieval_failures=0):
+  - A: Hit@1=0.50 Hit@3=0.60 Hit@5=0.80 Hit@10=0.95 MRR≈0.607 HN_outrank≈0.053
+  - B: Hit@1=0.50 Hit@3=0.55 Hit@5=0.75 Hit@10=0.95 MRR≈0.590 HN_outrank≈0.105
+- Hit@1 transitions: gained B `017`; lost B `019`.
+- **Verdict: `A WINS`** (better MRR / Hit@3 / Hit@5 / mean rank / HN rate;
+  Hit@1 and Hit@10 tied). `safe_for_ce_next=true`.
+- Reports: `artifacts/legal_v2/chunking_ab_pilot_300_v1/fast_ab_results/FAST_AB_COMPARISON.{md,json,html}`
+- Reporter: `scripts/legal_v2/report_chunking_ab_fast_comparison_v8.py`
+- Unchanged: Slice 4 indexes, golden dataset, chunkers, CE off.
+
 ## 2026-08-12 Europe/Moscow — Task: Slice 4 A/B indexes (HARD STOP before FAST/CE)
 
 - Goal: isolated A/B BGE-M3 + BM25 indexes for `chunking_ab_pilot_300_v1` on
