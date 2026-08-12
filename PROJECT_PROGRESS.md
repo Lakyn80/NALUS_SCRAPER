@@ -1,5 +1,14 @@
 # Project Progress
 
+## 2026-08-12 Europe/Moscow — Task: ColBERT retrieval foundation
+
+- Added modular ColBERT package under `app/rag/legal_v2/retrieve/colbert/`
+  (config / models / backend boundary / indexer / retriever).
+- No model download, no index build, no profile activation, no benchmark.
+- FAST/CE pins unchanged (A / B contextual). Profile resolver unchanged
+  (`precise` remains reserved for a future late-interaction phase).
+- Next (explicit go only): install/wire backend, build Slice 4 B index, eval.
+
 ## 2026-08-12 Europe/Moscow — Task: Pin FAST=A and CE=B runtime profiles
 
 - Decision after Slice 4 FAST + canonical CE-7 A/B benchmarks:
