@@ -73,6 +73,10 @@ class LegalV2HybridRetriever:
         self._bm25 = bm25_sidecar
         self._config = config
 
+    @property
+    def config(self) -> LegalV2RetrieverConfig:
+        return self._config
+
     def retrieve(self, query_spec: QuerySpecV2) -> LegalV2RetrievalResult:
         started = time.perf_counter()
         query = _retrieval_query(query_spec)
@@ -160,6 +164,24 @@ def build_live_legal_v2_retriever(client: Any, embedder: Any, config: LegalV2Ret
 
 def _retrieval_query(query_spec: QuerySpecV2) -> str:
     return " ".join(query_spec.retrieval_queries[:3]) if query_spec.retrieval_queries else query_spec.original_query
+
+
+def aggregate_legal_v2_documents(
+    fused: list[RetrievedChunk],
+    *,
+    dense: list[RetrievedChunk],
+    bm25: list[RetrievedChunk],
+    query_spec: QuerySpecV2,
+    limit: int,
+) -> list[CandidateEvidenceDocument]:
+    """Public document aggregation used by Stage 1 and experimental multi-source RRF."""
+    return _aggregate_documents(
+        fused,
+        dense=dense,
+        bm25=bm25,
+        query_spec=query_spec,
+        limit=limit,
+    )
 
 
 def _aggregate_documents(

@@ -1,5 +1,25 @@
 # Project Progress
 
+## 2026-08-12 Europe/Moscow — Task: Hybrid B + ColBERT golden evaluation
+
+- Experimental Stage-1 only: B contextual dense (BGE-M3) + BM25 + ColBERT → RRF
+  (no CE). Reuses `rrf_fuse` N-lists + `ColbertRetriever` (async).
+- Code: `app/rag/legal_v2/retrieve/colbert_hybrid.py`,
+  `scripts/legal_v2/evaluate_colbert_hybrid_golden_v1.py`,
+  `tests/rag/test_legal_v2_colbert_hybrid.py`; public
+  `aggregate_legal_v2_documents` helper on Legal v2 retriever.
+- Depths: dense=80, BM25=80, ColBERT=80, fused=120, rrf_k=60.
+- Metrics (20 golden): Hit@1=0.50, Hit@3=0.60, Hit@5=0.85, Hit@10=0.95,
+  MRR=0.625, mean rank≈2.53, HN≈0.053.
+- vs FAST A: Hit@1/3/10 tie; Hit@5 +0.05; MRR +0.018; better mean rank.
+- Critical: `004` 5→4 (ColBERT helped); `002` still >10 with HN
+  (pure ColBERT had rank 3 — fusion lost it); Hit@1 loss `020` (1→2).
+- Verdict: **COLBERT HYBRID VERDICT = IMPROVES** (vs FAST A/B; still far
+  below CE B). Not production-activated; FAST/CE pins unchanged.
+- Artifacts (not committed):
+  `artifacts/legal_v2/chunking_ab_pilot_300_v1/colbert_v1/hybrid_eval/`
+- Next (explicit go only): B+ColBERT candidates → canonical CE-7.
+
 ## 2026-08-12 Europe/Moscow — Task: Pure ColBERT golden evaluation
 
 - Runner: `scripts/legal_v2/evaluate_colbert_golden_v1.py` (async boundary;
@@ -14,8 +34,7 @@
 - Artifacts (not committed):
   `artifacts/legal_v2/chunking_ab_pilot_300_v1/colbert_v1/eval/`
 - FAST canonical = A; CE canonical = B contextual (unchanged).
-- Next (explicit go only): experimental Hybrid B (BGE-M3+BM25) + ColBERT RRF,
-  no CE, no production activation.
+- Hybrid B+ColBERT eval completed (see entry above).
 
 ## 2026-08-12 Europe/Moscow — Task: ColBERT backend + B contextual index
 
