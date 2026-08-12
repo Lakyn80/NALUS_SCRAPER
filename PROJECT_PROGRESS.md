@@ -1,5 +1,25 @@
 # Project Progress
 
+## 2026-08-12 Europe/Moscow — Task: Slice 4 A/B indexes (HARD STOP before FAST/CE)
+
+- Goal: isolated A/B BGE-M3 + BM25 indexes for `chunking_ab_pilot_300_v1` on
+  parser v8; classify readiness; do **not** run FAST/CE yet.
+- Chunk QA v8: `run_chunking_ab_pilot_300_chunk_qa_v8.py` + lost-paragraph
+  verifier; base QA overlap/text-loss helpers tightened. Verdict
+  **`CHUNK_QA_PASS_V8`** (A=6162, B=4168).
+- Indexer: `build_chunking_ab_pilot_300_indexes_v8.py` (resume-by-default,
+  `--side A|B|both`, `--device cpu|cuda`, experiment CUDA embedder bypass).
+- GPU stack (local only): `Dockerfile.slice4-gpu`,
+  `docker-compose.slice4.gpu.yml`, `requirements-slice4-gpu.txt` — dual
+  networks (API + Qdrant); BM25 mount must be `nalus-scraper/storage`.
+- Collections:
+  - `nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_300` (6162)
+  - `nalus_legal_paragraph_chunks_v2_chunk_ab_v8_b_contextual_300` (4168)
+- Classification: **`INDEX_AB_READY`**, **`FAST_AB_SAFE_TO_START=YES`**.
+- Artifacts: `artifacts/legal_v2/chunking_ab_pilot_300_v1/slice4_indexes_v8/`.
+- **HARD STOP:** no FAST A/B and no CE until explicitly requested.
+- Next (only on explicit go): FAST A/B retrieval benchmark on these indexes.
+
 ## 2026-08-10 Europe/Moscow — Task: SectionType parser v8 fix
 
 - Goal: stop keyword/`HEADER` sticky contamination so same-section chunking
