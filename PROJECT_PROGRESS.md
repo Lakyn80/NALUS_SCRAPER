@@ -1,5 +1,35 @@
 # Project Progress
 
+## 2026-08-12 Europe/Moscow — Task: Pin FAST=A and CE=B runtime profiles
+
+- Decision after Slice 4 FAST + canonical CE-7 A/B benchmarks:
+  - **FAST canonical chunking: A** (`…chunk_ab_v8_a_current_300`)
+  - **CE canonical chunking: B contextual** (`…chunk_ab_v8_b_contextual_300`)
+  - CE params unchanged: `fast_ce` / `BAAI/bge-reranker-v2-m3` / candidates 30 /
+    passages 7 / `diversified_stage1_evidence_v1` / pool 40 / batch 8 /
+    max_length 512 / experiment `ce_bge_v2m3_p7_diverse_v1`
+- Evidence:
+  - FAST A/B: **A WINS** (Hit@1/10 tie; A better Hit@3/5, MRR, mean rank, HN)
+  - CE A/B: **B WINS** (Hit@1=0.95, Hit@3/5/10=1.00, MRR=0.975, HN=0.000;
+    query `002`: A CE `>10` → B CE `1`; no B CE regressions)
+- Code: per-profile index bindings in
+  `app/rag/legal_v2/retrieve/retrieval_profiles.py`; dual Stage1 runtimes in
+  `case_similarity_search.py` (FAST retriever=A, CE retriever=B).
+- Reporter: `scripts/legal_v2/report_chunking_ab_ce_comparison_v8.py`
+- Unchanged: chunkers, indexes, golden dataset, CE hyperparameters.
+- **COLBERT = NOT STARTED** (next experiment only on explicit go).
+
+## 2026-08-12 Europe/Moscow — Task: CE A/B retrieval on Slice 4 indexes
+
+- Goal: canonical CE-7 A/B on same Slice 4 indexes; compare vs FAST; no ColBERT.
+- Config: `--profile fast_ce`, model `BAAI/bge-reranker-v2-m3`, candidates 30,
+  passages 7, selector `diversified_stage1_evidence_v1`, pool 40, batch 8,
+  experiment `ce_bge_v2m3_p7_diverse_v1`.
+- Results (n=20): CE A Hit@1=0.90 Hit@10=0.95 MRR=0.925; CE B Hit@1=0.95
+  Hit@3/5/10=1.00 MRR=0.975 HN=0.000.
+- **CE A/B VERDICT: B WINS**; overall chunking flips FAST→**B** under CE-7.
+- Reports: `artifacts/legal_v2/chunking_ab_pilot_300_v1/ce_ab_results/CE_AB_COMPARISON.{md,json,html}`
+
 ## 2026-08-12 Europe/Moscow — Task: FAST A/B retrieval on Slice 4 indexes
 
 - Goal: run FAST-only case-similarity golden eval on isolated chunk_ab_v8 A/B

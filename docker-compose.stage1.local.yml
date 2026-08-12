@@ -1,6 +1,12 @@
 # Local Stage 1 deploy overlay.
 # Uses the existing nalus-scraper Qdrant + storage/models; does not recreate indexes.
 #
+# Slice 4 profile pins (code-canonical in retrieval_profiles.py):
+#   FAST → chunk_ab_v8_a_current_300 (A won FAST A/B)
+#   CE   → chunk_ab_v8_b_contextual_300 (B won CE-7 A/B)
+# Legacy NALUS_LEGAL_V2_QDRANT_COLLECTION / BM25_* below are shared knobs /
+# path-prefix hints only; Stage1 search overrides collection+BM25 per profile.
+#
 # Usage (PowerShell, from repo root):
 #   docker stop nalus-scraper-api-1
 #   docker compose -f docker-compose.yml -f docker-compose.stage1.local.yml up -d --build --no-deps api

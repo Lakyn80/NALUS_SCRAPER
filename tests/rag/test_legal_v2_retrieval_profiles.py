@@ -20,6 +20,9 @@ def test_fast_profile_disables_ce(monkeypatch: pytest.MonkeyPatch) -> None:
     assert resolved.profile_id == "fast"
     assert resolved.use_cross_encoder is False
     assert resolved.cross_encoder_config is None
+    assert resolved.index is not None
+    assert resolved.index.qdrant_collection.endswith("a_current_300")
+    assert resolved.index.bm25_index_id.endswith("a_current_300")
 
 
 def test_ce7_requires_master_allow(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -43,6 +46,26 @@ def test_ce7_profile_forces_diversified_seven(monkeypatch: pytest.MonkeyPatch) -
         == DIVERSIFIED_STAGE1_EVIDENCE_V1
     )
     assert resolved.cross_encoder_config.evidence_pool_limit >= 40
+    assert resolved.cross_encoder_config.model_id == "BAAI/bge-reranker-v2-m3"
+    assert resolved.index is not None
+    assert resolved.index.qdrant_collection.endswith("b_contextual_300")
+    assert resolved.index.bm25_index_id.endswith("b_contextual_300")
+
+
+def test_fast_and_ce_index_bindings_are_distinct() -> None:
+    from app.rag.legal_v2.retrieve.retrieval_profiles import (
+        ce_index_binding,
+        fast_index_binding,
+    )
+
+    fast = fast_index_binding()
+    ce = ce_index_binding()
+    assert fast.qdrant_collection != ce.qdrant_collection
+    assert fast.bm25_index_id != ce.bm25_index_id
+    assert "a_current_300" in fast.qdrant_collection
+    assert "b_contextual_300" in ce.qdrant_collection
+    assert fast.bm25_sidecar_path.name.endswith("a_current_300.sqlite")
+    assert ce.bm25_sidecar_path.name.endswith("b_contextual_300.sqlite")
 
 
 def test_precise_reserved(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -144,10 +167,15 @@ def test_search_default_profile_is_fast_even_when_ce_env_on(
     runtime = CaseSimilarityStage1Runtime(
         retriever=_FakeRetriever(),  # type: ignore[arg-type]
         config=MagicMock(
-            qdrant_collection="nalus_legal_paragraph_chunks_v2_pilot_600",
-            bm25_index_id="nalus_legal_paragraph_bm25_v2_pilot_600",
+            qdrant_collection="nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_300",
+            bm25_index_id="nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_300",
         ),
         ready=True,
+        ce_retriever=_FakeRetriever(),  # type: ignore[arg-type]
+        ce_config=MagicMock(
+            qdrant_collection="nalus_legal_paragraph_chunks_v2_chunk_ab_v8_b_contextual_300",
+            bm25_index_id="nalus_legal_paragraph_bm25_v2_chunk_ab_v8_b_contextual_300",
+        ),
     )
     result = module.search_case_similarity_stage1(
         query="krátký testovací dotaz",
@@ -159,6 +187,10 @@ def test_search_default_profile_is_fast_even_when_ce_env_on(
     assert result.diagnostics["retrieval_profile"] == "fast"
     assert result.diagnostics["rerank"]["rerank_applied"] is False
     assert result.retrieval_stage == "hybrid_rrf_stage_1"
+    assert (
+        result.diagnostics["collection"]
+        == "nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_300"
+    )
     assert [row.ecli for row in result.results] == [
         "ECLI:CZ:US:2025:1.US.1111.25.1",
         "ECLI:CZ:US:2025:1.US.2222.25.1",
@@ -243,10 +275,15 @@ def test_search_ce7_applied_reports_hybrid_rrf_ce7(
     runtime = CaseSimilarityStage1Runtime(
         retriever=_FakeRetriever(),  # type: ignore[arg-type]
         config=MagicMock(
-            qdrant_collection="nalus_legal_paragraph_chunks_v2_pilot_600",
-            bm25_index_id="nalus_legal_paragraph_bm25_v2_pilot_600",
+            qdrant_collection="nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_300",
+            bm25_index_id="nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_300",
         ),
         ready=True,
+        ce_retriever=_FakeRetriever(),  # type: ignore[arg-type]
+        ce_config=MagicMock(
+            qdrant_collection="nalus_legal_paragraph_chunks_v2_chunk_ab_v8_b_contextual_300",
+            bm25_index_id="nalus_legal_paragraph_bm25_v2_chunk_ab_v8_b_contextual_300",
+        ),
     )
     result = module.search_case_similarity_stage1(
         query="krátký testovací dotaz",
@@ -257,6 +294,10 @@ def test_search_ce7_applied_reports_hybrid_rrf_ce7(
     assert result.retrieval_stage == "hybrid_rrf_ce7"
     assert result.diagnostics["rerank"]["rerank_applied"] is True
     assert result.diagnostics["rerank"]["requested_passages_per_document"] == 7
+    assert (
+        result.diagnostics["collection"]
+        == "nalus_legal_paragraph_chunks_v2_chunk_ab_v8_b_contextual_300"
+    )
     # CE reversed Stage-1 order: former rank-2 becomes ce_rank=1.
     assert [row.ecli for row in result.results] == [
         "ECLI:CZ:US:2025:1.US.2222.25.1",
@@ -315,10 +356,15 @@ def test_search_ce_failure_does_not_claim_ce7_stage(
     runtime = CaseSimilarityStage1Runtime(
         retriever=_FakeRetriever(),  # type: ignore[arg-type]
         config=MagicMock(
-            qdrant_collection="nalus_legal_paragraph_chunks_v2_pilot_600",
-            bm25_index_id="nalus_legal_paragraph_bm25_v2_pilot_600",
+            qdrant_collection="nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_300",
+            bm25_index_id="nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_300",
         ),
         ready=True,
+        ce_retriever=_FakeRetriever(),  # type: ignore[arg-type]
+        ce_config=MagicMock(
+            qdrant_collection="nalus_legal_paragraph_chunks_v2_chunk_ab_v8_b_contextual_300",
+            bm25_index_id="nalus_legal_paragraph_bm25_v2_chunk_ab_v8_b_contextual_300",
+        ),
     )
     with pytest.raises(ValueError, match="cross-encoder reranking failed"):
         module.search_case_similarity_stage1(

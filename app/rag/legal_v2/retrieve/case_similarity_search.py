@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from threading import Lock
 from typing import Any
 
@@ -16,6 +17,9 @@ from app.rag.legal_v2.query_spec import QuerySpecV2, build_query_spec_v2
 from app.rag.legal_v2.retrieve.retrieval_profiles import (
     RetrievalStage,
     build_retrieval_stage,
+    ce_index_binding,
+    fast_index_binding,
+    resolve_retrieval_profile,
 )
 from app.rag.legal_v2.retrieve.retriever import (
     LegalV2HybridRetriever,
@@ -133,6 +137,28 @@ class CaseSimilarityStage1Runtime:
     warmup_status: str = "cold"  # cold | warming | warm | failed | skipped
     warmup_error_type: str | None = None
     warmup_latency_ms: float | None = None
+    # Dual Slice-4 bindings: FAST=A, CE=B contextual (pinned after A/B benchmarks).
+    ce_retriever: LegalV2HybridRetriever | None = None
+    ce_config: LegalV2RetrieverConfig | None = None
+
+    def retriever_for_profile(self, profile_id: str) -> LegalV2HybridRetriever:
+        if profile_id == "ce7":
+            if self.ce_retriever is None:
+                raise RetrievalConfigurationError(
+                    "CE retriever is not configured (expected Slice 4 B contextual indexes)."
+                )
+            return self.ce_retriever
+        return self.retriever
+
+    def config_for_profile(self, profile_id: str) -> LegalV2RetrieverConfig:
+        if profile_id == "ce7":
+            if self.ce_config is None:
+                raise RetrievalConfigurationError(
+                    "CE retriever config is not configured "
+                    "(expected Slice 4 B contextual indexes)."
+                )
+            return self.ce_config
+        return self.config
 
 
 _runtime: CaseSimilarityStage1Runtime | None = None
@@ -145,6 +171,48 @@ def reset_case_similarity_stage1_runtime_for_tests() -> None:
         _runtime = None
 
 
+def _retriever_config_for_index(
+    *,
+    base: LegalV2RetrieverConfig,
+    qdrant_collection: str,
+    bm25_index_id: str,
+    bm25_sidecar_path: Path,
+) -> LegalV2RetrieverConfig:
+    from dataclasses import replace
+
+    return replace(
+        base,
+        qdrant_collection=qdrant_collection,
+        bm25_index_id=bm25_index_id,
+        bm25_sidecar_path=bm25_sidecar_path,
+    )
+
+
+def _require_collection(client: Any, collection: str) -> Any:
+    try:
+        info = client.get_collection(collection)
+    except Exception as exc:  # noqa: BLE001
+        raise RetrievalConfigurationError(
+            f"Qdrant collection unavailable: {collection}"
+        ) from exc
+    if int(getattr(info, "points_count", 0) or 0) <= 0:
+        raise RetrievalConfigurationError(f"Qdrant collection is empty: {collection}")
+    return info
+
+
+def _resolve_profile_bm25_path(binding_path: Path) -> Path:
+    """Map relative Slice-4 BM25 paths onto the Docker /app/storage mount when present."""
+    if binding_path.is_absolute():
+        return binding_path
+    env_path = os.getenv("NALUS_LEGAL_V2_BM25_SIDECAR_PATH", "").strip()
+    if env_path.startswith("/app/storage"):
+        return Path("/app") / binding_path.as_posix()
+    sidecar_dir = os.getenv("NALUS_LEGAL_V2_BM25_SIDECAR_DIR", "").strip()
+    if sidecar_dir:
+        return Path(sidecar_dir) / binding_path.name
+    return binding_path
+
+
 def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
     global _runtime
     if _runtime is not None:
@@ -152,61 +220,81 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
     with _runtime_lock:
         if _runtime is not None:
             return _runtime
-        config = legal_v2_retriever_config_from_env()
-        config.validate()
-        if not config.bm25_sidecar_path.exists():
+        # Shared knobs (dense/BM25 candidate sizes, model path) from env;
+        # profile-specific index bindings come from Slice-4 pin constants.
+        base = legal_v2_retriever_config_from_env()
+        fast_bind = fast_index_binding()
+        ce_bind = ce_index_binding()
+        fast_config = _retriever_config_for_index(
+            base=base,
+            qdrant_collection=fast_bind.qdrant_collection,
+            bm25_index_id=fast_bind.bm25_index_id,
+            bm25_sidecar_path=_resolve_profile_bm25_path(fast_bind.bm25_sidecar_path),
+        )
+        ce_config = _retriever_config_for_index(
+            base=base,
+            qdrant_collection=ce_bind.qdrant_collection,
+            bm25_index_id=ce_bind.bm25_index_id,
+            bm25_sidecar_path=_resolve_profile_bm25_path(ce_bind.bm25_sidecar_path),
+        )
+        fast_config.validate()
+        ce_config.validate()
+        if not fast_config.bm25_sidecar_path.exists():
             raise RetrievalConfigurationError(
-                f"BM25 sidecar missing: {config.bm25_sidecar_path}"
+                f"FAST BM25 sidecar missing: {fast_config.bm25_sidecar_path}"
+            )
+        if not ce_config.bm25_sidecar_path.exists():
+            raise RetrievalConfigurationError(
+                f"CE BM25 sidecar missing: {ce_config.bm25_sidecar_path}"
             )
         qdrant_module = __import__("qdrant_client", fromlist=["QdrantClient"])
         client = qdrant_module.QdrantClient(
             url=os.getenv("QDRANT_URL", "http://qdrant:6333"),
             timeout=10,
         )
-        collection = config.qdrant_collection
-        try:
-            info = client.get_collection(collection)
-        except Exception as exc:  # noqa: BLE001
-            raise RetrievalConfigurationError(
-                f"Qdrant collection unavailable: {collection}"
-            ) from exc
-        if int(getattr(info, "points_count", 0) or 0) <= 0:
-            raise RetrievalConfigurationError(
-                f"Qdrant collection is empty: {collection}"
-            )
+        fast_info = _require_collection(client, fast_config.qdrant_collection)
+        ce_info = _require_collection(client, ce_config.qdrant_collection)
         prod_config = ProductionRetrievalConfig(
             profile=LEGAL_V2_PROFILE,
-            qdrant_collection=config.qdrant_collection,
-            bm25_sidecar_path=config.bm25_sidecar_path,
-            bm25_index_id=config.bm25_index_id,
-            model_path=config.model_path,
+            qdrant_collection=fast_config.qdrant_collection,
+            bm25_sidecar_path=fast_config.bm25_sidecar_path,
+            bm25_index_id=fast_config.bm25_index_id,
+            model_path=fast_config.model_path,
             local_files_only=True,
             trust_remote_code=False,
             device=os.getenv("EMBEDDING_DEVICE", "cpu"),
             candidate_multiplier=1,
             min_candidate_count=1,
             max_candidate_count=max(
-                config.dense_candidate_chunks, config.bm25_candidate_chunks
+                fast_config.dense_candidate_chunks, fast_config.bm25_candidate_chunks
             ),
             lexical_filter_enabled=False,
         )
         embedder = BgeM3Embedder(prod_config)
-        retriever = build_live_legal_v2_retriever(client, embedder, config)
+        fast_retriever = build_live_legal_v2_retriever(client, embedder, fast_config)
+        ce_retriever = build_live_legal_v2_retriever(client, embedder, ce_config)
         _runtime = CaseSimilarityStage1Runtime(
-            retriever=retriever,
-            config=config,
+            retriever=fast_retriever,
+            config=fast_config,
             embedder=embedder,
             ready=True,
             ready_error=None,
             model_loaded=bool(getattr(embedder, "loaded", False)),
             bm25_loaded=False,
             warmup_status="cold",
+            ce_retriever=ce_retriever,
+            ce_config=ce_config,
         )
         logger.info(
-            "[legal_v2.stage1] runtime ready collection=%s bm25_index_id=%s points=%s",
-            config.qdrant_collection,
-            config.bm25_index_id,
-            getattr(info, "points_count", None),
+            "[legal_v2.stage1] runtime ready "
+            "fast_collection=%s fast_bm25=%s fast_points=%s "
+            "ce_collection=%s ce_bm25=%s ce_points=%s",
+            fast_config.qdrant_collection,
+            fast_config.bm25_index_id,
+            getattr(fast_info, "points_count", None),
+            ce_config.qdrant_collection,
+            ce_config.bm25_index_id,
+            getattr(ce_info, "points_count", None),
         )
         return _runtime
 
@@ -222,7 +310,12 @@ def _bm25_is_loaded(runtime: CaseSimilarityStage1Runtime) -> bool:
     if runtime.bm25_loaded:
         return True
     bm25 = getattr(runtime.retriever, "_bm25", None)
-    return bool(bm25 is not None and getattr(bm25, "_index", None) is not None)
+    fast_ok = bool(bm25 is not None and getattr(bm25, "_index", None) is not None)
+    if runtime.ce_retriever is None:
+        return fast_ok
+    ce_bm25 = getattr(runtime.ce_retriever, "_bm25", None)
+    ce_ok = bool(ce_bm25 is not None and getattr(ce_bm25, "_index", None) is not None)
+    return fast_ok and ce_ok
 
 
 def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
@@ -243,6 +336,10 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
             "bm25_loaded": True,
             "warmup_latency_ms": runtime.warmup_latency_ms,
             "collection": runtime.config.qdrant_collection,
+            "fast_collection": runtime.config.qdrant_collection,
+            "ce_collection": (
+                runtime.ce_config.qdrant_collection if runtime.ce_config else None
+            ),
         }
 
     runtime.warmup_status = "warming"
@@ -263,14 +360,22 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
         if bm25 is None:
             raise RetrievalConfigurationError("Stage 1 BM25 sidecar is not configured.")
         bm25.search(_WARMUP_QUERY, top_k=1)
+        if runtime.ce_retriever is not None:
+            ce_bm25 = getattr(runtime.ce_retriever, "_bm25", None)
+            if ce_bm25 is None:
+                raise RetrievalConfigurationError(
+                    "CE BM25 sidecar is not configured."
+                )
+            ce_bm25.search(_WARMUP_QUERY, top_k=1)
         runtime.bm25_loaded = True
 
         runtime.warmup_status = "warm"
         runtime.warmup_latency_ms = (time.perf_counter() - started) * 1000.0
         logger.info(
-            "[legal_v2.stage1] warmup complete collection=%s model_loaded=1 bm25_loaded=1 "
-            "warmup_latency_ms=%.1f",
+            "[legal_v2.stage1] warmup complete fast_collection=%s ce_collection=%s "
+            "model_loaded=1 bm25_loaded=1 warmup_latency_ms=%.1f",
             runtime.config.qdrant_collection,
+            runtime.ce_config.qdrant_collection if runtime.ce_config else None,
             runtime.warmup_latency_ms,
         )
         return {
@@ -279,6 +384,10 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
             "bm25_loaded": True,
             "warmup_latency_ms": runtime.warmup_latency_ms,
             "collection": runtime.config.qdrant_collection,
+            "fast_collection": runtime.config.qdrant_collection,
+            "ce_collection": (
+                runtime.ce_config.qdrant_collection if runtime.ce_config else None
+            ),
         }
     except Exception as exc:  # noqa: BLE001
         runtime.warmup_status = "failed"
@@ -312,12 +421,18 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
     try:
         runtime = get_case_similarity_stage1_runtime()
     except Exception as exc:  # noqa: BLE001
+        fast_bind = fast_index_binding()
+        ce_bind = ce_index_binding()
         return {
             "ready": False,
             "status": "unavailable",
             "error_type": exc.__class__.__name__,
-            "collection": os.getenv("NALUS_LEGAL_V2_QDRANT_COLLECTION"),
-            "bm25_index_id": os.getenv("NALUS_LEGAL_V2_BM25_INDEX_ID"),
+            "collection": fast_bind.qdrant_collection,
+            "bm25_index_id": fast_bind.bm25_index_id,
+            "fast_collection": fast_bind.qdrant_collection,
+            "fast_bm25_index_id": fast_bind.bm25_index_id,
+            "ce_collection": ce_bind.qdrant_collection,
+            "ce_bm25_index_id": ce_bind.bm25_index_id,
             "model_loaded": False,
             "bm25_loaded": False,
             "warmup_status": "failed",
@@ -348,6 +463,14 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
         "collection": runtime.config.qdrant_collection,
         "bm25_index_id": runtime.config.bm25_index_id,
         "bm25_sidecar_exists": runtime.config.bm25_sidecar_path.exists(),
+        "fast_collection": runtime.config.qdrant_collection,
+        "fast_bm25_index_id": runtime.config.bm25_index_id,
+        "ce_collection": (
+            runtime.ce_config.qdrant_collection if runtime.ce_config else None
+        ),
+        "ce_bm25_index_id": (
+            runtime.ce_config.bm25_index_id if runtime.ce_config else None
+        ),
         "retrieval_stage": STAGE_1_RETRIEVAL,
         "model_loaded": model_loaded,
         "bm25_loaded": bm25_loaded,
@@ -402,7 +525,6 @@ def search_case_similarity_stage1(
     query_started = time.perf_counter()
     query_spec = query_spec_builder(cleaned)
     query_ms = (time.perf_counter() - query_started) * 1000.0
-    retrieval = active.retriever.retrieve(query_spec)
 
     from app.rag.legal_v2.rerank.errors import (
         RerankerInferenceError,
@@ -411,11 +533,14 @@ def search_case_similarity_stage1(
         RerankerUnavailableError,
     )
     from app.rag.legal_v2.rerank.service import get_cross_encoder_reranking_service
-    from app.rag.legal_v2.retrieve.retrieval_profiles import resolve_retrieval_profile
 
     # Env alone no longer forces CE on every API call; request profile selects mode.
     # Master-allow still gates CE via resolve_retrieval_profile (ce7 requires env ON).
+    # Index binding: FAST→A, CE→B contextual (Slice 4 pin).
     profile = resolve_retrieval_profile(retrieval_profile)
+    active_retriever = active.retriever_for_profile(profile.profile_id)
+    active_config = active.config_for_profile(profile.profile_id)
+    retrieval = active_retriever.retrieve(query_spec)
     ce_config = profile.cross_encoder_config
     rerank_diagnostics: dict[str, Any] | None = None
 
@@ -526,8 +651,8 @@ def search_case_similarity_stage1(
         "original_query_length": len(prepared.original_query),
         "generated_query_count": len(query_spec.retrieval_queries),
         "result_count": len(documents),
-        "collection": active.config.qdrant_collection,
-        "bm25_index_id": active.config.bm25_index_id,
+        "collection": active_config.qdrant_collection,
+        "bm25_index_id": active_config.bm25_index_id,
         "queryspec_latency_ms": query_ms,
         "dense_latency_ms": retrieval.diagnostics.get("dense_latency_ms"),
         "bm25_latency_ms": retrieval.diagnostics.get("bm25_latency_ms"),
@@ -556,6 +681,7 @@ def search_case_similarity_stage1(
             "retrieval_profile": profile.profile_id,
         },
         "retrieval_profile": profile.profile_id,
+        "profile_index_notes": profile.notes,
     }
     rerank_payload = diagnostics["rerank"]
     passages_per_document = rerank_payload.get("requested_passages_per_document")
@@ -580,23 +706,24 @@ def search_case_similarity_stage1(
         "legal_v2.stage1.search.completed",
         result_count=len(documents),
         query_length=len(cleaned),
-        collection=active.config.qdrant_collection,
+        collection=active_config.qdrant_collection,
     )
     logger.info(
         "[legal_v2.stage1] search done result_count=%s query_length=%s "
         "generated_query_count=%s collection=%s bm25_index_id=%s "
         "dense_latency_ms=%s bm25_latency_ms=%s total_latency_ms=%s "
-        "was_condensed=%s classification=%s",
+        "was_condensed=%s classification=%s retrieval_profile=%s",
         len(documents),
         len(cleaned),
         len(query_spec.retrieval_queries),
-        active.config.qdrant_collection,
-        active.config.bm25_index_id,
+        active_config.qdrant_collection,
+        active_config.bm25_index_id,
         diagnostics.get("dense_latency_ms"),
         diagnostics.get("bm25_latency_ms"),
         diagnostics.get("total_latency_ms"),
         prepared.was_condensed,
         prepared.classification.value,
+        profile.profile_id,
     )
     return Stage1SearchResult(
         query=cleaned,

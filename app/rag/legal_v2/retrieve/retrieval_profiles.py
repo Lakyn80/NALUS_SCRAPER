@@ -9,12 +9,19 @@ Master-allow policy:
 
 ``retrieval_stage`` is provenance for the ranking that was actually returned —
 derived from runtime rerank outcome, not from configuration intent alone.
+
+Slice 4 index pinning (chunking_ab_pilot_300_v1, parser v8):
+- FAST uses Slice 4 variant A because A won the FAST A/B benchmark.
+- CE uses Slice 4 variant B contextual because B won the canonical CE-7 A/B
+  benchmark.
 """
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Literal
 
 from app.rag.legal_v2.rerank.config import CrossEncoderConfig, cross_encoder_config_from_env
@@ -24,6 +31,33 @@ RetrievalProfileId = Literal["fast", "ce7", "precise"]
 
 DEFAULT_RETRIEVAL_PROFILE: RetrievalProfileId = "fast"
 KNOWN_RETRIEVAL_PROFILES: tuple[RetrievalProfileId, ...] = ("fast", "ce7", "precise")
+
+# ---------------------------------------------------------------------------
+# Canonical Slice-4 profile index bindings (pinned after A/B benchmarks).
+# FAST = chunking A; CE = chunking B contextual. ColBERT not started.
+# Optional env overrides (ops only):
+#   NALUS_LEGAL_V2_FAST_QDRANT_COLLECTION / _BM25_INDEX_ID / _BM25_SIDECAR_PATH
+#   NALUS_LEGAL_V2_CE_QDRANT_COLLECTION / _BM25_INDEX_ID / _BM25_SIDECAR_PATH
+# ---------------------------------------------------------------------------
+FAST_CANONICAL_QDRANT_COLLECTION = (
+    "nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_300"
+)
+FAST_CANONICAL_BM25_INDEX_ID = (
+    "nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_300"
+)
+FAST_CANONICAL_BM25_SIDECAR_PATH = Path(
+    "storage/rag/bm25/nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_300.sqlite"
+)
+
+CE_CANONICAL_QDRANT_COLLECTION = (
+    "nalus_legal_paragraph_chunks_v2_chunk_ab_v8_b_contextual_300"
+)
+CE_CANONICAL_BM25_INDEX_ID = (
+    "nalus_legal_paragraph_bm25_v2_chunk_ab_v8_b_contextual_300"
+)
+CE_CANONICAL_BM25_SIDECAR_PATH = Path(
+    "storage/rag/bm25/nalus_legal_paragraph_bm25_v2_chunk_ab_v8_b_contextual_300.sqlite"
+)
 
 
 class RetrievalStage(str, Enum):
@@ -51,12 +85,22 @@ def build_retrieval_stage(
 
 
 @dataclass(frozen=True)
+class ProfileIndexBinding:
+    """Qdrant + BM25 targets bound to a retrieval profile."""
+
+    qdrant_collection: str
+    bm25_index_id: str
+    bm25_sidecar_path: Path
+
+
+@dataclass(frozen=True)
 class ResolvedRetrievalProfile:
     profile_id: RetrievalProfileId
     use_cross_encoder: bool
     cross_encoder_config: CrossEncoderConfig | None = None
     label: str = "FAST"
     notes: str = ""
+    index: ProfileIndexBinding | None = None
 
 
 def normalize_retrieval_profile(value: str | None) -> RetrievalProfileId:
@@ -69,6 +113,55 @@ def normalize_retrieval_profile(value: str | None) -> RetrievalProfileId:
     return cleaned  # type: ignore[return-value]
 
 
+def _env_or_default(name: str, default: str) -> str:
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    return str(raw).strip()
+
+
+def fast_index_binding() -> ProfileIndexBinding:
+    """FAST canonical indexes = Slice 4 variant A (A won FAST A/B)."""
+    collection = _env_or_default(
+        "NALUS_LEGAL_V2_FAST_QDRANT_COLLECTION",
+        FAST_CANONICAL_QDRANT_COLLECTION,
+    )
+    bm25_id = _env_or_default(
+        "NALUS_LEGAL_V2_FAST_BM25_INDEX_ID",
+        FAST_CANONICAL_BM25_INDEX_ID,
+    )
+    path_raw = _env_or_default(
+        "NALUS_LEGAL_V2_FAST_BM25_SIDECAR_PATH",
+        str(FAST_CANONICAL_BM25_SIDECAR_PATH),
+    )
+    return ProfileIndexBinding(
+        qdrant_collection=collection,
+        bm25_index_id=bm25_id,
+        bm25_sidecar_path=Path(path_raw),
+    )
+
+
+def ce_index_binding() -> ProfileIndexBinding:
+    """CE canonical indexes = Slice 4 variant B contextual (B won CE-7 A/B)."""
+    collection = _env_or_default(
+        "NALUS_LEGAL_V2_CE_QDRANT_COLLECTION",
+        CE_CANONICAL_QDRANT_COLLECTION,
+    )
+    bm25_id = _env_or_default(
+        "NALUS_LEGAL_V2_CE_BM25_INDEX_ID",
+        CE_CANONICAL_BM25_INDEX_ID,
+    )
+    path_raw = _env_or_default(
+        "NALUS_LEGAL_V2_CE_BM25_SIDECAR_PATH",
+        str(CE_CANONICAL_BM25_SIDECAR_PATH),
+    )
+    return ProfileIndexBinding(
+        qdrant_collection=collection,
+        bm25_index_id=bm25_id,
+        bm25_sidecar_path=Path(path_raw),
+    )
+
+
 def resolve_retrieval_profile(value: str | None = None) -> ResolvedRetrievalProfile:
     """Resolve a request profile against the CE master-allow env flag."""
     profile_id = normalize_retrieval_profile(value)
@@ -78,7 +171,11 @@ def resolve_retrieval_profile(value: str | None = None) -> ResolvedRetrievalProf
             use_cross_encoder=False,
             cross_encoder_config=None,
             label="FAST",
-            notes="Stage 1 only (BGE-M3 + BM25 + RRF)",
+            notes=(
+                "Stage 1 only (BGE-M3 + BM25 + RRF). "
+                "FAST uses Slice 4 variant A because A won the FAST A/B benchmark."
+            ),
+            index=fast_index_binding(),
         )
     if profile_id == "precise":
         raise ValueError(
@@ -113,5 +210,10 @@ def resolve_retrieval_profile(value: str | None = None) -> ResolvedRetrievalProf
         use_cross_encoder=True,
         cross_encoder_config=ce7,
         label="CE-7",
-        notes="Stage 1 shortlist + diversified 7-passage Cross-Encoder",
+        notes=(
+            "Stage 1 shortlist + diversified 7-passage Cross-Encoder. "
+            "CE uses Slice 4 variant B contextual because B won the canonical "
+            "CE-7 A/B benchmark."
+        ),
+        index=ce_index_binding(),
     )
