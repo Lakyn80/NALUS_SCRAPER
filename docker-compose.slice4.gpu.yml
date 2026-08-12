@@ -1,0 +1,48 @@
+# Ad-hoc GPU Slice-4 indexer for local RTX 4060 (Docker Desktop + WSL2).
+# Does NOT replace production api service (keeps CPU torch).
+#
+# Needs BOTH networks:
+# - forms_default: reach API for document fetch
+# - nalus-scraper_default: reach nalus-scraper-qdrant-1
+
+services:
+  slice4-gpu-indexer:
+    build:
+      context: .
+      dockerfile: Dockerfile.slice4-gpu
+    gpus: all
+    environment:
+      - PYTHONPATH=/app
+      - EMBEDDING_DEVICE=cuda
+      - EMBEDDING_MODEL_NAME=/root/.cache/huggingface/hub/models--BAAI--bge-m3/snapshots/5617a9f61b028005a4858fdac845db406aefb181
+      - EMBEDDING_LOCAL_FILES_ONLY=1
+      - EMBEDDING_TRUST_REMOTE_CODE=0
+      - HF_HUB_OFFLINE=1
+      - TRANSFORMERS_OFFLINE=1
+      - QDRANT_URL=http://nalus-scraper-qdrant-1:6333
+      - LEGAL_V2_GIT_COMMIT=
+    volumes:
+      - ./app:/app/app
+      - ./scripts:/app/scripts
+      - ./artifacts:/app/artifacts
+      # Must match forms-api mount (nalus-scraper/storage), not local worktree storage.
+      - ../nalus-scraper/storage:/app/storage
+      - huggingface_cache:/root/.cache/huggingface
+      - ./models:/app/models:ro
+    networks:
+      - forms_default
+      - scraper_default
+    working_dir: /app
+
+volumes:
+  huggingface_cache:
+    external: true
+    name: nalus-scraper_huggingface_cache
+
+networks:
+  forms_default:
+    external: true
+    name: nalus-scraper-parser-forms_default
+  scraper_default:
+    external: true
+    name: nalus-scraper_default

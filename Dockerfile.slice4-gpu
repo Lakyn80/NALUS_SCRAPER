@@ -1,0 +1,29 @@
+# Experimental Slice-4 GPU indexer (RTX 4060). Not for production API.
+FROM pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1 \
+    EMBEDDING_DEVICE=cuda
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-slice4-gpu.txt /tmp/requirements-slice4-gpu.txt
+RUN python -m pip install --upgrade pip \
+    && python -m pip install -r /tmp/requirements-slice4-gpu.txt \
+    && python -m pip check
+
+COPY app ./app
+COPY scripts ./scripts
+
+RUN mkdir -p /app/batches /app/storage /app/models /app/artifacts \
+    && rm -rf /root/.cache/pip
+
+CMD ["python", "-c", "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"]
