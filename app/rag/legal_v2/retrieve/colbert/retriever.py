@@ -1,4 +1,4 @@
-"""ColBERT retriever foundation (backend-injected; no fake results)."""
+"""ColBERT retriever (async; blocking search offloaded in backend)."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ class ColbertRetriever:
     def config(self) -> ColbertConfig:
         return self._config
 
-    def retrieve(
+    async def retrieve(
         self,
         query: str,
         *,
@@ -47,8 +47,10 @@ class ColbertRetriever:
 
         backend = require_backend(self._backend)
         started = time.perf_counter()
-        raw_hits = backend.search(cleaned, top_k=resolved_top_k)
-        hits = tuple(_normalize_hit(hit, rank=index) for index, hit in enumerate(raw_hits, start=1))
+        raw_hits = await backend.search(cleaned, top_k=resolved_top_k)
+        hits = tuple(
+            _normalize_hit(hit, rank=index) for index, hit in enumerate(raw_hits, start=1)
+        )
         return ColbertRetrievalResult(
             hits=hits[:resolved_top_k],
             diagnostics={

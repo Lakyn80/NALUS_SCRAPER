@@ -1,22 +1,38 @@
-"""ColBERT backend dependency boundary (lazy; no import-time loading).
-
-External ColBERT libraries must only be imported behind this boundary and only
-when a concrete backend implementation is constructed in a later step.
-"""
+"""ColBERT backend dependency boundary (async Protocol; lazy library import)."""
 
 from __future__ import annotations
 
-from typing import Protocol, Sequence
+from typing import Any, Mapping, Protocol, Sequence
 
 from app.rag.legal_v2.retrieve.colbert.errors import ColbertBackendUnavailableError
-from app.rag.legal_v2.retrieve.colbert.models import ColbertHit
+from app.rag.legal_v2.retrieve.colbert.models import (
+    ColbertHit,
+    ColbertIndexBuildResult,
+)
 
 
 class ColbertBackend(Protocol):
-    """Narrow injectable backend for search (and later indexing)."""
+    """Injectable async ColBERT backend (search + index build)."""
 
-    def search(self, query: str, *, top_k: int) -> Sequence[ColbertHit]:
+    async def initialize(self) -> None:
+        """Lazy-load model / open index. Safe to call more than once."""
+        ...
+
+    async def close(self) -> None:
+        """Release resources."""
+        ...
+
+    async def search(self, query: str, *, top_k: int) -> Sequence[ColbertHit]:
         """Return ranked ColBERT hits for ``query``."""
+        ...
+
+    async def build_index(
+        self,
+        documents: Sequence[Mapping[str, Any]],
+        *,
+        source_collection: str | None = None,
+    ) -> ColbertIndexBuildResult:
+        """Build index + mapping from source chunk rows."""
         ...
 
 
@@ -30,13 +46,16 @@ def require_backend(backend: ColbertBackend | None) -> ColbertBackend:
     return backend
 
 
-def import_colbert_library() -> None:
-    """Lazy library probe for a future concrete backend.
+def import_colbert_library() -> Any:
+    """Lazy import of the optional PyLate dependency.
 
-    Intentionally raises: no ColBERT package is installed or wired in this step.
-    Safe to call only from backend constructors — never at module import.
+    Never called at module import time.
     """
-    raise ColbertBackendUnavailableError(
-        "ColBERT library is not installed or wired yet "
-        "(foundation boundary only; no download/install in this step)."
-    )
+    try:
+        import pylate  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise ColbertBackendUnavailableError(
+            "ColBERT library 'pylate' is not installed. "
+            "Install optional deps from requirements-colbert.txt."
+        ) from exc
+    return pylate

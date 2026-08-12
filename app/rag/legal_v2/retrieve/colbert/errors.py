@@ -1,4 +1,4 @@
-"""Typed errors for Legal v2 ColBERT retrieval foundation."""
+"""Typed errors for Legal v2 ColBERT retrieval."""
 
 from __future__ import annotations
 
@@ -16,4 +16,12 @@ class ColbertBackendUnavailableError(ColbertError):
 
 
 class ColbertNotImplementedError(ColbertError):
-    """Requested ColBERT capability is foundation-only and not wired yet."""
+    """Requested ColBERT capability is not wired yet."""
+
+
+class ColbertIndexError(ColbertError):
+    """ColBERT index is missing, corrupt, or failed integrity checks."""
+
+
+class ColbertMappingError(ColbertError):
+    """Chunk mapping is missing, corrupt, or inconsistent with the index."""

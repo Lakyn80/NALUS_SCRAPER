@@ -1,8 +1,6 @@
-"""ColBERT hit models compatible with shared retrieval chunk contracts.
+"""Colbert hit models compatible with shared retrieval chunk contracts.
 
 Public chunk shape reuses ``RetrievedChunk`` from ``app.rag.retrieval.models``.
-ColBERT-specific ranked hits carry document/chunk identity explicitly and can
-convert to that shared model without inventing a parallel public result type.
 """
 
 from __future__ import annotations
@@ -50,3 +48,35 @@ class ColbertRetrievalResult:
 
     def as_retrieved_chunks(self) -> list[RetrievedChunk]:
         return [hit.to_retrieved_chunk() for hit in self.hits]
+
+
+@dataclass(frozen=True)
+class ColbertIndexBuildResult:
+    """Outcome of an index build (integrity fields required for readiness)."""
+
+    status: str
+    source_collection: str
+    expected_chunk_count: int
+    indexed_chunk_count: int
+    mapping_row_count: int
+    duplicate_chunk_ids: int
+    missing_chunk_ids: int
+    empty_texts: int
+    index_path: str
+    mapping_path: str
+    model_name: str
+    library: str
+    library_version: str
+    device: str
+    diagnostics: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def ready(self) -> bool:
+        return (
+            self.status == "ok"
+            and self.indexed_chunk_count == self.expected_chunk_count
+            and self.mapping_row_count == self.expected_chunk_count
+            and self.duplicate_chunk_ids == 0
+            and self.missing_chunk_ids == 0
+            and self.empty_texts == 0
+        )

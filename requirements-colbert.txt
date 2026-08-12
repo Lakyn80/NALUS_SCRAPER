@@ -1,0 +1,22 @@
+# Optional ColBERT / late-interaction stack for Legal v2 experiments.
+# Keep isolated from the default API requirements so FAST/CE stay stable.
+#
+# Recommended install (Slice-4 GPU indexer container):
+#   pip install --no-deps pylate==1.6.0
+#   pip install --no-deps fast-plaid==1.4.6.2110 fastkmeans==0.5.0
+#   pip install ujson==5.12.0 usearch==2.26.0 accelerate==1.14.0 datasets==5.0.1
+#   # FastPLAID wheels expect a newer torch ABI; use CUDA torch compatible with
+#   # fast-plaid (verified: torch==2.11.0+cu130). Do NOT upgrade the production
+#   # API image torch (2.6.0+cu124) used by FAST/CE.
+#   pip install "torch==2.11.0"
+#   pip uninstall -y torchvision torchaudio  # avoid ABI clash with API image leftovers
+#
+# Library: PyLate (ColBERT encode + FastPLAID index)
+
+pylate==1.6.0
+fast-plaid==1.4.6.2110
+fastkmeans==0.5.0
+ujson==5.12.0
+usearch==2.26.0
+accelerate==1.14.0
+datasets==5.0.1

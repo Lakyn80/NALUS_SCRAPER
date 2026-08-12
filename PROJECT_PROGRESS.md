@@ -1,5 +1,19 @@
 # Project Progress
 
+## 2026-08-12 Europe/Moscow — Task: ColBERT backend + B contextual index
+
+- Implemented async-first PyLate ColBERT backend under
+  `app/rag/legal_v2/retrieve/colbert/` (Protocol + `PyLateColbertBackend`,
+  mapping, corpus export, indexer/retriever).
+- Optional deps: `requirements-colbert.txt` (isolated; do not upgrade API torch).
+- Builder: `scripts/legal_v2/build_colbert_index_v1.py`
+- First index: Slice 4 B contextual, **4168/4168**, FastPLAID,
+  model `colbert-ir/colbertv2.0`, device `cuda`, batch 16.
+- Artifacts (not committed):
+  `artifacts/legal_v2/chunking_ab_pilot_300_v1/colbert_v1/`
+  (`COLBERT_INDEX_READY: true`).
+- FAST/CE pins unchanged. Golden ColBERT benchmark **not started**.
+
 ## 2026-08-12 Europe/Moscow — Task: ColBERT retrieval foundation
 
 - Added modular ColBERT package under `app/rag/legal_v2/retrieve/colbert/`
