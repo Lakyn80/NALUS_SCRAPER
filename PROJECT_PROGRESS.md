@@ -1,5 +1,22 @@
 # Project Progress
 
+## 2026-08-12 Europe/Moscow — Task: Pure ColBERT golden evaluation
+
+- Runner: `scripts/legal_v2/evaluate_colbert_golden_v1.py` (async boundary;
+  uses existing `ColbertRetriever` / PyLate backend; no BM25/RRF/BGE/CE).
+- Corpus: Slice 4 B contextual ColBERT index
+  (`legal_v2_colbert_b_contextual_300`, 4168 chunks).
+- Same 20 golden queries. Metrics: Hit@1=0.30, Hit@3=0.45, Hit@5=0.45,
+  Hit@10=0.55, MRR=0.371, mean rank≈2.73, HN≈0.053.
+- Critical: `002`→rank 3, `004`→rank 1; `>10`: 003,005,007,008,009,012,017,018,019.
+- Verdict: **COLBERT VS FAST = FAST WINS**, **COLBERT VS CE = CE WINS**.
+- Decision: **PURE COLBERT = REJECTED** as standalone canonical profile.
+- Artifacts (not committed):
+  `artifacts/legal_v2/chunking_ab_pilot_300_v1/colbert_v1/eval/`
+- FAST canonical = A; CE canonical = B contextual (unchanged).
+- Next (explicit go only): experimental Hybrid B (BGE-M3+BM25) + ColBERT RRF,
+  no CE, no production activation.
+
 ## 2026-08-12 Europe/Moscow — Task: ColBERT backend + B contextual index
 
 - Implemented async-first PyLate ColBERT backend under
@@ -12,7 +29,7 @@
 - Artifacts (not committed):
   `artifacts/legal_v2/chunking_ab_pilot_300_v1/colbert_v1/`
   (`COLBERT_INDEX_READY: true`).
-- FAST/CE pins unchanged. Golden ColBERT benchmark **not started**.
+- FAST/CE pins unchanged. Golden ColBERT benchmark completed (see entry above).
 
 ## 2026-08-12 Europe/Moscow — Task: ColBERT retrieval foundation
 
