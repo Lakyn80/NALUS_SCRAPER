@@ -1,5 +1,25 @@
 # Project Progress
 
+## 2026-08-13 Europe/Moscow — Task: CPU-only latency proxy (FAST/BALANCED/PRECISE)
+
+- Scope: laptop **CPU proxy** only (not target VPS). Ephemeral Docker + pylate;
+  `HF_HUB_OFFLINE=1` / no model downloads; no Compose persistence; no production
+  activation; no commit/push.
+- Runner: `scripts/legal_v2/benchmark_cpu_tiers_golden_v1.py` (async Stage1 path,
+  20 golden queries, cold → warm → latency → concurrency).
+- Results (`artifacts/.../cpu_latency_v1/`):
+
+  | Profile | Warm p50 | Warm p95 | Cold | Peak RSS | Verdict |
+  |---|---:|---:|---:|---:|---|
+  | FAST | 731 ms | 1.1 s | 2.2 s | ~3.1 GiB | `CPU_PRODUCTION_SAFE` |
+  | BALANCED | 1.5 s | 1.9 s | 6.1 s | ~4.0 GiB | `CPU_PRODUCTION_SAFE` |
+  | PRECISE | 121 s | 220 s | 189 s | ~6.3 GiB | `GPU_WORKER_RECOMMENDED` |
+
+- Operational read (proxy): **BALANCED is CPU-usable** on this host;
+  **PRECISE is not** for interactive CPU service (needs GPU worker).
+- Host role: **laptop CPU proxy**. Target VPS benchmark = **NOT YET RUN**.
+- HARD STOP after report. Ephemeral container removed.
+
 ## 2026-08-13 Europe/Moscow — Task: Staging smoke + concurrency (3 tiers)
 
 - Runner: `scripts/legal_v2/smoke_retrieval_tiers_staging_v1.py` (in-process async
