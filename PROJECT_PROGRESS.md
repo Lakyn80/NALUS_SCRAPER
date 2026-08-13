@@ -1,5 +1,24 @@
 # Project Progress
 
+## 2026-08-13 Europe/Moscow — Task: Latency/cost tier benchmark (FAST / B+ColBERT / CE)
+
+- Runner: `scripts/legal_v2/benchmark_retrieval_latency_golden_v1.py`
+  (warmup once each; 20 golden queries; CUDA synchronize on ColBERT/CE).
+- Modes: FAST A; B+ColBERT (no CE); CE B (Stage1 B + CE-7). No profile activation.
+- Warm wall_ms (p50 / p95 / mean):
+  - FAST A: 684 / 1103 / 758
+  - B+ColBERT: 612 / 903 / 654
+  - CE B: 7479 / 8064 / 7264
+- Ratios (p50): B+ColBERT / FAST ≈ 0.89×; B+ColBERT / CE ≈ 0.08×.
+- Known quality unchanged: FAST MRR 0.607; B+ColBERT 0.625 (+0.018, Hit@5 +0.05);
+  CE B MRR 0.975.
+- Verdict: **KEEP_COLBERT_AS_BALANCED** (clear middle tier vs CE; not slower than FAST
+  on this GPU+parallel hybrid path).
+- Artifacts (not committed):
+  `artifacts/legal_v2/chunking_ab_pilot_300_v1/latency_tier_v1/LATENCY_TIER_RESULTS.*`
+- Next (explicit go only): product wiring of BALANCED profile, or archive decision if
+  ops cost of ColBERT index outweighs latency benefit.
+
 ## 2026-08-12 Europe/Moscow — Task: Hybrid B + ColBERT golden evaluation
 
 - Experimental Stage-1 only: B contextual dense (BGE-M3) + BM25 + ColBERT → RRF
