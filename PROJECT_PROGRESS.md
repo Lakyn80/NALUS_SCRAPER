@@ -1,5 +1,16 @@
 # Project Progress
 
+## 2026-08-13 Europe/Moscow — Task: B+ColBERT → CE-7 golden evaluation
+
+- Experiment only: B hybrid+ColBERT RRF shortlist → enrich ColBERT evidence →
+  canonical CE-7. Code: `retrieve_hybrid_plus_colbert_ce`,
+  `scripts/legal_v2/evaluate_colbert_hybrid_ce_golden_v1.py`.
+- Metrics vs CE B: **TIE** (Hit@1/3/5/10 and MRR identical; 0 rank mismatches).
+- Decision: do **not** put ColBERT in front of PRECISE; PRECISE stays B+CE-7.
+  BALANCED stays B+ColBERT (no CE).
+- Artifacts (not committed):
+  `artifacts/legal_v2/chunking_ab_pilot_300_v1/colbert_v1/hybrid_ce_eval/`
+
 ## 2026-08-13 Europe/Moscow — Task: Wire FAST / BALANCED / PRECISE profiles
 
 - Product tiers pinned in `retrieval_profiles.py` + async Stage1 search/API:
