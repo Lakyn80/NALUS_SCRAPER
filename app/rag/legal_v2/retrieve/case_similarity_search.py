@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -663,8 +664,10 @@ async def search_case_similarity_stage1(
     rerank_diagnostics: dict[str, Any] | None = None
 
     if not profile.use_cross_encoder or ce_config is None:
+        # Prefer RRF-ordered chunk_evidence for FE "best passage" display.
+        # Document ranking is unchanged; only passage selection improves.
         documents = [
-            _to_stage1_document(document, rank=index)
+            _to_stage1_document(document, rank=index, prefer_chunk_evidence=True)
             for index, document in enumerate(retrieval.documents[:resolved_limit], start=1)
         ]
         rerank_diagnostics = {
@@ -891,6 +894,106 @@ def search_case_similarity_stage1_sync(
 
 
 
+_HEADING_ONLY_PASSAGE_RE = re.compile(
+    r"^(?:"
+    r"Odůvodnění|Výrok|Poučení|"
+    r"I{1,3}|IV|VI{0,3}|IX|X"
+    r")\.?:?$",
+    re.IGNORECASE,
+)
+
+
+def _is_heading_only_passage(text: str) -> bool:
+    """True for bare section markers unsuitable as FE 'best passage' snippets."""
+    stripped = text.strip()
+    if not stripped:
+        return True
+    if _HEADING_ONLY_PASSAGE_RE.fullmatch(stripped):
+        return True
+    # Short ALL-CAPS / title-case section labels (e.g. "Název rozhodnutí").
+    words = stripped.split()
+    if len(stripped) <= 80 and len(words) <= 6 and not stripped.endswith("."):
+        letters = [ch for ch in stripped if ch.isalpha()]
+        if letters and all(ch.isupper() for ch in letters):
+            return True
+    return False
+
+
+def _passages_from_paragraphs(document, *, evidence_limit: int) -> list[Stage1Passage]:
+    passages: list[Stage1Passage] = []
+    for paragraph in list(document.paragraphs or [])[: max(0, int(evidence_limit))]:
+        text = str(paragraph.normalized_text or paragraph.original_text or "").strip()
+        if not text or _is_heading_only_passage(text):
+            continue
+        section = getattr(paragraph.section_type, "value", None) or str(
+            getattr(paragraph, "section_type", "") or ""
+        ) or None
+        passages.append(
+            Stage1Passage(
+                text=text,
+                chunk_id=str(paragraph.paragraph_id or ""),
+                section=section,
+                page=None,
+                score=None,
+            )
+        )
+        if len(passages) >= max(0, int(evidence_limit)):
+            break
+    # If every paragraph was a heading marker, keep the first non-empty texts.
+    if not passages:
+        for paragraph in list(document.paragraphs or [])[: max(0, int(evidence_limit))]:
+            text = str(paragraph.normalized_text or paragraph.original_text or "").strip()
+            if not text:
+                continue
+            section = getattr(paragraph.section_type, "value", None) or str(
+                getattr(paragraph, "section_type", "") or ""
+            ) or None
+            passages.append(
+                Stage1Passage(
+                    text=text,
+                    chunk_id=str(paragraph.paragraph_id or ""),
+                    section=section,
+                    page=None,
+                    score=None,
+                )
+            )
+            if len(passages) >= max(0, int(evidence_limit)):
+                break
+    return passages
+
+
+def _passages_from_chunk_evidence(
+    chunk_evidence_raw: list[dict[str, Any]],
+    *,
+    evidence_limit: int,
+) -> list[Stage1Passage]:
+    """Select top non-heading chunks in existing RRF / retrieval order."""
+    limit = max(0, int(evidence_limit))
+    passages: list[Stage1Passage] = []
+    for item in chunk_evidence_raw:
+        if len(passages) >= limit:
+            break
+        text = str(item.get("text") or "").strip()
+        if not text or _is_heading_only_passage(text):
+            continue
+        channels = tuple(item.get("retrieval_channels") or ())
+        passages.append(
+            Stage1Passage(
+                text=text,
+                chunk_id=str(item.get("chunk_id") or ""),
+                section=item.get("section"),
+                page=item.get("page"),
+                score=item.get("rrf_score"),
+                dense_rank=item.get("dense_rank"),
+                bm25_rank=item.get("bm25_rank"),
+                rrf_rank=item.get("rrf_rank"),
+                retrieval_channels=channels,
+                chunk_position=item.get("chunk_position"),
+            )
+        )
+    return passages
+
+
 def _to_stage1_document(
     document,
     *,
@@ -915,47 +1018,25 @@ def _to_stage1_document(
             # Never promote doc-* to the public identity.
             source_id = raw_doc
 
-    chunk_evidence_raw = list(getattr(document, "chunk_evidence", None) or [])
-    chunk_evidence = [
-        dict(item) for item in chunk_evidence_raw[: max(0, int(evidence_limit))] if isinstance(item, dict)
+    chunk_evidence_raw = [
+        dict(item)
+        for item in list(getattr(document, "chunk_evidence", None) or [])
+        if isinstance(item, dict)
     ]
+    # Bounded provenance payload (order preserved; headings kept for audit).
+    chunk_evidence = chunk_evidence_raw[: max(0, int(evidence_limit))]
 
     passages: list[Stage1Passage] = []
-    if prefer_chunk_evidence and chunk_evidence:
-        for item in chunk_evidence:
-            text = str(item.get("text") or "").strip()
-            if not text:
-                continue
-            channels = tuple(item.get("retrieval_channels") or ())
-            passages.append(
-                Stage1Passage(
-                    text=text,
-                    chunk_id=str(item.get("chunk_id") or ""),
-                    section=item.get("section"),
-                    page=item.get("page"),
-                    score=item.get("rrf_score"),
-                    dense_rank=item.get("dense_rank"),
-                    bm25_rank=item.get("bm25_rank"),
-                    rrf_rank=item.get("rrf_rank"),
-                    retrieval_channels=channels,
-                    chunk_position=item.get("chunk_position"),
-                )
-            )
-    else:
-        # FAST / historical path: first N paragraphs in document source order.
-        for paragraph in list(document.paragraphs or [])[: max(0, int(evidence_limit))]:
-            section = getattr(paragraph.section_type, "value", None) or str(
-                getattr(paragraph, "section_type", "") or ""
-            ) or None
-            passages.append(
-                Stage1Passage(
-                    text=str(paragraph.normalized_text or paragraph.original_text or "").strip(),
-                    chunk_id=str(paragraph.paragraph_id or ""),
-                    section=section,
-                    page=None,
-                    score=None,
-                )
-            )
+    if prefer_chunk_evidence and chunk_evidence_raw:
+        # Scan full RRF-ordered evidence so heading-only top hits do not starve
+        # the FE snippet of the first real matching chunk.
+        passages = _passages_from_chunk_evidence(
+            chunk_evidence_raw,
+            evidence_limit=evidence_limit,
+        )
+    if not passages:
+        # Fallback: document source-order paragraphs (also skips bare headings).
+        passages = _passages_from_paragraphs(document, evidence_limit=evidence_limit)
     passages = [item for item in passages if item.text]
 
     stage1_score = float(document.score or 0.0)

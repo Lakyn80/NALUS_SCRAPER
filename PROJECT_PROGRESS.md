@@ -1,5 +1,18 @@
 # Project Progress
 
+## 2026-08-13 Europe/Moscow — Task: Stage1 best-passage snippet fix (FAST/BALANCED)
+
+- Scope: FE "Nejlepší nalezená pasáž" / `relevant_passages[0]` for FAST and
+  BALANCED. Document ranking unchanged.
+- Change: `_to_stage1_document(..., prefer_chunk_evidence=True)` on the
+  non-CE path; skip heading-only chunk texts (`Odůvodnění`, `Výrok`, short
+  Roman markers); fall back to body paragraphs when evidence is heading-only.
+- Tests: `tests/rag/test_legal_v2_stage1_best_passage.py` (4 passed).
+- Optional post-restart FAST smoke (manual, after API container recreate):
+  same child-abduction / cross-border query; for a hit that previously showed
+  bare `Odůvodnění` as best passage, expect a real matching reasoning chunk
+  instead. Ranking positions may stay the same.
+
 ## 2026-08-13 Europe/Moscow — Task: CPU-only latency proxy (FAST/BALANCED/PRECISE)
 
 - Scope: laptop **CPU proxy** only (not target VPS). Ephemeral Docker + pylate;
