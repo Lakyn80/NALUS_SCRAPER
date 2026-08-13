@@ -1,7 +1,12 @@
-"""Stage 1 case-similarity search: deterministic QuerySpec + hybrid retrieval (no LLM)."""
+"""Stage 1 case-similarity search: deterministic QuerySpec + hybrid retrieval (no LLM).
+
+Public search API is async-first. Blocking hybrid/CE work runs via
+``asyncio.to_thread``; ColBERT uses the existing async backend.
+"""
 
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 from dataclasses import dataclass, field
@@ -18,6 +23,7 @@ from app.rag.legal_v2.retrieve.retrieval_profiles import (
     RetrievalStage,
     build_retrieval_stage,
     ce_index_binding,
+    colbert_master_allow_enabled,
     fast_index_binding,
     resolve_retrieval_profile,
 )
@@ -137,25 +143,34 @@ class CaseSimilarityStage1Runtime:
     warmup_status: str = "cold"  # cold | warming | warm | failed | skipped
     warmup_error_type: str | None = None
     warmup_latency_ms: float | None = None
-    # Dual Slice-4 bindings: FAST=A, CE=B contextual (pinned after A/B benchmarks).
+    # Dual Slice-4 bindings: FAST=A; BALANCED/PRECISE share B contextual.
     ce_retriever: LegalV2HybridRetriever | None = None
     ce_config: LegalV2RetrieverConfig | None = None
+    # Lazy ColBERT handle for BALANCED (populated on first balanced search).
+    colbert_retriever: Any | None = None
+    colbert_config: Any | None = None
+    colbert_ready: bool = False
+    colbert_error_type: str | None = None
+
+    def _uses_b_indexes(self, profile_id: str) -> bool:
+        return profile_id in {"precise", "balanced", "ce7"}
 
     def retriever_for_profile(self, profile_id: str) -> LegalV2HybridRetriever:
-        if profile_id == "ce7":
+        if self._uses_b_indexes(profile_id):
             if self.ce_retriever is None:
                 raise RetrievalConfigurationError(
-                    "CE retriever is not configured (expected Slice 4 B contextual indexes)."
+                    "B contextual retriever is not configured "
+                    "(expected Slice 4 B indexes for BALANCED/PRECISE)."
                 )
             return self.ce_retriever
         return self.retriever
 
     def config_for_profile(self, profile_id: str) -> LegalV2RetrieverConfig:
-        if profile_id == "ce7":
+        if self._uses_b_indexes(profile_id):
             if self.ce_config is None:
                 raise RetrievalConfigurationError(
-                    "CE retriever config is not configured "
-                    "(expected Slice 4 B contextual indexes)."
+                    "B contextual retriever config is not configured "
+                    "(expected Slice 4 B indexes for BALANCED/PRECISE)."
                 )
             return self.ce_config
         return self.config
@@ -163,6 +178,7 @@ class CaseSimilarityStage1Runtime:
 
 _runtime: CaseSimilarityStage1Runtime | None = None
 _runtime_lock = Lock()
+_colbert_init_lock = asyncio.Lock()
 
 
 def reset_case_similarity_stage1_runtime_for_tests() -> None:
@@ -482,7 +498,95 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
     }
 
 
-def search_case_similarity_stage1(
+def _colbert_config_from_env() -> Any:
+    from app.rag.legal_v2.retrieve.colbert import (
+        DEFAULT_COLBERT_MODEL,
+        DEFAULT_INDEX_NAME,
+        ColbertConfig,
+    )
+
+    index_path = Path(
+        os.getenv(
+            "NALUS_LEGAL_V2_COLBERT_INDEX_PATH",
+            "artifacts/legal_v2/chunking_ab_pilot_300_v1/colbert_v1/index",
+        )
+    )
+    mapping_path = Path(
+        os.getenv(
+            "NALUS_LEGAL_V2_COLBERT_MAPPING_PATH",
+            "artifacts/legal_v2/chunking_ab_pilot_300_v1/colbert_v1/"
+            "colbert_chunk_mapping.jsonl",
+        )
+    )
+    device = os.getenv("NALUS_LEGAL_V2_COLBERT_DEVICE", "cuda").strip() or "cuda"
+    batch_size = int(os.getenv("NALUS_LEGAL_V2_COLBERT_BATCH_SIZE", "16") or "16")
+    allow_download = (
+        os.getenv("NALUS_LEGAL_V2_COLBERT_ALLOW_DOWNLOAD", "0").strip().lower() in _TRUTHY
+    )
+    cfg = ColbertConfig(
+        model_name=os.getenv("NALUS_LEGAL_V2_COLBERT_MODEL", DEFAULT_COLBERT_MODEL),
+        index_path=index_path,
+        index_name=os.getenv("NALUS_LEGAL_V2_COLBERT_INDEX_NAME", DEFAULT_INDEX_NAME),
+        device=device,
+        top_k=int(os.getenv("NALUS_LEGAL_V2_COLBERT_CANDIDATE_CHUNKS", "80") or "80"),
+        batch_size=batch_size,
+        concurrency_limit=1,
+        mapping_path=mapping_path,
+        allow_download=allow_download,
+    )
+    cfg.validate()
+    return cfg
+
+
+async def _ensure_colbert_retriever(runtime: CaseSimilarityStage1Runtime) -> Any:
+    """Lazily initialize ColBERT for BALANCED. Safe to call concurrently."""
+    if runtime.colbert_retriever is not None and runtime.colbert_ready:
+        return runtime.colbert_retriever
+    async with _colbert_init_lock:
+        if runtime.colbert_retriever is not None and runtime.colbert_ready:
+            return runtime.colbert_retriever
+        if not colbert_master_allow_enabled():
+            raise RetrievalConfigurationError(
+                "ColBERT is disabled (NALUS_LEGAL_V2_COLBERT_ENABLED!=1)."
+            )
+        try:
+            from app.rag.legal_v2.retrieve.colbert import (
+                ColbertRetriever,
+                PyLateColbertBackend,
+            )
+
+            cfg = _colbert_config_from_env()
+            if not Path(cfg.index_path).exists():
+                raise RetrievalConfigurationError(
+                    f"ColBERT index missing: {cfg.index_path}"
+                )
+            mapping = cfg.resolved_mapping_path()
+            if not mapping.exists():
+                raise RetrievalConfigurationError(
+                    f"ColBERT mapping missing: {mapping}"
+                )
+            backend = PyLateColbertBackend(cfg)
+            await backend.initialize()
+            retriever = ColbertRetriever(cfg, backend=backend)
+            runtime.colbert_config = cfg
+            runtime.colbert_retriever = retriever
+            runtime.colbert_ready = True
+            runtime.colbert_error_type = None
+            logger.info(
+                "[legal_v2.stage1] ColBERT ready index=%s device=%s",
+                cfg.index_name,
+                cfg.device,
+            )
+            return retriever
+        except Exception as exc:  # noqa: BLE001
+            runtime.colbert_ready = False
+            runtime.colbert_error_type = type(exc).__name__
+            raise RetrievalConfigurationError(
+                f"ColBERT initialization failed: {type(exc).__name__}"
+            ) from exc
+
+
+async def search_case_similarity_stage1(
     *,
     query: str,
     limit: int | None = None,
@@ -533,19 +637,32 @@ def search_case_similarity_stage1(
         RerankerUnavailableError,
     )
     from app.rag.legal_v2.rerank.service import get_cross_encoder_reranking_service
+    from app.rag.legal_v2.retrieve.colbert_hybrid import retrieve_hybrid_plus_colbert
 
-    # Env alone no longer forces CE on every API call; request profile selects mode.
-    # Master-allow still gates CE via resolve_retrieval_profile (ce7 requires env ON).
-    # Index binding: FAST→A, CE→B contextual (Slice 4 pin).
     profile = resolve_retrieval_profile(retrieval_profile)
     active_retriever = active.retriever_for_profile(profile.profile_id)
     active_config = active.config_for_profile(profile.profile_id)
-    retrieval = active_retriever.retrieve(query_spec)
+    colbert_applied = False
+
+    if profile.use_colbert:
+        colbert_retriever = await _ensure_colbert_retriever(active)
+        retrieval = await retrieve_hybrid_plus_colbert(
+            hybrid_retriever=active_retriever,
+            colbert_retriever=colbert_retriever,
+            query_spec=query_spec,
+            colbert_candidate_chunks=int(profile.colbert_candidate_chunks),
+            fused_candidate_chunks=int(active_config.fused_candidate_chunks),
+            candidate_documents=int(active_config.candidate_documents),
+            rrf_k=int(LEGAL_V2_PROFILE.rrf_k),
+        )
+        colbert_applied = True
+    else:
+        retrieval = await asyncio.to_thread(active_retriever.retrieve, query_spec)
+
     ce_config = profile.cross_encoder_config
     rerank_diagnostics: dict[str, Any] | None = None
 
     if not profile.use_cross_encoder or ce_config is None:
-        # FAST path — preserve historical public passage truncation (first 5 paragraphs).
         documents = [
             _to_stage1_document(document, rank=index)
             for index, document in enumerate(retrieval.documents[:resolved_limit], start=1)
@@ -553,8 +670,9 @@ def search_case_similarity_stage1(
         rerank_diagnostics = {
             "rerank_enabled": False,
             "rerank_applied": False,
-            "experiment_mode": "fast",
+            "experiment_mode": profile.profile_id,
             "retrieval_profile": profile.profile_id,
+            "colbert_applied": colbert_applied,
         }
     else:
         shortlist_n = min(
@@ -573,7 +691,9 @@ def search_case_similarity_stage1(
         by_ecli = {item.ecli: item for item in shortlist}
         service = get_cross_encoder_reranking_service(ce_config)
         try:
-            reranked = service.rerank(cleaned, shortlist, require_success=True)
+            reranked = await asyncio.to_thread(
+                lambda: service.rerank(cleaned, shortlist, require_success=True)
+            )
             rerank_diagnostics = reranked.diagnostics.as_dict()
             rerank_diagnostics["retrieval_profile"] = profile.profile_id
             documents = []
@@ -581,7 +701,6 @@ def search_case_similarity_stage1(
                 source = by_ecli.get(item.ecli)
                 if source is None:
                     continue
-                # Public response keeps a short passage preview; CE used the fuller pool.
                 public_passages = list(source.relevant_passages)[:5]
                 documents.append(
                     Stage1DocumentResult(
@@ -607,7 +726,6 @@ def search_case_similarity_stage1(
                         chunk_evidence=list(source.chunk_evidence),
                     )
                 )
-            # Re-number public ranks 1..N after truncation.
             documents = [
                 Stage1DocumentResult(
                     rank=index,
@@ -639,7 +757,6 @@ def search_case_similarity_stage1(
             RerankerInferenceError,
             RerankerInvalidCandidateError,
         ) as exc:
-            # Experimental CE mode: fail clearly (no silent FAST claim).
             raise ValueError(f"cross-encoder reranking failed: {exc}") from exc
 
     for document in documents:
@@ -656,17 +773,20 @@ def search_case_similarity_stage1(
         "queryspec_latency_ms": query_ms,
         "dense_latency_ms": retrieval.diagnostics.get("dense_latency_ms"),
         "bm25_latency_ms": retrieval.diagnostics.get("bm25_latency_ms"),
+        "colbert_latency_ms": retrieval.diagnostics.get("colbert_latency_ms"),
         "rrf_latency_ms": retrieval.diagnostics.get("rrf_latency_ms"),
         "aggregation_latency_ms": max(
             0.0,
             float(retrieval.diagnostics.get("total_retrieval_latency_ms") or 0.0)
             - float(retrieval.diagnostics.get("dense_latency_ms") or 0.0)
             - float(retrieval.diagnostics.get("bm25_latency_ms") or 0.0)
+            - float(retrieval.diagnostics.get("colbert_latency_ms") or 0.0)
             - float(retrieval.diagnostics.get("rrf_latency_ms") or 0.0),
         ),
         "total_latency_ms": total_ms,
         "dense_candidate_chunks": retrieval.diagnostics.get("dense_candidate_chunks"),
         "bm25_candidate_chunks": retrieval.diagnostics.get("bm25_candidate_chunks"),
+        "colbert_candidate_chunks": retrieval.diagnostics.get("colbert_candidate_chunks"),
         "fused_candidate_chunks": retrieval.diagnostics.get("fused_candidate_chunks"),
         "aggregated_documents": retrieval.diagnostics.get("candidate_documents"),
         "retrieval_status": "ok",
@@ -677,11 +797,14 @@ def search_case_similarity_stage1(
         or {
             "rerank_enabled": False,
             "rerank_applied": False,
-            "experiment_mode": "fast",
+            "experiment_mode": profile.profile_id,
             "retrieval_profile": profile.profile_id,
+            "colbert_applied": colbert_applied,
         },
         "retrieval_profile": profile.profile_id,
+        "profile_label": profile.label,
         "profile_index_notes": profile.notes,
+        "colbert_applied": colbert_applied,
     }
     rerank_payload = diagnostics["rerank"]
     passages_per_document = rerank_payload.get("requested_passages_per_document")
@@ -694,6 +817,7 @@ def search_case_similarity_stage1(
     retrieval_stage = build_retrieval_stage(
         rerank_applied=bool(rerank_payload.get("rerank_applied")),
         passages_per_document=passages_per_document,
+        colbert_applied=colbert_applied,
     )
     if include_debug and stage1_debug_allowed():
         diagnostics["debug"] = _safe_debug_payload(query_spec, retrieval)
@@ -711,8 +835,9 @@ def search_case_similarity_stage1(
     logger.info(
         "[legal_v2.stage1] search done result_count=%s query_length=%s "
         "generated_query_count=%s collection=%s bm25_index_id=%s "
-        "dense_latency_ms=%s bm25_latency_ms=%s total_latency_ms=%s "
-        "was_condensed=%s classification=%s retrieval_profile=%s",
+        "dense_latency_ms=%s bm25_latency_ms=%s colbert_latency_ms=%s "
+        "total_latency_ms=%s was_condensed=%s classification=%s "
+        "retrieval_profile=%s retrieval_stage=%s",
         len(documents),
         len(cleaned),
         len(query_spec.retrieval_queries),
@@ -720,10 +845,12 @@ def search_case_similarity_stage1(
         active_config.bm25_index_id,
         diagnostics.get("dense_latency_ms"),
         diagnostics.get("bm25_latency_ms"),
+        diagnostics.get("colbert_latency_ms"),
         diagnostics.get("total_latency_ms"),
         prepared.was_condensed,
         prepared.classification.value,
         profile.profile_id,
+        retrieval_stage,
     )
     return Stage1SearchResult(
         query=cleaned,
@@ -732,6 +859,36 @@ def search_case_similarity_stage1(
         results=documents,
         diagnostics=diagnostics,
     )
+
+
+def search_case_similarity_stage1_sync(
+    *,
+    query: str,
+    limit: int | None = None,
+    include_debug: bool = False,
+    runtime: CaseSimilarityStage1Runtime | None = None,
+    query_spec_builder=build_query_spec_v2,
+    retrieval_profile: str | None = None,
+) -> Stage1SearchResult:
+    """Sync CLI/test boundary only. Prefer ``await search_case_similarity_stage1``."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(
+            search_case_similarity_stage1(
+                query=query,
+                limit=limit,
+                include_debug=include_debug,
+                runtime=runtime,
+                query_spec_builder=query_spec_builder,
+                retrieval_profile=retrieval_profile,
+            )
+        )
+    raise RuntimeError(
+        "search_case_similarity_stage1_sync() cannot be called from a running "
+        "event loop; await search_case_similarity_stage1() instead"
+    )
+
 
 
 def _to_stage1_document(

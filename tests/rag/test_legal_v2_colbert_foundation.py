@@ -283,10 +283,22 @@ def test_fast_canonical_still_a(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_ce_canonical_still_b_contextual(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED", "1")
-    resolved = resolve_retrieval_profile("ce7")
+    resolved = resolve_retrieval_profile("precise")
+    assert resolved.profile_id == "precise"
     assert resolved.index is not None
     assert resolved.index.qdrant_collection.endswith("b_contextual_300")
     assert resolved.index.bm25_index_id.endswith("b_contextual_300")
     assert resolved.use_cross_encoder is True
+    assert resolved.use_colbert is False
     assert resolved.cross_encoder_config is not None
     assert resolved.cross_encoder_config.passages_per_document == 7
+
+
+def test_balanced_canonical_is_b_plus_colbert(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NALUS_LEGAL_V2_COLBERT_ENABLED", "1")
+    resolved = resolve_retrieval_profile("balanced")
+    assert resolved.profile_id == "balanced"
+    assert resolved.use_colbert is True
+    assert resolved.use_cross_encoder is False
+    assert resolved.index is not None
+    assert resolved.index.qdrant_collection.endswith("b_contextual_300")

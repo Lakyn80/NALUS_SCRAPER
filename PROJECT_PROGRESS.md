@@ -1,5 +1,20 @@
 # Project Progress
 
+## 2026-08-13 Europe/Moscow — Task: Wire FAST / BALANCED / PRECISE profiles
+
+- Product tiers pinned in `retrieval_profiles.py` + async Stage1 search/API:
+  - **FAST** (`fast`) = A hybrid
+  - **BALANCED** (`balanced`) = B + ColBERT (master-allow
+    `NALUS_LEGAL_V2_COLBERT_ENABLED=1`)
+  - **PRECISE** (`precise`, alias `ce7`) = B + CE-7 (master-allow
+    `NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED=1`)
+- `search_case_similarity_stage1` is async-first (`to_thread` for hybrid/CE;
+  ColBERT via existing async backend). API endpoint awaits it.
+- `retrieval_stage` provenance: `hybrid_rrf_stage_1` | `hybrid_rrf_colbert` |
+  `hybrid_rrf_ce7`.
+- Default request profile remains `fast`. No auto-enable of ColBERT/CE.
+- Latency commit: `1eb5c20`.
+
 ## 2026-08-13 Europe/Moscow — Task: Latency/cost tier benchmark (FAST / B+ColBERT / CE)
 
 - Runner: `scripts/legal_v2/benchmark_retrieval_latency_golden_v1.py`

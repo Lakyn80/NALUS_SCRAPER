@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import MagicMock
@@ -127,7 +129,7 @@ def test_stage1_accepts_limit_50(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("NALUS_LEGAL_V2_MAX_RESULT_LIMIT", "50")
     called: dict[str, Any] = {}
 
-    def _fake_search(**kwargs):
+    async def _fake_search(**kwargs):
         called.update(kwargs)
         return _sample_result()
 
@@ -147,7 +149,7 @@ def test_stage1_accepts_limit_50(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_stage1_success_uses_authoritative_search(monkeypatch: pytest.MonkeyPatch) -> None:
     called: dict[str, Any] = {}
 
-    def _fake_search(**kwargs):
+    async def _fake_search(**kwargs):
         called.update(kwargs)
         return _sample_result()
 
@@ -176,7 +178,7 @@ def test_stage1_success_uses_authoritative_search(monkeypatch: pytest.MonkeyPatc
 
 
 def test_stage1_missing_dependencies_return_503(monkeypatch: pytest.MonkeyPatch) -> None:
-    def _fail(**kwargs):
+    async def _fail(**kwargs):
         raise RetrievalConfigurationError("BM25 sidecar missing")
 
     monkeypatch.setattr(
@@ -193,7 +195,7 @@ def test_stage1_missing_dependencies_return_503(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_stage1_unexpected_error_is_not_empty_200(monkeypatch: pytest.MonkeyPatch) -> None:
-    def _fail(**kwargs):
+    async def _fail(**kwargs):
         raise RuntimeError("dense failed")
 
     monkeypatch.setattr(
@@ -311,11 +313,13 @@ def test_search_case_similarity_stage1_builds_queryspec(monkeypatch: pytest.Monk
         ),
         ready=True,
     )
-    result = module.search_case_similarity_stage1(
+    result = asyncio.run(
+        module.search_case_similarity_stage1(
         query="Nehledám meritorní spor o péči, ale odmítnutí ústavní stížnosti pro vady. Bez advokáta.",
         limit=5,
         runtime=runtime,
         query_spec_builder=build_query_spec_v2,
+        )
     )
     assert result.results[0].ecli.startswith("ECLI:")
     assert "child_custody_merits" in {
@@ -458,10 +462,12 @@ def test_ce_disabled_preserves_stage1_order(monkeypatch: pytest.MonkeyPatch) -> 
         ),
         ready=True,
     )
-    result = module.search_case_similarity_stage1(
+    result = asyncio.run(
+        module.search_case_similarity_stage1(
         query="krátký testovací dotaz",
         limit=2,
         runtime=runtime,
+        )
     )
     assert [row.ecli for row in result.results] == [
         "ECLI:CZ:US:2025:1.US.1111.25.1",

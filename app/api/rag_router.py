@@ -1228,8 +1228,9 @@ class CaseSimilarityStage1SearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=100_000)
     limit: int | None = Field(default=None, ge=1, le=50)
     include_debug: bool = False
-    # Request-level profile: fast (default) | ce7 | precise(reserved).
-    # CE profiles also require NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED=1 (master-allow).
+    # Request-level profile: fast (default) | balanced | precise | ce7(alias of precise).
+    # BALANCED requires NALUS_LEGAL_V2_COLBERT_ENABLED=1.
+    # PRECISE/ce7 require NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED=1.
     retrieval_profile: str | None = Field(default="fast", max_length=32)
 
     @field_validator("query")
@@ -1337,7 +1338,7 @@ def case_similarity_stage1_ready() -> CaseSimilarityStage1ReadyResponse:
     "/legal-v2/case-similarity/search",
     response_model=CaseSimilarityStage1SearchResponse,
 )
-def case_similarity_stage1_search(
+async def case_similarity_stage1_search(
     req: CaseSimilarityStage1SearchRequest,
 ) -> CaseSimilarityStage1SearchResponse:
     endpoint_label = "/api/rag/legal-v2/case-similarity/search"
@@ -1375,7 +1376,7 @@ def case_similarity_stage1_search(
         retrieval_profile=req.retrieval_profile,
     )
     try:
-        result = search_case_similarity_stage1(
+        result = await search_case_similarity_stage1(
             query=req.query,
             limit=req.limit,
             include_debug=include_debug,
