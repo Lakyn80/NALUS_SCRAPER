@@ -1,5 +1,19 @@
 # Project Progress
 
+## 2026-08-13 Europe/Moscow — Task: Staging smoke + concurrency (3 tiers)
+
+- Runner: `scripts/legal_v2/smoke_retrieval_tiers_staging_v1.py` (in-process async
+  Stage1 path in GPU Docker; same orchestration as API).
+- Checks (10/10 PASS): master-allow off for balanced/precise; live
+  `fast`/`balanced`/`precise` stages; concurrency×4 balanced+precise;
+  missing ColBERT index → controlled failure.
+- Bug found+fixed during smoke: CE service allocated a new model per request
+  under concurrent PRECISE (`c715e47` singleton reuse).
+- Verdict: **STAGING_SMOKE_PASS**
+- Artifacts (not committed):
+  `artifacts/legal_v2/chunking_ab_pilot_300_v1/staging_smoke_v1/`
+- Note: HTTP reverse-proxy surface not included in this smoke.
+
 ## 2026-08-13 Europe/Moscow — Task: B+ColBERT → CE-7 golden evaluation
 
 - Experiment only: B hybrid+ColBERT RRF shortlist → enrich ColBERT evidence →
