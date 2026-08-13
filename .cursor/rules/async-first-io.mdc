@@ -1,0 +1,64 @@
+---
+description: Async-first I/O and concurrency rules for Python runtime code
+alwaysApply: true
+---
+
+# Async-First I/O (Python)
+
+Target architecture for NALUS runtime code: **async-first public I/O APIs**.
+
+Current codebase is hybrid:
+
+- Already async-oriented: FastAPI lifespan/startup in `app/api/main.py`, ColBERT package under `app/rag/legal_v2/retrieve/colbert/`
+- Still mostly sync: Stage 1 search (`case_similarity_search.py`), most `app/api/rag_router.py` endpoints, hybrid BGE-M3 + BM25 retrievers
+
+Do **not** freeze the sync style. New modules and any intentional redesign of retrieval/API boundaries must be async-first. When editing a sync I/O path, prefer migrating that boundary toward async rather than extending sync as the long-term public API.
+
+## MUST
+
+1. Public runtime I/O APIs use `async def` + `await` (HTTP handlers, retrieval/search services, index open/search, DB/network/file-heavy orchestration intended for FastAPI).
+2. Blocking library/CPU/GPU work (PyLate, torch encode, sync Qdrant/BM25 clients, heavy disk I/O) must run off the event loop via `await asyncio.to_thread(...)` or an existing controlled executor — never call it directly inside `async def`.
+3. Independent I/O must use concurrency:
+   - `await asyncio.gather(...)` or `asyncio.TaskGroup` when tasks have no data dependency
+   - examples: warmup multiple backends, fan-out HTTP, parallel file/index reads
+4. Bound concurrency for shared non-thread-safe resources (`asyncio.Semaphore` / lock). Do not spawn unbounded threads.
+5. Reusable libraries/modules must assume an event loop already exists. Never call `asyncio.run()` inside reusable app code.
+6. CLI/scripts may use `def main(): return asyncio.run(async_main())` only as the process boundary.
+7. Prefer `await asyncio.sleep(...)`; never `time.sleep(...)` on async paths.
+8. Prefer async HTTP clients on async paths; no sync `requests` inside async handlers/services.
+
+## MUST NOT
+
+- Fake async: `async def` that only calls blocking work inline without `to_thread` / executor
+- New long-lived sync public APIs for retrieval/search that FastAPI will later need to wrap
+- Global event-loop objects or nested `asyncio.run()` inside request/runtime code
+- Silent sync fallbacks that hide blocking latency on the event loop
+
+## Reference pattern (ColBERT)
+
+```python
+async def search(...):
+    await self.initialize()
+    async with self._semaphore:
+        return await asyncio.to_thread(self._search_sync, ...)
+```
+
+```text
+FastAPI / service layer
+        | await
+        v
+async retriever / backend
+        | asyncio.to_thread / bounded executor
+        v
+blocking library (PyLate, torch, sync clients)
+```
+
+## When to use gather
+
+Use `asyncio.gather` / `TaskGroup` when operations are independent and I/O-bound (or already offloaded). Do **not** gather dependent steps (B needs A's result) or unbounded fan-out against a single non-thread-safe model/index without a semaphore.
+
+## Exceptions
+
+- Pure CPU-local helpers with no I/O may stay sync.
+- Offline one-shot scripts may stay sync until converted; new evaluation runners that call async modules must use an async orchestration boundary.
+- Do not mass-refactor unrelated sync Stage1/router code unless the task explicitly requests it — but do not add more sync surface area when building new retrieval systems.

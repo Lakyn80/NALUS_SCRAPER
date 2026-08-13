@@ -66,6 +66,16 @@ git log -8 --oneline --decorate
 
 Report pre-existing changes before editing. Do not overwrite, discard, stage, or commit unrelated changes.
 
+## Async I/O Policy
+
+Runtime Python I/O is **async-first**. Follow `.cursor/rules/async-first-io.mdc`.
+
+- New retrieval/search/API I/O modules must expose `async def` public APIs.
+- Blocking libraries run via `await asyncio.to_thread(...)` (or a bounded executor), never inline on the event loop.
+- Independent I/O uses `asyncio.gather` / `TaskGroup` with bounded concurrency.
+- `asyncio.run()` is allowed only at CLI/process boundaries.
+- The codebase is currently hybrid (async lifespan/ColBERT/Stage1 search; most other RAG router handlers still sync). Do not extend sync as the long-term public surface for new systems; migrate boundaries when those paths are intentionally redesigned.
+
 ## Observability Implementation Policy
 
 Reuse existing mechanisms before adding new infrastructure:
