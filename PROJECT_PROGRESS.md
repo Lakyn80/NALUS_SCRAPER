@@ -1,5 +1,23 @@
 # Project Progress
 
+## 2026-08-13 Europe/Moscow — Task: FAST vs PRECISE GPU 15-query quality benchmark
+
+- Scope: measurement/export only. No retrieval tuning. BALANCED not re-benchmarked.
+- Runner: `scripts/legal_v2/benchmark_fast_vs_precise_gpu_15q.py` (in-process Stage1;
+  PRECISE CrossEncoder forced on CUDA; hard-stop if CPU fallback).
+- GPU: NVIDIA GeForce RTX 4060 Laptop GPU; reranker device=`cuda`, dtype=`float32`,
+  model=`BAAI/bge-reranker-v2-m3`.
+- Queries: 15 hard Czech legal research queries finalized in
+  `artifacts/legal_v2/fast_vs_precise_gpu_15q/queries.md` before retrieval.
+- Artifacts (not committed): `artifacts/legal_v2/fast_vs_precise_gpu_15q/`
+  (per-query full judgments, comparison.md, benchmark_summary.md, JSON).
+- Latency (retrieval only, warmup excluded): FAST p50≈772 ms / p95≈1.9 s;
+  PRECISE GPU p50≈7.2 s / p95≈8.0 s.
+- Ranking signals: avg top-10 overlap 5.80/10; PRECISE promotions >10→top10 = 62;
+  >20→top10 = 22. Snippet regression 0; full texts OK for all returned docs.
+- Product modes unchanged: FAST / BALANCED / PRECISE all remain available.
+- HARD STOP after report. No 75k corpus build in this task.
+
 ## 2026-08-13 Europe/Moscow — Task: Stage1 best-passage snippet fix (FAST/BALANCED)
 
 - Scope: FE "Nejlepší nalezená pasáž" / `relevant_passages[0]` for FAST and
