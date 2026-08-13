@@ -110,3 +110,53 @@ def test_retrieve_hybrid_plus_colbert_fuses_three_sources() -> None:
     assert len(result.fused_results) >= 3
     assert {doc.document_id for doc in result.documents}
     colbert_retriever.retrieve.assert_awaited_once()
+
+
+def test_enrich_documents_with_colbert_evidence_merges_unique_chunks() -> None:
+    from app.rag.legal_v2.evidence import CandidateEvidenceDocument
+    from app.rag.legal_v2.retrieve.colbert_hybrid import enrich_documents_with_colbert_evidence
+
+    doc = CandidateEvidenceDocument(
+        document_id="ECLI:CZ:NS:2020:1",
+        metadata={"ecli": "ECLI:CZ:NS:2020:1"},
+        paragraphs=[],
+        score=1.0,
+        chunk_evidence=[
+            {
+                "chunk_id": "c1",
+                "text": "fused evidence",
+                "dense_rank": 1,
+                "bm25_rank": None,
+                "rrf_rank": 1,
+                "retrieval_channels": ["rrf", "dense"],
+            }
+        ],
+    )
+    colbert_chunks = [
+        RetrievedChunk(
+            id="c1",
+            text="fused evidence",
+            score=10.0,
+            source="colbert",
+            metadata={"document_id": "ECLI:CZ:NS:2020:1", "ecli": "ECLI:CZ:NS:2020:1"},
+        ),
+        RetrievedChunk(
+            id="c2",
+            text="colbert only evidence",
+            score=9.0,
+            source="colbert",
+            metadata={"document_id": "ECLI:CZ:NS:2020:1", "ecli": "ECLI:CZ:NS:2020:1"},
+        ),
+    ]
+    enriched = enrich_documents_with_colbert_evidence(
+        [doc],
+        colbert_chunks,
+        evidence_pool_limit=40,
+    )
+    assert len(enriched) == 1
+    evidence = enriched[0].chunk_evidence
+    by_id = {item["chunk_id"]: item for item in evidence}
+    assert "colbert" in by_id["c1"]["retrieval_channels"]
+    assert by_id["c1"]["colbert_rank"] == 1
+    assert by_id["c2"]["retrieval_channels"] == ["colbert"]
+    assert by_id["c2"]["text"] == "colbert only evidence"

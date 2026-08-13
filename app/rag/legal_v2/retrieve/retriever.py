@@ -173,6 +173,7 @@ def aggregate_legal_v2_documents(
     bm25: list[RetrievedChunk],
     query_spec: QuerySpecV2,
     limit: int,
+    colbert: list[RetrievedChunk] | None = None,
 ) -> list[CandidateEvidenceDocument]:
     """Public document aggregation used by Stage 1 and experimental multi-source RRF."""
     return _aggregate_documents(
@@ -181,6 +182,7 @@ def aggregate_legal_v2_documents(
         bm25=bm25,
         query_spec=query_spec,
         limit=limit,
+        colbert=colbert,
     )
 
 
@@ -191,12 +193,16 @@ def _aggregate_documents(
     bm25: list[RetrievedChunk],
     query_spec: QuerySpecV2,
     limit: int,
+    colbert: list[RetrievedChunk] | None = None,
 ) -> list[CandidateEvidenceDocument]:
     from app.rag.legal_v2.identity import ecli_key, is_valid_ecli
 
     dense_rank = {chunk.id: index for index, chunk in enumerate(dense, start=1)}
     bm25_rank = {chunk.id: index for index, chunk in enumerate(bm25, start=1)}
     rrf_rank = {chunk.id: index for index, chunk in enumerate(fused, start=1)}
+    colbert_rank = {
+        chunk.id: index for index, chunk in enumerate(colbert or [], start=1)
+    }
     grouped: dict[str, list[RetrievedChunk]] = {}
     display_ids: dict[str, str] = {}
     for chunk in fused:
@@ -218,6 +224,7 @@ def _aggregate_documents(
             dense_rank=dense_rank,
             bm25_rank=bm25_rank,
             rrf_rank=rrf_rank,
+            colbert_rank=colbert_rank,
         )
         documents.append(
             CandidateEvidenceDocument(
@@ -273,8 +280,10 @@ def _chunk_evidence_records(
     dense_rank: dict[str, int],
     bm25_rank: dict[str, int],
     rrf_rank: dict[str, int],
+    colbert_rank: dict[str, int] | None = None,
 ) -> list[dict[str, Any]]:
     """Bounded per-chunk Stage-1 provenance for CE passage selection."""
+    colbert_rank = colbert_rank or {}
     records: list[dict[str, Any]] = []
     seen: set[str] = set()
     for position, chunk in enumerate(ordered):
@@ -289,6 +298,7 @@ def _chunk_evidence_records(
         d_rank = dense_rank.get(chunk_id)
         b_rank = bm25_rank.get(chunk_id)
         r_rank = rrf_rank.get(chunk_id)
+        c_rank = colbert_rank.get(chunk_id)
         channels: list[str] = []
         if r_rank is not None:
             channels.append("rrf")
@@ -296,6 +306,8 @@ def _chunk_evidence_records(
             channels.append("dense")
         if b_rank is not None:
             channels.append("bm25")
+        if c_rank is not None:
+            channels.append("colbert")
         records.append(
             {
                 "chunk_id": chunk_id,
@@ -303,6 +315,7 @@ def _chunk_evidence_records(
                 "dense_rank": d_rank,
                 "bm25_rank": b_rank,
                 "rrf_rank": r_rank,
+                "colbert_rank": c_rank,
                 "dense_score": None,
                 "bm25_score": None,
                 "rrf_score": float(metadata.get("rrf_score") or chunk.score)
