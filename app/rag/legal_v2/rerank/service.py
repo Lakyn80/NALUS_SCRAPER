@@ -179,18 +179,38 @@ _service: CrossEncoderRerankingService | None = None
 _service_lock = Lock()
 
 
+def _configs_equivalent(left: CrossEncoderConfig, right: CrossEncoderConfig) -> bool:
+    """Compare CE runtime knobs that affect loaded model / scoring behavior."""
+    return (
+        left.enabled == right.enabled
+        and left.model_id == right.model_id
+        and left.candidate_documents == right.candidate_documents
+        and left.passages_per_document == right.passages_per_document
+        and left.batch_size == right.batch_size
+        and left.device == right.device
+        and left.max_length == right.max_length
+        and left.allow_download == right.allow_download
+        and left.local_files_only == right.local_files_only
+        and left.aggregation == right.aggregation
+        and left.passage_selector == right.passage_selector
+        and left.evidence_pool_limit == right.evidence_pool_limit
+    )
+
+
 def get_cross_encoder_reranking_service(
     config: CrossEncoderConfig | None = None,
 ) -> CrossEncoderRerankingService:
+    """Return a process-wide CE service singleton.
+
+    Passing ``config`` updates/reuses the singleton when knobs match. Never create
+    a fresh GPU model load per request (concurrent PRECISE would OOM).
+    """
     global _service
-    if config is not None:
-        return CrossEncoderRerankingService(config=config)
-    if _service is not None:
-        return _service
     with _service_lock:
-        if _service is not None:
+        resolved = config or cross_encoder_config_from_env()
+        if _service is not None and _configs_equivalent(_service.config, resolved):
             return _service
-        _service = CrossEncoderRerankingService(config=cross_encoder_config_from_env())
+        _service = CrossEncoderRerankingService(config=resolved)
         return _service
 
 
