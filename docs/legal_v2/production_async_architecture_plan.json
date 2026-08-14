@@ -1,0 +1,38 @@
+{
+  "schema": "legal_v2_production_async_architecture_plan_v1",
+  "source_of_truth": "docs/legal_v2/PRODUCTION_ASYNC_ARCHITECTURE_PLAN.md",
+  "git_baseline": "d0028a2",
+  "prior_audit_verdict": "NOT_PRODUCTION_ASYNC_SAFE",
+  "target_verdict": "PRODUCTION_ASYNC_SAFE",
+  "principle": "Async at orchestration/I/O boundaries; bounded off-loop CPU/GPU; no event-loop blocking; no unbounded inference concurrency",
+  "initial_limits": {
+    "fast_admission": 8,
+    "balanced_admission": 4,
+    "precise_admission": 1,
+    "ce_resource": 1,
+    "colbert_resource": 1,
+    "bge_encode": 2
+  },
+  "phases": [
+    {"id": 0, "name": "freeze_baseline", "goal": "Document baseline; no code required"},
+    {"id": 1, "name": "p0_concurrency_safety", "goal": "CE semaphore; cold runtime off-loop; single-worker contract"},
+    {"id": 2, "name": "admission_timeouts_bge_bm25", "goal": "Profile admission; timeouts; BGE/BM25 locks"},
+    {"id": 3, "name": "async_qdrant", "goal": "AsyncQdrantClient request path behind adapter"},
+    {"id": 4, "name": "orchestration_optimization", "goal": "Optional dense||BM25; trim sync-on-loop prep"},
+    {"id": 5, "name": "observability_readiness", "goal": "Metrics and readiness polish"},
+    {"id": 6, "name": "load_validation", "goal": "Target-host soak; PRODUCTION_ASYNC_SAFE gate"},
+    {"id": 7, "name": "optional_gpu_service", "goal": "Dedicated GPU inference service if scale requires"}
+  ],
+  "open_decisions": [
+    "admission_http_status_429_vs_503",
+    "target_host_precise_slo_numbers",
+    "phase1_scope_ce_only_vs_precise_admission",
+    "async_qdrant_vs_full_corpus_ops_scheduling"
+  ],
+  "non_goals": [
+    "mechanical_async_def_conversion",
+    "retrieval_quality_rewrite",
+    "full_corpus_builder_fastapi_conversion",
+    "premature_distributed_gpu_mesh"
+  ]
+}
