@@ -1,5 +1,23 @@
 # Project Progress
 
+## 2026-08-14 Europe/Moscow — Task: Adaptive GPU embedding batching (preflight)
+
+- Scope: ingest execution only. No retrieval/ranking/chunking/model changes.
+- Builder: `scripts/legal_v2/build_full_corpus_ab_indexes_v1.py`
+  (`--embed-scheduler adaptive`, length buckets, post-truncation token lengths,
+  sum-token + padded-token budgets, one pack = one encode batch, order restore,
+  document-level checkpoint/resume).
+- Same frozen stratified 2k IDs as `throughput_2k/document_ids.txt`.
+- Isolated collections: `*_cal2k_adaptive` (baseline `*_cal2k` untouched).
+- Equivalence: PASS (cosine≈1.0, max abs≈3e-6); bit-identity not required.
+- Throughput (e2e): A 1.04→5.98 cps (~5.7×); B ~7.77 cps; chunk counts unchanged
+  (A 15111 / B 13159). No OOM. Qdrant green.
+- Decision: **MEANINGFUL_GAIN** — stop further ingest tuning; full A ready with
+  adaptive scheduler + resume (`--force-recreate` only on first create).
+- Est. full A embed ≈ ~36 h at measured adaptive e2e cps.
+- Artifacts (not committed): `artifacts/legal_v2/full_corpus_build_v1/throughput_2k_adaptive/`
+- HARD STOP after commit of builder/tests/docs. Full A/B/ColBERT not started.
+
 ## 2026-08-13 Europe/Moscow — Task: FAST vs PRECISE GPU 15-query quality benchmark
 
 - Scope: measurement/export only. No retrieval tuning. BALANCED not re-benchmarked.

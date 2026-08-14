@@ -27,6 +27,8 @@ services:
       - ./artifacts:/app/artifacts
       # Must match forms-api mount (nalus-scraper/storage), not local worktree storage.
       - ../nalus-scraper/storage:/app/storage
+      # Canonical Constitutional Court corpus for full-corpus builds.
+      - ../nalus-scraper/batches:/app/batches:ro
       - huggingface_cache:/root/.cache/huggingface
       - ./models:/app/models:ro
     networks:
