@@ -1075,9 +1075,12 @@ def build_side(
         compact_stats["chunks_per_doc_tail"] = list(stats["chunks_per_doc"][-500:])
         compact_stats.pop("chunks_per_doc", None)
         compact["stats"] = compact_stats
-        checkpoint_path.write_text(
+        # Atomic replace: never leave a truncated checkpoint after crash/reboot mid-write.
+        _tmp_ckpt = checkpoint_path.with_suffix(checkpoint_path.suffix + ".tmp")
+        _tmp_ckpt.write_text(
             json.dumps(compact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
+        _tmp_ckpt.replace(checkpoint_path)
 
         done = len(completed_ids)
         elapsed = time.perf_counter() - started
