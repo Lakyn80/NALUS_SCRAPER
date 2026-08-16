@@ -150,3 +150,20 @@ def test_build_full_document_matches_canonical_document_id() -> None:
     )
     assert result.full_text_availability_status == "available"
     assert result.full_text == "Text z legal_v2 chunku."
+
+
+def test_document_id_filter_omits_unindexed_secondary_keys() -> None:
+    from app.rag.retrieval.full_document import (
+        _DOCUMENT_ID_FILTER_KEYS,
+        _DOCUMENT_ID_KEYS,
+        _document_id_filter,
+    )
+
+    assert "case_number" not in _DOCUMENT_ID_FILTER_KEYS
+    assert "reference" not in _DOCUMENT_ID_FILTER_KEYS
+    assert "case_number" in _DOCUMENT_ID_KEYS
+    assert "reference" in _DOCUMENT_ID_KEYS
+
+    scroll_filter = _document_id_filter("ECLI:CZ:US:2009:2.US.1255.07.1")
+    filter_keys = [condition.key for condition in scroll_filter.should]
+    assert filter_keys == list(_DOCUMENT_ID_FILTER_KEYS)

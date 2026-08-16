@@ -22,12 +22,19 @@ FullTextAvailabilityStatus = Literal["available", "partial", "not_found"]
 _MAX_DOCUMENT_ID_LENGTH = 256
 _DEFAULT_SCROLL_PAGE_SIZE = 256
 _DEFAULT_MAX_CHUNKS_PER_DOCUMENT = 2_000
-_DOCUMENT_ID_KEYS = (
-    "source_document_id",
+_DEFAULT_QDRANT_TIMEOUT_SECONDS = 30
+# Keys used for Qdrant scroll filters. These must remain keyword-indexed on large
+# collections; including unindexed fields in a ``should`` clause forces a full
+# payload scan and times out on full-corpus indexes (~10s client timeout).
+_DOCUMENT_ID_FILTER_KEYS = (
     "document_id",
-    "canonical_document_id",
     "ecli",
+    "canonical_document_id",
+    "source_document_id",
     "case_reference",
+)
+# Broader identity keys used only for local payload matching after scroll.
+_DOCUMENT_ID_KEYS = _DOCUMENT_ID_FILTER_KEYS + (
     "case_number",
     "reference",
 )
@@ -312,7 +319,21 @@ def normalize_document_metadata(
 def _make_qdrant_client(qdrant_url: str) -> _ScrollableQdrantClient:
     from qdrant_client import QdrantClient
 
-    return QdrantClient(url=qdrant_url, timeout=10)
+    return QdrantClient(url=qdrant_url, timeout=_qdrant_timeout_from_env())
+
+
+def _qdrant_timeout_from_env() -> float:
+    raw_value = os.getenv("NALUS_FULL_DOCUMENT_QDRANT_TIMEOUT_SECONDS", "").strip()
+    if not raw_value:
+        return float(_DEFAULT_QDRANT_TIMEOUT_SECONDS)
+    try:
+        value = float(raw_value)
+    except ValueError:
+        logger.warning(
+            "Invalid NALUS_FULL_DOCUMENT_QDRANT_TIMEOUT_SECONDS value; using default."
+        )
+        return float(_DEFAULT_QDRANT_TIMEOUT_SECONDS)
+    return max(1.0, min(value, 300.0))
 
 
 def _document_id_filter(document_id: str) -> Any:
@@ -321,9 +342,38 @@ def _document_id_filter(document_id: str) -> Any:
     return models.Filter(
         should=[
             models.FieldCondition(key=key, match=models.MatchValue(value=document_id))
-            for key in _DOCUMENT_ID_KEYS
+            for key in _DOCUMENT_ID_FILTER_KEYS
         ]
     )
+
+
+def ensure_full_document_payload_indexes(
+    *,
+    client: Any,
+    collection_name: str,
+    wait: bool = False,
+) -> list[str]:
+    """Ensure keyword payload indexes exist for full-document scroll filters.
+
+    Safe to call repeatedly. Returns the field names for which an index create
+    was requested. Does not modify unrelated collections.
+    """
+    from qdrant_client.http import models as http_models
+
+    info = client.get_collection(collection_name)
+    existing = set((info.payload_schema or {}).keys())
+    created: list[str] = []
+    for field_name in _DOCUMENT_ID_FILTER_KEYS:
+        if field_name in existing:
+            continue
+        client.create_payload_index(
+            collection_name=collection_name,
+            field_name=field_name,
+            field_schema=http_models.PayloadSchemaType.KEYWORD,
+            wait=wait,
+        )
+        created.append(field_name)
+    return created
 
 
 def _max_chunks_from_env() -> int:
