@@ -1,0 +1,68 @@
+{
+  "document": "docs/legal_v2/LLM_RETRIEVAL_AUGMENTATION_PLAN.md",
+  "status": "AUTHORITATIVE_FUTURE_ROADMAP",
+  "authored_at": "2026-08-14",
+  "git_baseline": "bb5084c",
+  "related_docs": [
+    "docs/legal_v2/PRODUCTION_ASYNC_ARCHITECTURE_PLAN.md"
+  ],
+  "principle": {
+    "retrieval_discovers_evidence": true,
+    "llm_improves_search_strategy": true,
+    "corpus_is_source_of_truth": true,
+    "no_invented_case_law": true
+  },
+  "independence": {
+    "does_not_modify_embeddings": true,
+    "does_not_modify_chunking": true,
+    "does_not_require_rebuild_A": true,
+    "does_not_require_rebuild_B": true,
+    "does_not_invalidate_colbert": true,
+    "must_not_touch_running_full_A": true
+  },
+  "profile_policy": {
+    "FAST": "no_llm_default_baseline",
+    "BALANCED": "optional_bounded_planner_later",
+    "PRECISE": "primary_planner_and_optional_evidence_judge"
+  },
+  "existing_query_intelligence": {
+    "stage1_llm": false,
+    "deterministic_query_spec_expansions": "app/rag/legal_v2/query/query_spec.py",
+    "extractive_search_brief": "app/rag/legal_v2/query_input/providers/extractive.py",
+    "precise_llm_stub": "app/rag/legal_v2/query_input/providers/precise_llm.py",
+    "gated_deepseek_interpreter": "app/rag/legal_v2/interpret/interpreter.py",
+    "gated_deepseek_verifier": "app/rag/legal_v2/verify/verifier.py",
+    "provider_factory": "app/rag/llm/provider_factory.py",
+    "legacy_rewrite_not_on_stage1": "app/rag/rewrite/query_rewrite_service.py"
+  },
+  "phases": [
+    {"id": 0, "name": "documentation_schemas_benchmark_freeze"},
+    {"id": 1, "name": "offline_planner_evaluation"},
+    {"id": 2, "name": "multi_query_retrieval_offline_benchmark"},
+    {"id": 3, "name": "domain_concept_metadata_experiments"},
+    {"id": 4, "name": "precise_planner_feature_flag"},
+    {"id": 5, "name": "evidence_judge_offline"},
+    {"id": 6, "name": "evidence_judge_precise_if_validated"},
+    {"id": 7, "name": "balanced_experiment"},
+    {"id": 8, "name": "optional_grounded_answer_generation"}
+  ],
+  "planned_feature_flags": [
+    "NALUS_LEGAL_V2_LLM_PLANNER_ENABLED",
+    "NALUS_LEGAL_V2_LLM_PLANNER_PROFILES",
+    "NALUS_LEGAL_V2_LLM_EVIDENCE_JUDGE_ENABLED"
+  ],
+  "proposed_module_layout": "app/rag/legal_v2/llm/",
+  "primary_success_metric": "candidate_recall_known_relevant_judgment_enters_set",
+  "evaluation_variants": ["BASELINE", "A_rewrite", "B_multi_query", "C_domain_soft", "D_reranker", "E_evidence_judge"],
+  "open_decisions": [
+    "provider_model",
+    "max_query_variants",
+    "balanced_planner_initially",
+    "evidence_judge_top_n",
+    "fusion_strategy",
+    "domain_signal_strength",
+    "precise_latency_budget"
+  ],
+  "implementation_started": false,
+  "production_code_changed": false
+}

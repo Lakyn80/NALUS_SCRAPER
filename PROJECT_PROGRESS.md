@@ -1,5 +1,21 @@
 # Project Progress
 
+## 2026-08-14 Europe/Moscow — Task: LLM retrieval augmentation plan (docs only)
+
+- Scope: documentation / architecture planning only. No production code, ranking,
+  chunking, embeddings, B/ColBERT, or LLM implementation.
+- FULL A build left running untouched (`nalus-full-a-builder`).
+- Authoritative plan: `docs/legal_v2/LLM_RETRIEVAL_AUGMENTATION_PLAN.md`
+  (+ companion `docs/legal_v2/llm_retrieval_augmentation_plan.json`).
+- Product principle: LLM = legal query planner (+ optional evidence judge) to
+  improve **recall before reranking**; corpus remains source of truth; FAST stays
+  deterministic no-LLM baseline; PRECISE is primary integration target.
+- Existing Stage1 path remains LLM-free; gated `search_legal_v2` DeepSeek
+  interpret/verify is a separate path (do not conflate).
+- Next recommended (after full-corpus foundation): Phase 1 offline planner eval
+  behind flags — only when explicitly scheduled.
+- HARD STOP: no commit unless asked; no LLM code.
+
 ## 2026-08-14 Europe/Moscow — Task: Adaptive GPU embedding batching (preflight)
 
 - Scope: ingest execution only. No retrieval/ranking/chunking/model changes.
