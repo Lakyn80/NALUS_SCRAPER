@@ -1,9 +1,9 @@
 # Local Stage 1 deploy overlay.
 # Uses the existing nalus-scraper Qdrant + storage/models; does not recreate indexes.
 #
-# Slice 4 profile pins (code-canonical in retrieval_profiles.py):
-#   FAST → chunk_ab_v8_a_current_300 (A won FAST A/B)
-#   CE   → chunk_ab_v8_b_contextual_300 (B won CE-7 A/B)
+# Slice 4 profile pins (ops overrides below; code defaults still in retrieval_profiles.py):
+#   FAST → chunk_ab_v8_a_current_full  (full-corpus A; hierarchical)
+#   CE   → chunk_ab_v8_b_contextual_300 (pilot B until full B finishes)
 # Legacy NALUS_LEGAL_V2_QDRANT_COLLECTION / BM25_* below are shared knobs /
 # path-prefix hints only; Stage1 search overrides collection+BM25 per profile.
 #
@@ -20,12 +20,17 @@ services:
     environment:
       # Explicit container DNS — avoid resolving to this worktree's empty `qdrant` service.
       QDRANT_URL: http://nalus-scraper-qdrant-1:6333
-      # Keep full-document reconstruction on the same corpus as Stage 1 search.
-      QDRANT_COLLECTION_NAME: nalus_legal_paragraph_chunks_v2_pilot_600
-      NALUS_FULL_DOCUMENT_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_pilot_600
+      # Full-document reconstruction aligned with FAST full-corpus A.
+      QDRANT_COLLECTION_NAME: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full
+      NALUS_FULL_DOCUMENT_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full
       NALUS_LEGAL_V2_SEARCH_ENABLED: "1"
       NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED: "1"
+      # Always warm Stage1 on boot (BGE-M3 + CE BM25). Skip FAST full BM25 warm —
+      # loading the ~10GB in-memory index OOM'd the host alongside full-B GPU ingest.
+      # While full-B runs on 16GB hosts, also skip FAST BM25 on query (dense-only).
       NALUS_LEGAL_V2_STAGE1_WARMUP_ON_START: "1"
+      NALUS_LEGAL_V2_STAGE1_WARMUP_FAST_BM25: "0"
+      NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY: "1"
       NALUS_LEGAL_V2_LONG_INPUT_ENABLED: "0"
       NALUS_LEGAL_V2_LONG_INPUT_METHOD: extractive
       NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED: "1"
@@ -38,9 +43,18 @@ services:
       NALUS_LEGAL_V2_CE_DEVICE: cpu
       NALUS_LEGAL_V2_CE_MAX_LENGTH: "512"
       NALUS_LEGAL_V2_CE_ALLOW_DOWNLOAD: "0"
-      NALUS_LEGAL_V2_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_pilot_600
-      NALUS_LEGAL_V2_BM25_SIDECAR_PATH: /app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_pilot_600.sqlite
-      NALUS_LEGAL_V2_BM25_INDEX_ID: nalus_legal_paragraph_bm25_v2_pilot_600
+      # FAST = full corpus A (product search default).
+      NALUS_LEGAL_V2_FAST_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full
+      NALUS_LEGAL_V2_FAST_BM25_INDEX_ID: nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full
+      NALUS_LEGAL_V2_FAST_BM25_SIDECAR_PATH: /app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full.sqlite
+      # PRECISE/CE stays on pilot B until full B (+ ColBERT) is ready.
+      NALUS_LEGAL_V2_CE_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_b_contextual_300
+      NALUS_LEGAL_V2_CE_BM25_INDEX_ID: nalus_legal_paragraph_bm25_v2_chunk_ab_v8_b_contextual_300
+      NALUS_LEGAL_V2_CE_BM25_SIDECAR_PATH: /app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_chunk_ab_v8_b_contextual_300.sqlite
+      # Legacy shared knobs (full-doc / non-profile paths) → full A.
+      NALUS_LEGAL_V2_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full
+      NALUS_LEGAL_V2_BM25_SIDECAR_PATH: /app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full.sqlite
+      NALUS_LEGAL_V2_BM25_INDEX_ID: nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full
       NALUS_LEGAL_V2_DEFAULT_RESULT_LIMIT: "10"
       NALUS_LEGAL_V2_MAX_RESULT_LIMIT: "50"
       NALUS_LEGAL_V2_CANDIDATE_DOCUMENTS: "50"
