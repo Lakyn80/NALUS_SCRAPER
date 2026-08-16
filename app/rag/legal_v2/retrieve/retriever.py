@@ -37,6 +37,8 @@ class LegalV2RetrieverConfig:
     candidate_documents: int = 40
     returned_verified_documents: int = 10
     evidence_windows_per_constraint: int = 2
+    # When False, skip BM25 (dense-only). Ops flag for low-RAM coexistence with full-B ingest.
+    bm25_enabled: bool = True
 
     def validate(self) -> None:
         for field_name in (
@@ -85,15 +87,26 @@ class LegalV2HybridRetriever:
         dense_ms = _elapsed_ms(dense_started)
         trace_event(logger, "legal_v2.dense_retrieval.completed", result_count=len(dense))
         bm25_started = time.perf_counter()
-        bm25 = self._bm25.search(query, top_k=self._config.bm25_candidate_chunks)
-        bm25_ms = _elapsed_ms(bm25_started)
-        trace_event(logger, "legal_v2.bm25_retrieval.completed", result_count=len(bm25))
-        if not dense or not bm25:
-            raise RuntimeError("Legal v2 dense and BM25 indexes must both return candidates.")
-        fused_started = time.perf_counter()
-        fused = rrf_fuse([dense, bm25], top_k=self._config.fused_candidate_chunks, rrf_k=LEGAL_V2_PROFILE.rrf_k)
-        fused_ms = _elapsed_ms(fused_started)
-        trace_event(logger, "legal_v2.rrf_fusion.completed", result_count=len(fused))
+        if self._config.bm25_enabled:
+            bm25 = self._bm25.search(query, top_k=self._config.bm25_candidate_chunks)
+            bm25_ms = _elapsed_ms(bm25_started)
+            trace_event(logger, "legal_v2.bm25_retrieval.completed", result_count=len(bm25))
+            if not dense or not bm25:
+                raise RuntimeError("Legal v2 dense and BM25 indexes must both return candidates.")
+            fused_started = time.perf_counter()
+            fused = rrf_fuse([dense, bm25], top_k=self._config.fused_candidate_chunks, rrf_k=LEGAL_V2_PROFILE.rrf_k)
+            fused_ms = _elapsed_ms(fused_started)
+            trace_event(logger, "legal_v2.rrf_fusion.completed", result_count=len(fused))
+        else:
+            bm25 = []
+            bm25_ms = _elapsed_ms(bm25_started)
+            if not dense:
+                raise RuntimeError("Legal v2 dense index must return candidates (dense-only mode).")
+            fused_started = time.perf_counter()
+            # Dense-only: preserve ranking by truncating dense hits (no lexical channel).
+            fused = dense[: self._config.fused_candidate_chunks]
+            fused_ms = _elapsed_ms(fused_started)
+            trace_event(logger, "legal_v2.dense_only_retrieval.completed", result_count=len(fused))
         documents = _aggregate_documents(
             fused,
             dense=dense,
@@ -118,6 +131,8 @@ class LegalV2HybridRetriever:
                 "total_retrieval_latency_ms": _elapsed_ms(started),
                 "collection": self._config.qdrant_collection,
                 "bm25_index_id": self._config.bm25_index_id,
+                "bm25_enabled": bool(self._config.bm25_enabled),
+                "dense_only": not bool(self._config.bm25_enabled),
             },
         )
 

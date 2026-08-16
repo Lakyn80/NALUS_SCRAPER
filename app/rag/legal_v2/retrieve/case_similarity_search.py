@@ -63,8 +63,31 @@ def stage1_debug_allowed() -> bool:
 
 
 def stage1_warmup_on_start_enabled() -> bool:
-    """When enabled, API preloads BGE-M3 + BM25 after boot so first search is warm."""
+    """When enabled, API preloads BGE-M3 (+ BM25 policy) after boot so first search is warm."""
     return os.getenv("NALUS_LEGAL_V2_STAGE1_WARMUP_ON_START", "").strip().lower() in _TRUTHY
+
+
+def stage1_warmup_fast_bm25_enabled() -> bool:
+    """Whether startup warmup loads the FAST BM25 sidecar into RAM.
+
+    Full-corpus FAST BM25 is multi-GB in process memory. Loading it during warmup
+    while a GPU full-B ingest runs can OOM the host / wedge Docker Desktop.
+    Default remains enabled; set ``NALUS_LEGAL_V2_STAGE1_WARMUP_FAST_BM25=0`` to
+    warm BGE-M3 (+ small CE BM25) only and lazy-load FAST BM25 on first query.
+    """
+    raw = os.getenv("NALUS_LEGAL_V2_STAGE1_WARMUP_FAST_BM25", "1")
+    return str(raw).strip().lower() in _TRUTHY
+
+
+def stage1_fast_dense_only_enabled() -> bool:
+    """Skip FAST BM25 entirely (dense-only Stage 1) when set.
+
+    Disabled by default. Enable with ``NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY=1``
+    so FAST can stay available on a 16GB host while full-B ingest holds GPU RAM
+    without loading the multi-GB FAST BM25 sidecar on first query.
+    """
+    raw = os.getenv("NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY", "0")
+    return str(raw).strip().lower() in _TRUTHY
 
 
 def default_result_limit() -> int:
@@ -254,9 +277,18 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             bm25_index_id=ce_bind.bm25_index_id,
             bm25_sidecar_path=_resolve_profile_bm25_path(ce_bind.bm25_sidecar_path),
         )
+        fast_dense_only = stage1_fast_dense_only_enabled()
+        if fast_dense_only:
+            from dataclasses import replace as _replace_config
+
+            fast_config = _replace_config(fast_config, bm25_enabled=False)
+            logger.info(
+                "[legal_v2.stage1] FAST dense-only enabled "
+                "(NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY=1); skipping FAST BM25 load"
+            )
         fast_config.validate()
         ce_config.validate()
-        if not fast_config.bm25_sidecar_path.exists():
+        if (not fast_dense_only) and (not fast_config.bm25_sidecar_path.exists()):
             raise RetrievalConfigurationError(
                 f"FAST BM25 sidecar missing: {fast_config.bm25_sidecar_path}"
             )
@@ -324,19 +356,24 @@ def _embedder_is_loaded(runtime: CaseSimilarityStage1Runtime) -> bool:
 
 
 def _bm25_is_loaded(runtime: CaseSimilarityStage1Runtime) -> bool:
-    if runtime.bm25_loaded:
-        return True
+    """True when FAST and CE (if present) BM25 indexes are resident in memory."""
+    return _fast_bm25_is_loaded(runtime) and _ce_bm25_is_loaded(runtime)
+
+
+def _fast_bm25_is_loaded(runtime: CaseSimilarityStage1Runtime) -> bool:
     bm25 = getattr(runtime.retriever, "_bm25", None)
-    fast_ok = bool(bm25 is not None and getattr(bm25, "_index", None) is not None)
+    return bool(bm25 is not None and getattr(bm25, "_index", None) is not None)
+
+
+def _ce_bm25_is_loaded(runtime: CaseSimilarityStage1Runtime) -> bool:
     if runtime.ce_retriever is None:
-        return fast_ok
+        return True
     ce_bm25 = getattr(runtime.ce_retriever, "_bm25", None)
-    ce_ok = bool(ce_bm25 is not None and getattr(ce_bm25, "_index", None) is not None)
-    return fast_ok and ce_ok
+    return bool(ce_bm25 is not None and getattr(ce_bm25, "_index", None) is not None)
 
 
 def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
-    """Load BGE-M3 + BM25 into process memory (blocking; call from a worker thread)."""
+    """Load BGE-M3 (+ optional BM25) into process memory (blocking; worker thread)."""
     if not case_similarity_stage1_enabled():
         return {
             "warmup_status": "skipped",
@@ -346,11 +383,23 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
         }
 
     runtime = get_case_similarity_stage1_runtime()
-    if runtime.warmup_status == "warm" and _embedder_is_loaded(runtime) and _bm25_is_loaded(runtime):
+    # Dense-only ops mode never loads FAST BM25 (even if warmup flag is on).
+    warm_fast_bm25 = (
+        stage1_warmup_fast_bm25_enabled()
+        and (not stage1_fast_dense_only_enabled())
+        and bool(getattr(runtime.config, "bm25_enabled", True))
+    )
+    bm25_ready = _bm25_is_loaded(runtime) if warm_fast_bm25 else _ce_bm25_is_loaded(runtime)
+    if (
+        runtime.warmup_status == "warm"
+        and _embedder_is_loaded(runtime)
+        and bm25_ready
+    ):
         return {
             "warmup_status": "warm",
             "model_loaded": True,
-            "bm25_loaded": True,
+            "bm25_loaded": _fast_bm25_is_loaded(runtime),
+            "fast_bm25_warmed": warm_fast_bm25 and _fast_bm25_is_loaded(runtime),
             "warmup_latency_ms": runtime.warmup_latency_ms,
             "collection": runtime.config.qdrant_collection,
             "fast_collection": runtime.config.qdrant_collection,
@@ -373,10 +422,17 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
             raise RetrievalConfigurationError("Stage 1 warmup embedder returned an empty vector.")
         runtime.model_loaded = True
 
-        bm25 = getattr(runtime.retriever, "_bm25", None)
-        if bm25 is None:
-            raise RetrievalConfigurationError("Stage 1 BM25 sidecar is not configured.")
-        bm25.search(_WARMUP_QUERY, top_k=1)
+        if warm_fast_bm25:
+            bm25 = getattr(runtime.retriever, "_bm25", None)
+            if bm25 is None:
+                raise RetrievalConfigurationError("Stage 1 BM25 sidecar is not configured.")
+            bm25.search(_WARMUP_QUERY, top_k=1)
+        else:
+            logger.info(
+                "[legal_v2.stage1] warmup skipping FAST BM25 load "
+                "(NALUS_LEGAL_V2_STAGE1_WARMUP_FAST_BM25=0); lazy on first query"
+            )
+
         if runtime.ce_retriever is not None:
             ce_bm25 = getattr(runtime.ce_retriever, "_bm25", None)
             if ce_bm25 is None:
@@ -384,21 +440,24 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
                     "CE BM25 sidecar is not configured."
                 )
             ce_bm25.search(_WARMUP_QUERY, top_k=1)
-        runtime.bm25_loaded = True
 
+        runtime.bm25_loaded = _bm25_is_loaded(runtime) if warm_fast_bm25 else _ce_bm25_is_loaded(runtime)
         runtime.warmup_status = "warm"
         runtime.warmup_latency_ms = (time.perf_counter() - started) * 1000.0
         logger.info(
             "[legal_v2.stage1] warmup complete fast_collection=%s ce_collection=%s "
-            "model_loaded=1 bm25_loaded=1 warmup_latency_ms=%.1f",
+            "model_loaded=1 fast_bm25_warmed=%s bm25_loaded=%s warmup_latency_ms=%.1f",
             runtime.config.qdrant_collection,
             runtime.ce_config.qdrant_collection if runtime.ce_config else None,
+            warm_fast_bm25,
+            runtime.bm25_loaded,
             runtime.warmup_latency_ms,
         )
         return {
             "warmup_status": "warm",
             "model_loaded": True,
-            "bm25_loaded": True,
+            "bm25_loaded": bool(runtime.bm25_loaded),
+            "fast_bm25_warmed": warm_fast_bm25 and bool(runtime.bm25_loaded),
             "warmup_latency_ms": runtime.warmup_latency_ms,
             "collection": runtime.config.qdrant_collection,
             "fast_collection": runtime.config.qdrant_collection,
@@ -458,9 +517,22 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
         }
 
     model_loaded = _embedder_is_loaded(runtime)
-    bm25_loaded = _bm25_is_loaded(runtime)
+    dense_only = stage1_fast_dense_only_enabled() or (
+        not bool(getattr(runtime.config, "bm25_enabled", True))
+    )
+    warm_fast_bm25 = stage1_warmup_fast_bm25_enabled() and (not dense_only)
+    if warm_fast_bm25:
+        bm25_loaded = _bm25_is_loaded(runtime)
+        warm_enough = model_loaded and bm25_loaded
+    elif dense_only:
+        # Dense-only FAST: model (+ optional small CE BM25) is enough; FAST BM25 stays unloaded.
+        bm25_loaded = False
+        warm_enough = model_loaded
+    else:
+        # Model + (optional) small CE BM25 is enough for ready when FAST BM25 is lazy.
+        bm25_loaded = _fast_bm25_is_loaded(runtime)
+        warm_enough = model_loaded and _ce_bm25_is_loaded(runtime)
     warmup_required = stage1_warmup_on_start_enabled()
-    warm_enough = model_loaded and bm25_loaded
 
     if warmup_required and not warm_enough:
         if runtime.warmup_status == "failed":
@@ -491,6 +563,8 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
         "retrieval_stage": STAGE_1_RETRIEVAL,
         "model_loaded": model_loaded,
         "bm25_loaded": bm25_loaded,
+        "fast_bm25_warmup_enabled": warm_fast_bm25,
+        "fast_dense_only": dense_only,
         "warmup_status": runtime.warmup_status,
         "warmup_required": warmup_required,
         "warmup_latency_ms": runtime.warmup_latency_ms,
