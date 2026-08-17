@@ -9,7 +9,7 @@ import random
 import re
 import sys
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Iterable
@@ -363,7 +363,7 @@ def _candidate_from_text(
         year=int(decision_date[:4]) if decision_date else None,
         length_bucket=_length_bucket(char_count),
         source_content_type=content_type,
-        acquired_at=datetime.now(UTC).isoformat(),
+        acquired_at=datetime.now(timezone.utc).isoformat(),
     )
 
 
