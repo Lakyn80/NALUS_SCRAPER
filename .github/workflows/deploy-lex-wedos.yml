@@ -1,7 +1,7 @@
 # Continuous deploy to the same WEDOS Lex install used by bootstrap:
 #   /home/lucky/projects/apps/lex
 #   docker-compose.lex.prod.yml  (synced from GitHub clone)
-#   .env.prod                    (server-only; never committed)
+#   .env.prod                    (server-only; never committed; must already exist)
 #
 # Required GitHub secrets:
 #   LEX_WEDOS_SSH_HOST
@@ -12,8 +12,10 @@
 #   LEX_FE_DEPLOY_TOKEN  (PAT with read to Lakyn80/NalusFE — enables FE image rebuild)
 #
 # After CI succeeds on main, this workflow builds/pushes the API image to GHCR
-# and SSHs into WEDOS to pull + compose up. Frontend image is rebuilt only when
-# LEX_FE_DEPLOY_TOKEN is configured; otherwise the existing LEX_FE_IMAGE pin is kept.
+# (SHA tag + optional extra tag) and SSHs into WEDOS to pull + recreate only
+# the API service at ghcr.io/lakyn80/nalus-api:${DEPLOY_SHA}. Frontend image is
+# rebuilt only when LEX_FE_DEPLOY_TOKEN is configured; otherwise the existing
+# LEX_FE_IMAGE pin is kept. Qdrant is never recreated by this workflow.
 
 name: Deploy Lex WEDOS
 
@@ -25,9 +27,13 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: Image tag to deploy (default = latest)
+        description: Extra GHCR tag to push (production always deploys the commit SHA)
         required: false
         default: latest
+
+concurrency:
+  group: lex-wedos-production
+  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -118,14 +124,13 @@ jobs:
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEPLOY_SHA: ${{ steps.ref.outputs.sha }}
-          DEPLOY_TAG: ${{ steps.ref.outputs.tag }}
           BUILD_FE: ${{ steps.ref.outputs.build_fe }}
         with:
           host: ${{ secrets.LEX_WEDOS_SSH_HOST }}
           username: ${{ secrets.LEX_WEDOS_SSH_USER }}
           key: ${{ secrets.LEX_WEDOS_SSH_KEY }}
           port: ${{ secrets.LEX_WEDOS_SSH_PORT || 22 }}
-          envs: GHCR_USER,GHCR_TOKEN,DEPLOY_SHA,DEPLOY_TAG,BUILD_FE
+          envs: GHCR_USER,GHCR_TOKEN,DEPLOY_SHA,BUILD_FE
           script_stop: true
           script: |
             set -euo pipefail
@@ -137,35 +142,87 @@ jobs:
               echo "backend clone missing under /home/lucky/projects/apps/lex/backend" >&2
               exit 1
             fi
+            if [ ! -f .env.prod ]; then
+              echo ".env.prod is missing" >&2
+              exit 1
+            fi
+            if [ -z "${DEPLOY_SHA:-}" ]; then
+              echo "DEPLOY_SHA is empty" >&2
+              exit 1
+            fi
 
             git -C backend fetch origin main
-            git -C backend checkout --force "$DEPLOY_SHA" || git -C backend checkout --force origin/main
+            git -C backend checkout --force "$DEPLOY_SHA"
             cp -f backend/docker-compose.lex.prod.yml ./docker-compose.lex.prod.yml
 
-            touch .env.prod
             if grep -q '^LEX_API_IMAGE=' .env.prod; then
-              sed -i "s|^LEX_API_IMAGE=.*|LEX_API_IMAGE=ghcr.io/lakyn80/nalus-api:${DEPLOY_TAG}|" .env.prod
+              sed -i "s|^LEX_API_IMAGE=.*|LEX_API_IMAGE=ghcr.io/lakyn80/nalus-api:${DEPLOY_SHA}|" .env.prod
             else
-              echo "LEX_API_IMAGE=ghcr.io/lakyn80/nalus-api:${DEPLOY_TAG}" >> .env.prod
+              echo "LEX_API_IMAGE=ghcr.io/lakyn80/nalus-api:${DEPLOY_SHA}" >> .env.prod
             fi
             if [ "$BUILD_FE" = "true" ]; then
               if grep -q '^LEX_FE_IMAGE=' .env.prod; then
-                sed -i "s|^LEX_FE_IMAGE=.*|LEX_FE_IMAGE=ghcr.io/lakyn80/nalus-fe:${DEPLOY_TAG}|" .env.prod
+                sed -i "s|^LEX_FE_IMAGE=.*|LEX_FE_IMAGE=ghcr.io/lakyn80/nalus-fe:${DEPLOY_SHA}|" .env.prod
               else
-                echo "LEX_FE_IMAGE=ghcr.io/lakyn80/nalus-fe:${DEPLOY_TAG}" >> .env.prod
+                echo "LEX_FE_IMAGE=ghcr.io/lakyn80/nalus-fe:${DEPLOY_SHA}" >> .env.prod
               fi
             fi
 
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-            docker compose -f docker-compose.lex.prod.yml --env-file .env.prod pull api
+            docker compose \
+              -f docker-compose.lex.prod.yml \
+              --env-file .env.prod \
+              pull api
+            docker compose \
+              -f docker-compose.lex.prod.yml \
+              --env-file .env.prod \
+              up -d --no-deps api
             if [ "$BUILD_FE" = "true" ]; then
-              docker compose -f docker-compose.lex.prod.yml --env-file .env.prod pull frontend
+              docker compose \
+                -f docker-compose.lex.prod.yml \
+                --env-file .env.prod \
+                pull frontend
+              docker compose \
+                -f docker-compose.lex.prod.yml \
+                --env-file .env.prod \
+                up -d --no-deps frontend
             fi
-            docker compose -f docker-compose.lex.prod.yml --env-file .env.prod up -d
             docker logout ghcr.io || true
 
-            sleep 8
-            curl -sf http://127.0.0.1:8029/health >/dev/null
-            docker ps --filter name=lex-
+            API_HEALTHY=0
+            for i in $(seq 1 30); do
+              if curl -sf http://127.0.0.1:8029/health >/dev/null; then
+                echo "Lex API health check passed"
+                API_HEALTHY=1
+                break
+              fi
+              echo "Waiting for Lex API... attempt $i/30"
+              sleep 3
+            done
+            if [ "$API_HEALTHY" -ne 1 ]; then
+              echo "Lex API health check FAILED" >&2
+              docker logs --tail=200 lex-api || true
+              exit 1
+            fi
+
+            smoke_code=$(curl -sS -o /tmp/lex_fast_smoke.json -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 60 \
+              -H "Content-Type: application/json; charset=utf-8" \
+              -d '{"query":"neplatnost výpovědi z pracovního poměru","limit":3,"retrieval_profile":"fast"}' \
+              http://127.0.0.1:8029/api/rag/legal-v2/case-similarity/search || true)
+            if [ "$smoke_code" != "200" ]; then
+              echo "FAST smoke FAILED http=${smoke_code}" >&2
+              docker logs --tail=200 lex-api || true
+              exit 1
+            fi
+            echo "FAST smoke passed http=${smoke_code}"
+            rm -f /tmp/lex_fast_smoke.json
+
+            echo "DEPLOY_SHA=${DEPLOY_SHA}"
+            grep '^LEX_API_IMAGE=' .env.prod
+            docker ps --filter name=lex-api --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+            docker inspect lex-api \
+              --format 'status={{.State.Status}} restart={{.RestartCount}} oom={{.State.OOMKilled}} image={{.Config.Image}}'
             free -h
             df -h /
