@@ -8,6 +8,7 @@ from app.rag.retrieval.errors import RetrievalConfigurationError
 from app.rag.retrieval.models import RetrievedChunk
 from app.rag.retrieval.production_profile import ProductionRetrievalConfig
 from app.rag.retrieval.provenance import validate_embedding_provenance
+from app.rag.retrieval.qdrant_quantization import qdrant_quantization_policy_from_env
 
 logger = get_logger(__name__)
 
@@ -36,12 +37,14 @@ class QdrantDenseStore:
                 f"{len(vector)} != {self._config.profile.embedding_dimension}"
             )
 
+        quantization = qdrant_quantization_policy_from_env()
         qdrant_started = time.perf_counter()
         result = self._client.query_points(
             collection_name=self._config.qdrant_collection,
             query=vector,
             limit=top_k,
             with_payload=True,
+            search_params=quantization.to_search_params(),
         )
         qdrant_latency_ms = _elapsed_ms(qdrant_started)
 
@@ -50,16 +53,20 @@ class QdrantDenseStore:
         conversion_latency_ms = _elapsed_ms(conversion_started)
         total_latency_ms = _elapsed_ms(started)
 
+        quantization_diag = quantization.diagnostics()
         logger.info(
             "[dense_store] search completed embedding_latency_ms=%.3f "
             "qdrant_latency_ms=%.3f conversion_latency_ms=%.3f "
-            "total_latency_ms=%.3f top_k=%s query_length=%s",
+            "total_latency_ms=%.3f top_k=%s query_length=%s "
+            "quantization_enabled=%s quantization_ignore=%s",
             embedding_latency_ms,
             qdrant_latency_ms,
             conversion_latency_ms,
             total_latency_ms,
             top_k,
             len(query),
+            quantization_diag["quantization_enabled"],
+            quantization_diag["quantization_ignore"],
             extra={
                 "event_name": "dense_store.search.completed",
                 "embedding_latency_ms": round(embedding_latency_ms, 3),
@@ -70,6 +77,7 @@ class QdrantDenseStore:
                 "dense_store_total_latency_ms": round(total_latency_ms, 3),
                 "top_k": int(top_k),
                 "query_length": len(query),
+                **quantization_diag,
             },
         )
         return chunks
