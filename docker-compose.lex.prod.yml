@@ -64,7 +64,6 @@ services:
       LLM_PROVIDER: mock
       NALUS_DOCUMENT_RETRIEVAL_ENABLED: "0"
       NALUS_CONSTRAINT_RETRIEVAL_ENABLED: "0"
-      NALUS_LEGAL_V2_SEARCH_ENABLED: "1"
     volumes:
       - ./data/hf_cache:/root/.cache/huggingface:ro
       - ./data/storage:/app/storage:ro

@@ -277,14 +277,27 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             bm25_index_id=ce_bind.bm25_index_id,
             bm25_sidecar_path=_resolve_profile_bm25_path(ce_bind.bm25_sidecar_path),
         )
-        fast_dense_only = stage1_fast_dense_only_enabled()
-        if fast_dense_only:
-            from dataclasses import replace as _replace_config
+        from dataclasses import replace as _replace_config
 
+        from app.rag.legal_v2.rerank.config import cross_encoder_enabled
+
+        fast_dense_only = stage1_fast_dense_only_enabled()
+        # Dense-only / CE-off hosts (e.g. WEDOS 4 GB) must not require CE BM25
+        # sidecars or load a second hybrid index into RAM.
+        skip_ce_bm25 = fast_dense_only or (not cross_encoder_enabled())
+        if fast_dense_only:
             fast_config = _replace_config(fast_config, bm25_enabled=False)
             logger.info(
                 "[legal_v2.stage1] FAST dense-only enabled "
                 "(NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY=1); skipping FAST BM25 load"
+            )
+        if skip_ce_bm25:
+            ce_config = _replace_config(ce_config, bm25_enabled=False)
+            logger.info(
+                "[legal_v2.stage1] skipping CE BM25 load "
+                "(dense-only=%s cross_encoder_enabled=%s)",
+                fast_dense_only,
+                cross_encoder_enabled(),
             )
         fast_config.validate()
         ce_config.validate()
@@ -292,7 +305,7 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             raise RetrievalConfigurationError(
                 f"FAST BM25 sidecar missing: {fast_config.bm25_sidecar_path}"
             )
-        if not ce_config.bm25_sidecar_path.exists():
+        if (not skip_ce_bm25) and (not ce_config.bm25_sidecar_path.exists()):
             raise RetrievalConfigurationError(
                 f"CE BM25 sidecar missing: {ce_config.bm25_sidecar_path}"
             )
@@ -302,7 +315,9 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             timeout=10,
         )
         fast_info = _require_collection(client, fast_config.qdrant_collection)
-        ce_info = _require_collection(client, ce_config.qdrant_collection)
+        ce_info = None
+        if not skip_ce_bm25:
+            ce_info = _require_collection(client, ce_config.qdrant_collection)
         prod_config = ProductionRetrievalConfig(
             profile=LEGAL_V2_PROFILE,
             qdrant_collection=fast_config.qdrant_collection,
@@ -321,7 +336,11 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
         )
         embedder = BgeM3Embedder(prod_config)
         fast_retriever = build_live_legal_v2_retriever(client, embedder, fast_config)
-        ce_retriever = build_live_legal_v2_retriever(client, embedder, ce_config)
+        ce_retriever = (
+            None
+            if skip_ce_bm25
+            else build_live_legal_v2_retriever(client, embedder, ce_config)
+        )
         _runtime = CaseSimilarityStage1Runtime(
             retriever=fast_retriever,
             config=fast_config,
@@ -332,7 +351,7 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             bm25_loaded=False,
             warmup_status="cold",
             ce_retriever=ce_retriever,
-            ce_config=ce_config,
+            ce_config=None if skip_ce_bm25 else ce_config,
         )
         logger.info(
             "[legal_v2.stage1] runtime ready "
@@ -341,9 +360,9 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             fast_config.qdrant_collection,
             fast_config.bm25_index_id,
             getattr(fast_info, "points_count", None),
-            ce_config.qdrant_collection,
-            ce_config.bm25_index_id,
-            getattr(ce_info, "points_count", None),
+            None if skip_ce_bm25 else ce_config.qdrant_collection,
+            None if skip_ce_bm25 else ce_config.bm25_index_id,
+            None if ce_info is None else getattr(ce_info, "points_count", None),
         )
         return _runtime
 
@@ -433,13 +452,18 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
                 "(NALUS_LEGAL_V2_STAGE1_WARMUP_FAST_BM25=0); lazy on first query"
             )
 
-        if runtime.ce_retriever is not None:
+        if runtime.ce_retriever is not None and not stage1_fast_dense_only_enabled():
             ce_bm25 = getattr(runtime.ce_retriever, "_bm25", None)
             if ce_bm25 is None:
                 raise RetrievalConfigurationError(
                     "CE BM25 sidecar is not configured."
                 )
             ce_bm25.search(_WARMUP_QUERY, top_k=1)
+        elif runtime.ce_retriever is None:
+            logger.info(
+                "[legal_v2.stage1] warmup skipping CE BM25 "
+                "(CE retriever not loaded for dense-only / CE-disabled host)"
+            )
 
         runtime.bm25_loaded = _bm25_is_loaded(runtime) if warm_fast_bm25 else _ce_bm25_is_loaded(runtime)
         runtime.warmup_status = "warm"
