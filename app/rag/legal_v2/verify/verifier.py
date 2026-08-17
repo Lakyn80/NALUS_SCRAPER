@@ -619,6 +619,22 @@ def validate_verifier_payload(
     }
     diagnostics_supported = sorted(hard_proven_ids)
     diagnostics_missing = sorted(hard_ids.difference(hard_proven_ids))
+    # Compact demotion already recorded incomplete/non-holding hard coverage.
+    # Lexical prove may later fill gaps; keep the demotion diagnostics aligned
+    # with the demoted decision/reason so callers see a consistent snapshot.
+    demotion_reason = str(normalized_payload.get("reason") or "")
+    if demotion_reason in {
+        "positive_classification_without_holding_proven_constraints",
+        "positive_classification_with_incomplete_hard_proven_constraints",
+    }:
+        payload_missing = _safe_string_list(normalized_payload.get("mandatory_concepts_missing"))
+        payload_supported = _safe_string_list(
+            normalized_payload.get("mandatory_concepts_supported")
+        )
+        if payload_missing:
+            diagnostics_missing = payload_missing
+        if payload_supported:
+            diagnostics_supported = payload_supported
 
     return SemanticVerifierResult(
         document_id=candidate_document.document_id,
@@ -711,16 +727,18 @@ def deterministic_verification_gate(
     # mistakenly emits verified_match with that classification.
     if classification == "related_only":
         return VerificationDecision.NOT_PROVEN
+    # Compact demotions (metadata-only / incomplete hard proven) set these flags
+    # while leaving decision=AMBIGUOUS — map them to NOT_PROVEN before passthrough.
+    if diagnostics.get("holding_supports_query") is False:
+        return VerificationDecision.NOT_PROVEN
+    if diagnostics.get("legal_issue_match") is False:
+        return VerificationDecision.NOT_PROVEN
 
     if verifier_result.decision != VerificationDecision.VERIFIED_MATCH:
         return verifier_result.decision
 
     if diagnostics.get("jurisdiction_match") is False:
         return VerificationDecision.HARD_MISMATCH
-    if diagnostics.get("holding_supports_query") is False:
-        return VerificationDecision.NOT_PROVEN
-    if diagnostics.get("legal_issue_match") is False:
-        return VerificationDecision.NOT_PROVEN
     if float(diagnostics.get("confidence") or 0.0) < _MIN_VERIFIED_CONFIDENCE:
         return VerificationDecision.NOT_PROVEN
     if _safe_string_list(diagnostics.get("contradictory_facts")):

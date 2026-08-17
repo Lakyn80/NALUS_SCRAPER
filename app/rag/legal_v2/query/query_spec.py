@@ -853,6 +853,24 @@ def build_query_spec_v2(original_query: str) -> QuerySpecV2:
             ConstraintPolarity.HARD,
             attribute=f"legal_concept:{concept['name']}",
         )
+    # Cross-border child removal: keep origin/destination soft (ranking hints), but
+    # require a separate hard concept so incomplete holding coverage can be demoted.
+    if (
+        origin is not None
+        and destination is not None
+        and any(concept["name"] == "international_child_removal" for concept in candidate_retrieval_concepts)
+        and not any(
+            (constraint.attribute or "") == "legal_concept:cross_border_child_relocation"
+            for constraint in hard_constraints
+        )
+    ):
+        _add_constraint(
+            hard_constraints,
+            ConstraintCategory.LEGAL_PROVISION,
+            "přeshraniční přemístění dítěte",
+            ConstraintPolarity.HARD,
+            attribute="legal_concept:cross_border_child_relocation",
+        )
     for item in scoped_negative_concepts:
         _add_constraint(
             negative_constraints,
