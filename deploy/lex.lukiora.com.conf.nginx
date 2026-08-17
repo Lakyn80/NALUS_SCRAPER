@@ -1,0 +1,26 @@
+# Nginx site for Lex Lukiora — install with:
+#   sudo cp /home/lucky/projects/configs/lex.lukiora.com.conf /etc/nginx/sites-available/lex.lukiora.com
+#   sudo ln -sf /etc/nginx/sites-available/lex.lukiora.com /etc/nginx/sites-enabled/lex.lukiora.com
+#   sudo certbot --nginx -d lex.lukiora.com
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# Pattern matches rag.lukiora.com (localhost proxy + Certbot SSL).
+
+server {
+    server_name lex.lukiora.com;
+
+    # Frontend (Next.js) — search UI + server-side API proxy
+    location / {
+        proxy_pass http://127.0.0.1:3017;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 300;
+        proxy_send_timeout 300;
+        proxy_read_timeout 300;
+    }
+
+    listen 80;
+}

@@ -1,0 +1,98 @@
+# Lex production compose — dense FAST only (WEDOS 4 GB RAM).
+# Bind app ports to localhost; Nginx terminates HTTPS for lex.lukiora.com.
+#
+# Usage on VPS:
+#   cd /home/lucky/projects/apps/lex
+#   docker compose -f docker-compose.lex.prod.yml --env-file .env.prod up -d
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.13.6
+    container_name: lex-qdrant
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6335:6333"
+    volumes:
+      - ./data/qdrant:/qdrant/storage
+    networks:
+      - lex_net
+
+  api:
+    image: ${LEX_API_IMAGE:-ghcr.io/lakyn80/nalus-api:latest}
+    container_name: lex-api
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+    ports:
+      - "127.0.0.1:8029:8000"
+    env_file:
+      - .env.prod
+    environment:
+      PYTHONPATH: /app
+      LOG_LEVEL: INFO
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION_NAME: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full
+      NALUS_FULL_DOCUMENT_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full
+      NALUS_LEGAL_V2_SEARCH_ENABLED: "1"
+      NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED: "1"
+      NALUS_LEGAL_V2_STAGE1_WARMUP_ON_START: "1"
+      NALUS_LEGAL_V2_STAGE1_WARMUP_FAST_BM25: "0"
+      NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY: "1"
+      NALUS_LEGAL_V2_LONG_INPUT_ENABLED: "0"
+      NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED: "0"
+      NALUS_LEGAL_V2_CE_ALLOW_DOWNLOAD: "0"
+      NALUS_LEGAL_V2_FAST_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full
+      NALUS_LEGAL_V2_FAST_BM25_INDEX_ID: nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full
+      NALUS_LEGAL_V2_FAST_BM25_SIDECAR_PATH: /app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full.sqlite
+      NALUS_LEGAL_V2_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full
+      NALUS_LEGAL_V2_BM25_SIDECAR_PATH: /app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full.sqlite
+      NALUS_LEGAL_V2_BM25_INDEX_ID: nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full
+      NALUS_LEGAL_V2_DEFAULT_RESULT_LIMIT: "10"
+      NALUS_LEGAL_V2_MAX_RESULT_LIMIT: "50"
+      NALUS_LEGAL_V2_CANDIDATE_DOCUMENTS: "50"
+      NALUS_LEGAL_V2_DEBUG: "0"
+      EMBEDDING_PROVIDER: sentence_transformer
+      EMBEDDING_MODEL_NAME: /root/.cache/huggingface/hub/models--BAAI--bge-m3/snapshots/5617a9f61b028005a4858fdac845db406aefb181
+      EMBEDDING_DIMENSION: "1024"
+      EMBEDDING_LOCAL_FILES_ONLY: "1"
+      EMBEDDING_TRUST_REMOTE_CODE: "0"
+      EMBEDDING_DEVICE: cpu
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+      RAG_STRICT_REAL_MODE: "0"
+      LLM_PROVIDER: mock
+      NALUS_DOCUMENT_RETRIEVAL_ENABLED: "0"
+      NALUS_CONSTRAINT_RETRIEVAL_ENABLED: "0"
+      NALUS_LEGAL_V2_SEARCH_ENABLED: "1"
+    volumes:
+      - ./data/hf_cache:/root/.cache/huggingface:ro
+      - ./data/storage:/app/storage:ro
+      - ./data/batches:/app/batches:ro
+    networks:
+      - lex_net
+    mem_limit: 1800m
+
+  frontend:
+    image: ${LEX_FE_IMAGE:-ghcr.io/lakyn80/nalus-fe:latest}
+    container_name: lex-frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:3017:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      NALUS_API_BASE_URL: http://api:8000
+      NALUS_RETRIEVAL_MODE: v2
+      NEXT_PUBLIC_NALUS_RETRIEVAL_MODE: v2
+    networks:
+      - lex_net
+    mem_limit: 512m
+
+networks:
+  lex_net:
+    name: lex_net
