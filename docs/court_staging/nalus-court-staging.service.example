@@ -1,0 +1,11 @@
+[Unit]
+Description=NALUS court staging daily updater
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/nalus-scraper
+ExecStart=/usr/bin/python scripts/court_staging_updater.py --courts us,ns,nss --mode incremental --overlap-days 7
+# Incremental daily updater only. Historical NS/NSS backfill is docker-compose.court-staging.yml
+# (see docs/court_staging/WEDOS_HISTORICAL_BACKFILL.md). Do not ExecStart historical runners here.
+# Must never point outs at batches/ or Full B paths.

@@ -1,8 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$DockerHubNamespace = $env:DOCKERHUB_NAMESPACE,
+    [string]$GhcrOwner = $(if ($env:GHCR_OWNER) { $env:GHCR_OWNER } elseif ($env:DOCKERHUB_NAMESPACE) { $env:DOCKERHUB_NAMESPACE } else { "lakyn80" }),
     [string]$Tag = $(if ($env:IMAGE_TAG) { $env:IMAGE_TAG } else { "latest" }),
-    [string]$Registry = $(if ($env:DOCKER_REGISTRY) { $env:DOCKER_REGISTRY } else { "docker.io" }),
+    [string]$Registry = $(if ($env:DOCKER_REGISTRY) { $env:DOCKER_REGISTRY } else { "ghcr.io" }),
     [switch]$SkipExporter,
     [switch]$AlsoTagLatest,
     [switch]$UseExistingImages,
@@ -35,8 +35,8 @@ function Build-And-PushImage {
         [switch]$PublishLatestAlias
     )
 
-    $primaryImage = "${Registry}/${DockerHubNamespace}/${Repository}:${Tag}"
-    $latestImage = "${Registry}/${DockerHubNamespace}/${Repository}:latest"
+    $primaryImage = "${Registry}/${GhcrOwner}/${Repository}:${Tag}"
+    $latestImage = "${Registry}/${GhcrOwner}/${Repository}:latest"
 
     Invoke-Docker -Arguments @("build", "-f", $DockerfilePath, "-t", $primaryImage, ".")
 
@@ -62,8 +62,8 @@ function Tag-And-PushExistingImage {
         [switch]$PublishLatestAlias
     )
 
-    $primaryImage = "${Registry}/${DockerHubNamespace}/${Repository}:${Tag}"
-    $latestImage = "${Registry}/${DockerHubNamespace}/${Repository}:latest"
+    $primaryImage = "${Registry}/${GhcrOwner}/${Repository}:${Tag}"
+    $latestImage = "${Registry}/${GhcrOwner}/${Repository}:latest"
 
     Invoke-Docker -Arguments @("image", "inspect", $LocalImage)
     Invoke-Docker -Arguments @("tag", $LocalImage, $primaryImage)
@@ -81,8 +81,8 @@ function Tag-And-PushExistingImage {
     return $primaryImage
 }
 
-if ([string]::IsNullOrWhiteSpace($DockerHubNamespace)) {
-    throw "Provide -DockerHubNamespace or set DOCKERHUB_NAMESPACE."
+if ([string]::IsNullOrWhiteSpace($GhcrOwner)) {
+    throw "Provide -GhcrOwner or set GHCR_OWNER."
 }
 
 Get-Command docker -ErrorAction Stop | Out-Null
@@ -91,7 +91,7 @@ $repoRoot = Split-Path -Path $PSScriptRoot -Parent
 Push-Location $repoRoot
 
 try {
-    Write-Host "Publishing Docker images from $repoRoot"
+    Write-Host "Publishing Docker images from $repoRoot to ${Registry}/${GhcrOwner}"
     if ($UseExistingImages) {
         $apiImage = Tag-And-PushExistingImage -LocalImage $LocalApiImage -Repository "nalus-scraper-api" -PublishLatestAlias:$AlsoTagLatest
     }

@@ -1,0 +1,14 @@
+# Optional Linux timer (server later). Do not enable in production without review.
+# Calls the same staging-only daily updater as Windows Task Scheduler.
+# Not for historical NS/NSS backfill (see WEDOS_HISTORICAL_BACKFILL.md).
+
+[Unit]
+Description=NALUS court staging daily updater (US/NS/NSS → artifacts/court_staging)
+After=network-online.target
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

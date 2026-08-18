@@ -1,43 +1,54 @@
-# Docker Upload
+# Docker upload (GHCR)
 
-Ovaj repo vec ima lokalni `Dockerfile` i dev `docker-compose.yml`. Za push na Docker Hub i deploy iz registry-ja koristi sledece:
+This repo has a local `Dockerfile` and a dev `docker-compose.yml`. Publish and pull images from GitHub Container Registry.
 
-## Lokalni push
+Canonical API image:
 
-Prijavi se:
-
-```powershell
-docker login
+```text
+ghcr.io/lakyn80/nalus-scraper-api:<tag>
 ```
 
-Objavi API i exporter image:
+Do **not** build images on the WEDOS VPS. Build in GitHub Actions (or locally) and `docker compose pull` on the server.
+
+## Local push
+
+Log in:
 
 ```powershell
-.\scripts\docker_publish.ps1 -DockerHubNamespace your-dockerhub-user -Tag v1.0.0 -AlsoTagLatest
+echo $env:GITHUB_TOKEN | docker login ghcr.io -u lakyn80 --password-stdin
 ```
 
-Samo API image:
+Use a PAT with `write:packages` (and `read:packages` for pull). Do not commit the token.
+
+Publish API and exporter:
 
 ```powershell
-.\scripts\docker_publish.ps1 -DockerHubNamespace your-dockerhub-user -Tag v1.0.0 -SkipExporter
+.\scripts\docker_publish.ps1 -GhcrOwner lakyn80 -Tag v1.0.0 -AlsoTagLatest
 ```
 
-Ako vec imas lokalno izgradjene compose imageove i ne zelis novi build od nule:
+API image only:
 
 ```powershell
-.\scripts\docker_publish.ps1 -DockerHubNamespace your-dockerhub-user -Tag v1.0.0 -UseExistingImages -AlsoTagLatest
+.\scripts\docker_publish.ps1 -GhcrOwner lakyn80 -Tag v1.0.0 -SkipExporter
 ```
 
-Default lokalni source imageovi za ovaj fallback su:
+If you already have local compose images and do not want a rebuild:
+
+```powershell
+.\scripts\docker_publish.ps1 -GhcrOwner lakyn80 -Tag v1.0.0 -UseExistingImages -AlsoTagLatest
+```
+
+Default local source images for that fallback:
 
 - `nalus-scraper-api:latest`
 - `nalus-scraper-nalus-eval-metrics-exporter:latest`
 
-Mozes i preko env varijabli:
+Environment:
 
 ```powershell
-$env:DOCKERHUB_NAMESPACE="your-dockerhub-user"
+$env:GHCR_OWNER="lakyn80"
 $env:IMAGE_TAG="v1.0.0"
+$env:DOCKER_REGISTRY="ghcr.io"
 .\scripts\docker_publish.ps1 -AlsoTagLatest
 ```
 
@@ -45,33 +56,36 @@ $env:IMAGE_TAG="v1.0.0"
 
 Workflow: [../.github/workflows/docker-publish.yml](../.github/workflows/docker-publish.yml)
 
-Potrebno je dodati:
+Uses `GITHUB_TOKEN` (`packages: write`). Optional repo variable `GHCR_OWNER` (defaults to `github.repository_owner`, lowercased).
 
-- secret `DOCKERHUB_USERNAME`
-- secret `DOCKERHUB_TOKEN`
-- optional repo variable `DOCKERHUB_NAMESPACE`
+Triggers:
 
-Trigger opcije:
+- manual `workflow_dispatch` (set an explicit `image_tag`; optionally also push `latest`)
+- git tag `docker-v1.0.0` → image tag `1.0.0` plus `latest`
 
-- manualno preko `workflow_dispatch`
-- automatski kada pushas git tag oblika `docker-v1.0.0`
+Prefer an explicit tag for WEDOS (`IMAGE_TAG=...`), not only `latest`.
 
-## Deploy iz Docker Hub-a
+## Deploy from GHCR (RAG stack)
 
-Registry compose fajl: [../docker-compose.registry.yml](../docker-compose.registry.yml)
-
-Primjer:
+Registry compose: [../docker-compose.registry.yml](../docker-compose.registry.yml)
 
 ```powershell
-$env:DOCKERHUB_NAMESPACE="your-dockerhub-user"
+$env:GHCR_OWNER="lakyn80"
 $env:IMAGE_TAG="v1.0.0"
+docker compose -f docker-compose.registry.yml pull
 docker compose -f docker-compose.registry.yml up -d
 ```
 
-Ako model, storage ili batches nisu u default lokalnim folderima, postavi:
+If model, storage, or batches are not in the default local folders, set:
 
 - `NALUS_MODELS_HOST_DIR`
 - `NALUS_STORAGE_HOST_DIR`
 - `NALUS_BATCHES_HOST_DIR`
 - `NALUS_ARTIFACTS_HOST_DIR`
 - `NALUS_APP_ARTIFACTS_HOST_DIR`
+
+## Historical court backfill (separate stack)
+
+Do **not** use the RAG compose for NS/NSS historical downloads.
+
+See [court_staging/WEDOS_HISTORICAL_BACKFILL.md](court_staging/WEDOS_HISTORICAL_BACKFILL.md) and [../docker-compose.court-staging.yml](../docker-compose.court-staging.yml).

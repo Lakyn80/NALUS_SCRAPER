@@ -1,0 +1,66 @@
+# Isolated NS/NSS historical backfill. Do not merge into docker-compose.yml.
+# Image is pulled from GHCR; there is no build: on the VPS.
+# NSS probe / 20-doc pilot is not a service — use documented `docker compose run --rm`.
+# See docs/court_staging/WEDOS_HISTORICAL_BACKFILL.md
+
+x-backfill-common: &backfill-common
+  image: ghcr.io/${GHCR_OWNER:-lakyn80}/nalus-scraper-api:${IMAGE_TAG:-latest}
+  pull_policy: always
+  environment:
+    PYTHONUNBUFFERED: "1"
+    PYTHONPATH: /app
+  volumes:
+    - ${COURT_STAGING_HOST_DIR:-/opt/nalus-data/court_staging}:/app/artifacts/court_staging
+  restart: on-failure
+  logging:
+    driver: json-file
+    options:
+      max-size: "50m"
+      max-file: "5"
+
+services:
+  ns-historical:
+    <<: *backfill-common
+    command:
+      - python
+      - -m
+      - app.nsoud.run_historical_backfill
+      - --year-from
+      - "2020"
+      - --year-to
+      - "2026"
+      - --resume
+      - --delay
+      - "1.0"
+
+  ns-historical-pre2020:
+    <<: *backfill-common
+    profiles:
+      - ns-pre2020
+    command:
+      - python
+      - -m
+      - app.nsoud.run_historical_backfill
+      - --year-from
+      - "1993"
+      - --year-to
+      - "2019"
+      - --resume
+      - --delay
+      - "1.0"
+
+  nss-historical:
+    <<: *backfill-common
+    profiles:
+      - nss
+    command:
+      - python
+      - -m
+      - app.nssoud.run_historical_backfill
+      - --year-from
+      - "2003"
+      - --year-to
+      - "2026"
+      - --resume
+      - --delay
+      - "1.5"

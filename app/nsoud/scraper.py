@@ -91,14 +91,18 @@ class ScrapeStats:
     provider_name: str = ""
     transport_name: str = ""
     records_written: int = 0
+    records_updated: int = 0
     duplicates_skipped: int = 0
     parse_failures: int = 0
     pages_visited: int = 0
     records_discovered: int = 0
+    unique_candidates: int = 0
+    site_total_results: int | None = None
     locally_filtered_out: int = 0
     attempted_urls: list[str] = field(default_factory=list)
     first_record_keys: list[str] = field(default_factory=list)
     all_written_have_full_text: bool = True
+    failure_reasons: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -110,6 +114,7 @@ class ScrapeConfig:
     max_pages: int
     out_path: Path
     debug_dir: Path | None
+    exhaust: bool = False
 
 
 def parse_cli_date(value: str) -> date:
@@ -138,6 +143,11 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_MAX_PAGES,
         help=f"Hard maximum number of results pages to visit (default: {DEFAULT_MAX_PAGES}).",
+    )
+    parser.add_argument(
+        "--exhaust",
+        action="store_true",
+        help="Paginate until search results are exhausted (limit becomes a soft cap only if set high).",
     )
     parser.add_argument(
         "--debug-save-html",
@@ -769,7 +779,13 @@ def parse_decision_detail(html: str, url: str) -> dict[str, Any] | None:
         "source_attribution": SOURCE_ATTRIBUTION,
         "scraped_at": datetime.now(timezone.utc).isoformat(),
     }
-    record["content_hash"] = compute_content_hash(record["full_text"], record["url"])
+    # content_hash kept for change detection; canonical_id is document identity.
+    try:
+        from app.court_staging.identity import enrich_record_identity
+
+        record = enrich_record_identity(record, source="nsoud")
+    except Exception:  # pragma: no cover - keep scraper usable if staging pkg missing
+        record["content_hash"] = compute_content_hash(record["full_text"], record["url"])
     return record
 
 
@@ -801,8 +817,11 @@ def collect_candidate_links(
     config: ScrapeConfig,
     stats: ScrapeStats,
 ) -> list[SearchResultLink]:
-    page_size = min(max(config.limit, 20), MAX_PAGE_SIZE)
-    candidate_target = max(config.limit * 3, page_size * max(config.max_pages, 1))
+    page_size = min(max(config.limit if not config.exhaust else MAX_PAGE_SIZE, 20), MAX_PAGE_SIZE)
+    if config.exhaust:
+        candidate_target = page_size * max(config.max_pages, 1)
+    else:
+        candidate_target = max(config.limit * 3, page_size * max(config.max_pages, 1))
     seen_urls: set[str] = set()
     candidates: list[SearchResultLink] = []
 
@@ -845,19 +864,27 @@ def collect_candidate_links(
             candidates.append(link)
             logger.info("Discovered detail URL: %s", link.detail_url)
         stats.records_discovered = len(candidates)
+        stats.site_total_results = search_page.total_results or stats.site_total_results
 
         next_start = page_size
         while (
-            len(candidates) < min(search_page.total_results, candidate_target)
-            and next_start < search_page.total_results
+            next_start < max(search_page.total_results, 1)
             and stats.pages_visited < config.max_pages
+            and (
+                config.exhaust
+                or len(candidates) < min(search_page.total_results, candidate_target)
+            )
         ):
+            if not config.exhaust and len(candidates) >= config.limit:
+                break
             polite_delay(config.delay_seconds)
             page_url = build_page_url(search_page.url, start=next_start, count=page_size)
             stats.attempted_urls.append(page_url)
             logger.info("Following pagination URL: %s", page_url)
             page = provider.fetch_results_page(page_url)
             stats.pages_visited += 1
+            if page.total_results:
+                stats.site_total_results = page.total_results
             if not page.links:
                 logger.warning("Pagination returned no rows for %s", page_url)
                 break
@@ -876,7 +903,7 @@ def collect_candidate_links(
             logger.info("Reached hard max-pages=%s, stopping pagination.", config.max_pages)
             return candidates
 
-        if len(candidates) >= config.limit:
+        if not config.exhaust and len(candidates) >= config.limit:
             return candidates
 
         if config.date_from is None or config.date_to is None:
@@ -898,11 +925,12 @@ def scrape_sample(config: ScrapeConfig) -> ScrapeStats:
         raise ValueError("--date-from must be earlier than or equal to --date-to.")
 
     logger.info(
-        "Scrape configuration: date_from=%s date_to=%s limit=%s max_pages=%s delay=%.3f out=%s",
+        "Scrape configuration: date_from=%s date_to=%s limit=%s max_pages=%s exhaust=%s delay=%.3f out=%s",
         config.date_from.isoformat() if config.date_from else None,
         config.date_to.isoformat() if config.date_to else None,
         config.limit,
         config.max_pages,
+        config.exhaust,
         config.delay_seconds,
         config.out_path,
     )
@@ -913,8 +941,12 @@ def scrape_sample(config: ScrapeConfig) -> ScrapeStats:
         transport_name=discovery.transport_name,
         attempted_urls=list(discovery.attempted_urls),
     )
-    existing_hashes = load_existing_hashes(config.out_path)
-    logger.info("Loaded %s existing content hashes from %s", len(existing_hashes), config.out_path)
+
+    from app.court_staging.identity import ChangeKind
+    from app.court_staging.jsonl_store import load_canonical_index, rewrite_jsonl_upsert
+
+    known = load_canonical_index([config.out_path])
+    logger.info("Loaded %s existing canonical ids from %s", len(known), config.out_path)
 
     if config.date_from is not None and config.date_to is not None:
         if discovery.remote_date_filter_supported:
@@ -930,14 +962,16 @@ def scrape_sample(config: ScrapeConfig) -> ScrapeStats:
             )
 
     candidate_links = collect_candidate_links(provider, config, stats)
+    stats.unique_candidates = len(candidate_links)
     logger.info(
-        "Collected %s candidate detail URLs across %s visited pages.",
+        "Collected %s candidate detail URLs across %s visited pages (site_total=%s).",
         len(candidate_links),
         stats.pages_visited,
+        stats.site_total_results,
     )
 
     for index, candidate in enumerate(candidate_links, start=1):
-        if stats.records_written >= config.limit:
+        if not config.exhaust and (stats.records_written + stats.records_updated) >= config.limit:
             break
 
         polite_delay(config.delay_seconds)
@@ -949,11 +983,17 @@ def scrape_sample(config: ScrapeConfig) -> ScrapeStats:
             record = parse_decision_detail(response.html, response.url)
         except Exception as exc:  # pragma: no cover - defensive scraper path
             stats.parse_failures += 1
+            stats.failure_reasons["detail_fetch_or_parse"] = (
+                stats.failure_reasons.get("detail_fetch_or_parse", 0) + 1
+            )
             logger.warning("Failed to parse decision detail %s: %s", candidate.detail_url, exc)
             continue
 
         if record is None:
             stats.parse_failures += 1
+            stats.failure_reasons["empty_or_invalid_detail"] = (
+                stats.failure_reasons.get("empty_or_invalid_detail", 0) + 1
+            )
             continue
 
         if not record_matches_requested_dates(
@@ -971,35 +1011,39 @@ def scrape_sample(config: ScrapeConfig) -> ScrapeStats:
             )
             continue
 
-        content_hash = record["content_hash"]
-        if content_hash in existing_hashes:
-            stats.duplicates_skipped += 1
-            logger.info("Skipping duplicate record %s", record.get("case_number") or response.url)
-            continue
-
-        if config.debug_dir is not None and stats.records_written == 0:
+        if config.debug_dir is not None and stats.records_written == 0 and stats.records_updated == 0:
             save_debug_snapshot(config.debug_dir, "first_written_detail.html", response.html)
 
-        write_jsonl_record(config.out_path, record)
-        existing_hashes.add(content_hash)
-        stats.records_written += 1
-        stats.all_written_have_full_text = stats.all_written_have_full_text and bool(record["full_text"])
+        change = rewrite_jsonl_upsert(config.out_path, record, known=known, source="nsoud")
+        if change is ChangeKind.UNCHANGED:
+            stats.duplicates_skipped += 1
+            logger.info("Skipping unchanged record %s", record.get("canonical_id") or candidate.detail_url)
+            continue
+        if change is ChangeKind.UPDATED:
+            stats.records_updated += 1
+        else:
+            stats.records_written += 1
+        stats.all_written_have_full_text = stats.all_written_have_full_text and bool(record.get("full_text"))
 
         if not stats.first_record_keys:
             stats.first_record_keys = list(record.keys())
 
         logger.info(
-            "Wrote record %s/%s: %s",
+            "Upserted record kind=%s written=%s updated=%s id=%s",
+            change.value,
             stats.records_written,
-            config.limit,
-            record.get("case_number") or response.url,
+            stats.records_updated,
+            record.get("canonical_id") or record.get("case_number") or response.url,
         )
 
     logger.info(
-        "Scrape finished: pages_visited=%s records_discovered=%s records_written=%s duplicates_skipped=%s local_date_filtered=%s failed_detail_fetches=%s",
+        "Scrape finished: pages_visited=%s records_discovered=%s unique_candidates=%s "
+        "records_written=%s records_updated=%s duplicates_skipped=%s local_date_filtered=%s failed=%s",
         stats.pages_visited,
         stats.records_discovered,
+        stats.unique_candidates,
         stats.records_written,
+        stats.records_updated,
         stats.duplicates_skipped,
         stats.locally_filtered_out,
         stats.parse_failures,
@@ -1019,6 +1063,7 @@ def main() -> int:
         max_pages=args.max_pages,
         out_path=args.out,
         debug_dir=debug_dir,
+        exhaust=bool(getattr(args, "exhaust", False)),
     )
 
     try:
