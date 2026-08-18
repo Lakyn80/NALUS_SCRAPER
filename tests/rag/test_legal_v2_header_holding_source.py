@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from app.rag.legal_v2.evidence.selection import (
     CandidateEvidenceDocument,
     effective_source_of_claim,
@@ -8,7 +10,12 @@ from app.rag.legal_v2.evidence.selection import (
     source_of_claim_for_section,
 )
 from app.rag.legal_v2.models import LegalParagraph, MetadataProvenance, SectionType
-from app.rag.legal_v2.query_spec import build_query_spec_v2
+from app.rag.legal_v2.query_spec import (
+    ConstraintCategory,
+    ConstraintPolarity,
+    QueryConstraint,
+    build_query_spec_v2,
+)
 from app.rag.legal_v2.verifier import (
     CandidateDocumentForVerification,
     DeterministicFakeVerifier,
@@ -205,6 +212,17 @@ def test_compact_strong_with_metadata_only_is_demoted() -> None:
 def test_compact_exact_with_incomplete_hard_proven_is_demoted() -> None:
     query = "únos dítěte matkou z Česka do Ruska"
     spec = build_query_spec_v2(query)
+    # Lay origin/destination stay SOFT; inject a second hard concept so this
+    # test covers incomplete hard coverage rather than QuerySpec slot polarity.
+    extra_hard = QueryConstraint(
+        constraint_id="constraint_test_second_hard",
+        category=ConstraintCategory.CITED_CASE,
+        value="II. ÚS 859/23",
+        normalized_value="ii. us 859/23",
+        polarity=ConstraintPolarity.HARD,
+        attribute="cited_case",
+    )
+    spec = replace(spec, hard_constraints=[*spec.hard_constraints, extra_hard])
     assert len(spec.hard_constraints) >= 2
     holding = (
         "Soud zjistil, že matka neoprávněně přemístila dítě z Česka do Ruska "

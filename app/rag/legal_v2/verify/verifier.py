@@ -711,14 +711,16 @@ def deterministic_verification_gate(
     # mistakenly emits verified_match with that classification.
     if classification == "related_only":
         return VerificationDecision.NOT_PROVEN
+    # Compact exact/strong demotion sets AMBIGUOUS + holding_supports_query=False.
+    # Do not keep that as a related/ambiguous hit.
+    if diagnostics.get("holding_supports_query") is False:
+        return VerificationDecision.NOT_PROVEN
 
     if verifier_result.decision != VerificationDecision.VERIFIED_MATCH:
         return verifier_result.decision
 
     if diagnostics.get("jurisdiction_match") is False:
         return VerificationDecision.HARD_MISMATCH
-    if diagnostics.get("holding_supports_query") is False:
-        return VerificationDecision.NOT_PROVEN
     if diagnostics.get("legal_issue_match") is False:
         return VerificationDecision.NOT_PROVEN
     if float(diagnostics.get("confidence") or 0.0) < _MIN_VERIFIED_CONFIDENCE:
@@ -753,9 +755,18 @@ def _lexical_prove_legal_concept_constraints(
         if current.status == ConstraintVerificationStatus.CONTRADICTED:
             continue
         windows = windows_by_constraint.get(constraint.constraint_id, [])
-        if not windows:
-            windows = list(evidence_windows)
-        evidence_text = " ".join(window.text for window in windows)
+        court_windows = [
+            window for window in windows if window.source_of_claim == "court_finding"
+        ]
+        if not court_windows:
+            court_windows = [
+                window
+                for window in evidence_windows
+                if window.source_of_claim == "court_finding"
+            ]
+        if not court_windows:
+            continue
+        evidence_text = " ".join(window.text for window in court_windows)
         if not _constraint_text_supported(
             evidence_text,
             str(constraint.normalized_value or constraint.value),
@@ -763,7 +774,9 @@ def _lexical_prove_legal_concept_constraints(
         ):
             continue
         paragraph_ids = _dedupe_ids(
-            paragraph_id for window in windows for paragraph_id in window.paragraph_ids
+            paragraph_id
+            for window in court_windows
+            for paragraph_id in window.paragraph_ids
         )
         if not paragraph_ids:
             continue
