@@ -72,7 +72,13 @@ def _payload(text: str = "Haagská úmluva.") -> dict[str, Any]:
     )
 
 
-def test_search_maps_points_without_changing_retrieval_output(tmp_path: Path) -> None:
+def test_search_maps_points_without_changing_retrieval_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("NALUS_QDRANT_QUANTIZATION_ENABLED", raising=False)
+    monkeypatch.delenv("NALUS_QDRANT_QUANTIZATION_RESCORE", raising=False)
+    monkeypatch.delenv("NALUS_QDRANT_QUANTIZATION_OVERSAMPLING", raising=False)
     embedder = _CountingEmbedder([0.1] * 1024)
     client = MagicMock()
     client.query_points.return_value = SimpleNamespace(
@@ -83,12 +89,13 @@ def test_search_maps_points_without_changing_retrieval_output(tmp_path: Path) ->
     chunks = store.search("únos dítěte", top_k=80)
 
     assert embedder.calls == ["únos dítěte"]
-    client.query_points.assert_called_once_with(
-        collection_name="nalus_dense_diag_test",
-        query=[0.1] * 1024,
-        limit=80,
-        with_payload=True,
-    )
+    client.query_points.assert_called_once()
+    kwargs = client.query_points.call_args.kwargs
+    assert kwargs["collection_name"] == "nalus_dense_diag_test"
+    assert kwargs["query"] == [0.1] * 1024
+    assert kwargs["limit"] == 80
+    assert kwargs["with_payload"] is True
+    assert kwargs["search_params"].quantization.ignore is True
     assert len(chunks) == 1
     assert chunks[0].id == "orig-1"
     assert chunks[0].text == "Haagská úmluva."
@@ -99,7 +106,9 @@ def test_search_maps_points_without_changing_retrieval_output(tmp_path: Path) ->
 def test_search_logs_latency_breakdown_without_query_text(
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("NALUS_QDRANT_QUANTIZATION_ENABLED", raising=False)
     query = "SECRET_QUERY_TEXT_MUST_NOT_APPEAR_IN_LOGS"
     embedder = _CountingEmbedder([0.2] * 1024)
     client = MagicMock()
@@ -134,6 +143,10 @@ def test_search_logs_latency_breakdown_without_query_text(
     assert record.dense_store_total_latency_ms == record.total_latency_ms
     assert record.top_k == 80
     assert record.query_length == len(query)
+    assert "quantization_enabled=False" in message
+    assert "quantization_ignore=True" in message
+    assert record.quantization_enabled is False
+    assert record.quantization_ignore is True
 
 
 def test_dimension_mismatch_still_raises_before_qdrant(tmp_path: Path) -> None:
@@ -146,3 +159,27 @@ def test_dimension_mismatch_still_raises_before_qdrant(tmp_path: Path) -> None:
 
     assert len(embedder.calls) == 1
     client.query_points.assert_not_called()
+
+
+def test_search_sends_ignore_false_when_quantization_enabled(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NALUS_QDRANT_QUANTIZATION_ENABLED", "1")
+    monkeypatch.setenv("NALUS_QDRANT_QUANTIZATION_RESCORE", "1")
+    monkeypatch.setenv("NALUS_QDRANT_QUANTIZATION_OVERSAMPLING", "2.0")
+    embedder = _CountingEmbedder([0.1] * 1024)
+    client = MagicMock()
+    client.query_points.return_value = SimpleNamespace(
+        points=[_FakePoint(id="p1", score=0.91, payload=_payload())]
+    )
+    store = QdrantDenseStore(client=client, embedder=embedder, config=_config(tmp_path))
+
+    store.search("únos dítěte", top_k=80)
+
+    assert embedder.calls == ["únos dítěte"]
+    client.query_points.assert_called_once()
+    params = client.query_points.call_args.kwargs["search_params"]
+    assert params.quantization.ignore is False
+    assert params.quantization.rescore is True
+    assert params.quantization.oversampling == pytest.approx(2.0)
