@@ -17,6 +17,20 @@ from bs4 import BeautifulSoup
 from app.court_staging.identity import ChangeKind, enrich_record_identity
 from app.court_staging.jsonl_store import load_canonical_index, rewrite_jsonl_upsert
 from app.court_staging.paths import assert_safe_staging_path
+from app.nssoud.form import (
+    ECLI_CONDITION_TECH,
+    FULLTEXT_CONDITION_TECH,
+    apply_decision_date_window,
+    apply_named_text,
+    date_filter_was_applied,
+    detail_field,
+    encode_form_body,
+    extract_result_links,
+    is_search_or_nav_url,
+    parse_infinite_scroll_state,
+    serialize_findform,
+    summarize_findform,
+)
 
 try:
     import httpx
@@ -25,9 +39,10 @@ except ImportError:  # pragma: no cover
 
 BASE_URL = "https://vyhledavac.nssoud.cz"
 SEARCH_URL = f"{BASE_URL}/Home/Index?formular=4"
+MORE_ROWS_URL = f"{BASE_URL}/Home/MyResTRowsCont"
 SOURCE_ATTRIBUTION = "Nejvyšší správní soud České republiky, vyhledavac.nssoud.cz"
 USER_AGENT = "nalus-scraper/nssoud (+https://vyhledavac.nssoud.cz/)"
-DEFAULT_DELAY = 1.0
+DEFAULT_DELAY = 1.5
 
 logger = logging.getLogger("nssoud_scraper")
 
@@ -45,6 +60,7 @@ class ScrapeStats:
     records_discovered: int = 0
     unique_candidates: int = 0
     site_total_results: int | None = None
+    remote_date_filter_applied: bool = False
     failure_reasons: dict[str, int] = field(default_factory=dict)
     first_record_keys: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
@@ -100,77 +116,70 @@ def _client() -> Any:
     if httpx is None:
         raise RuntimeError("httpx is required for nssoud scraper")
     return httpx.Client(
-        timeout=60.0,
+        timeout=90.0,
         follow_redirects=True,
         headers={"User-Agent": USER_AGENT},
     )
 
 
-def extract_result_links(html: str, base_url: str = BASE_URL) -> tuple[list[dict[str, str]], int | None]:
-    """Best-effort extraction of detail links from search HTML."""
+def _post_form(client: Any, url: str, pairs: list[tuple[str, str]], *, referer: str) -> Any:
+    response = client.post(
+        url,
+        content=encode_form_body(pairs),
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Origin": BASE_URL,
+            "Referer": referer,
+        },
+    )
+    response.raise_for_status()
+    return response
+
+
+def parse_decision_detail(
+    html: str,
+    url: str,
+    *,
+    full_text_html: str | None = None,
+) -> dict[str, Any] | None:
     soup = BeautifulSoup(html, "lxml")
-    links: list[dict[str, str]] = []
-    seen: set[str] = set()
+    case_number = normalize_space(detail_field(html, "oznacenivecivcelku"))
+    ecli_raw = normalize_space(detail_field(html, "ecli"))
+    decision_date = parse_czech_date(detail_field(html, "datumvydanirozhodnuti"))
+    ecli_match = _ECLI_FIND.search(ecli_raw or "") or _ECLI_FIND.search(html)
+    ecli = ecli_match.group(0).upper() if ecli_match else None
 
-    total: int | None = None
-    body_text = soup.get_text(" ", strip=True)
-    total_match = re.search(r"(\d+)\s+(?:výsledk|dokument)", body_text, flags=re.I)
-    if total_match:
-        total = int(total_match.group(1))
-
-    for anchor in soup.find_all("a", href=True):
-        href = anchor["href"]
-        text = normalize_space(anchor.get_text(" ", strip=True))
-        href_l = href.lower()
-        if not any(token in href_l for token in ("document", "detail", "dokument", "soubor", "id=")):
-            # Keep anchors that look like case numbers (e.g. 1 As 12/2020)
-            if not re.search(r"\b\d+\s+[A-Za-z]{1,6}\s+\d+/\d{4}\b", text):
-                continue
-        url = urljoin(base_url, href)
-        if url in seen:
-            continue
-        seen.add(url)
-        links.append({"url": url, "label": text})
-
-    return links, total
-
-
-def parse_decision_detail(html: str, url: str) -> dict[str, Any] | None:
-    soup = BeautifulSoup(html, "lxml")
-    text = soup.get_text("\n", strip=True)
-    full_text = normalize_space(text)
-    # Prefer larger main/content blocks when present.
-    for selector in ("main", "article", "#content", ".document", ".dokument"):
-        node = soup.select_one(selector)
-        if node:
-            candidate = normalize_space(node.get_text("\n", strip=True))
-            if len(candidate) > 200:
-                full_text = candidate
-                break
+    full_text = ""
+    if full_text_html:
+        body = BeautifulSoup(full_text_html, "lxml")
+        full_text = normalize_space(body.get_text("\n", strip=True))
+    if len(full_text) < 80:
+        text = soup.get_text("\n", strip=True)
+        full_text = normalize_space(text)
 
     if len(full_text) < 80:
         logger.warning("NSS detail too short: %s", url)
         return None
+    if is_search_or_nav_url(url):
+        logger.warning("NSS refused search/nav URL as decision: %s", url)
+        return None
 
-    ecli_match = _ECLI_FIND.search(html) or _ECLI_FIND.search(full_text)
-    ecli = ecli_match.group(0).upper() if ecli_match else None
-
-    case_number = None
-    case_match = re.search(
-        r"\b(\d+\s+[A-Za-zÁ-ž]{1,8}\s+\d+/\d{4}(?:\s*[-–]\s*\d+)?)\b",
-        full_text,
-    )
-    if case_match:
-        case_number = normalize_space(case_match.group(1))
-
-    decision_date = parse_czech_date(full_text[:2000])
+    if not case_number:
+        case_match = re.search(
+            r"\b(\d+\s+[A-Za-zÁ-ž]{1,8}\s+\d+/\d{4}(?:\s*[-–]\s*\d+)?)\b",
+            full_text,
+        )
+        if case_match:
+            case_number = normalize_space(case_match.group(1))
+    if not decision_date:
+        decision_date = parse_czech_date(full_text[:2000])
 
     record = {
         "source": "nssoud",
         "court": "Nejvyšší správní soud",
         "authority_level": "supreme_administrative",
-        "case_number": case_number,
-        "spisova_znacka": case_number,
+        "case_number": case_number or None,
+        "spisova_znacka": case_number or None,
         "ecli": ecli,
         "decision_date": decision_date,
         "publication_date": None,
@@ -183,17 +192,96 @@ def parse_decision_detail(html: str, url: str) -> dict[str, Any] | None:
     return enrich_record_identity(record, source="nssoud")
 
 
-def _search_get(client: Any, *, query: str, page: int) -> str:
-    # Public UI is ASP.NET-like; GET with query params is a best-effort probe path.
-    # Probe report may refine endpoints; scraper remains resilient to empty pages.
-    params = {
-        "formular": "4",
-        "q": query,
-        "page": str(page),
-    }
-    response = client.get(f"{BASE_URL}/Home/Index", params=params)
-    response.raise_for_status()
-    return response.text
+def _search_pages(client: Any, config: ScrapeConfig, stats: ScrapeStats) -> list[dict[str, str]]:
+    polite_delay(config.delay_seconds)
+    form_response = client.get(SEARCH_URL)
+    form_response.raise_for_status()
+    summary = summarize_findform(form_response.text)
+    if not summary.get("present"):
+        raise RuntimeError("NSS findform missing on GET")
+    pairs = serialize_findform(form_response.text)
+    if config.date_from or config.date_to:
+        if not apply_decision_date_window(pairs, date_from=config.date_from, date_to=config.date_to):
+            stats.notes.append("remote_date_fields_missing")
+    query = (config.query or "").strip()
+    if query and query != "*":
+        if query.upper().startswith("ECLI:"):
+            apply_named_text(pairs, tech=ECLI_CONDITION_TECH, text=query)
+        else:
+            apply_named_text(pairs, tech=FULLTEXT_CONDITION_TECH, text=query)
+
+    polite_delay(config.delay_seconds)
+    search_response = _post_form(client, SEARCH_URL, pairs, referer=SEARCH_URL)
+    stats.pages_visited += 1
+    html = search_response.text
+    state = parse_infinite_scroll_state(html)
+    stats.remote_date_filter_applied = date_filter_was_applied(state)
+    if config.date_from or config.date_to:
+        if stats.remote_date_filter_applied:
+            stats.notes.append("remote_date_filter_applied:datumvydanirozhodnuti")
+        else:
+            stats.notes.append("remote_date_filter_not_confirmed_in_currParams")
+
+    candidates: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    def _absorb(page_html: str) -> int:
+        page_links, total = extract_result_links(page_html, BASE_URL)
+        if total is not None:
+            stats.site_total_results = total
+        added = 0
+        for link in page_links:
+            url = link["url"]
+            if url in seen or is_search_or_nav_url(url):
+                continue
+            seen.add(url)
+            candidates.append(link)
+            added += 1
+        return added
+
+    added = _absorb(html)
+    if added == 0:
+        stats.notes.append("no_links_on_page_1")
+        return candidates
+
+    more_path = state.get("more_rows_url") or "/Home/MyResTRowsCont"
+    more_url = urljoin(BASE_URL, str(more_path))
+    page_num = 1
+    while stats.pages_visited < config.max_pages:
+        if not config.exhaust and len(candidates) >= config.limit:
+            break
+        if not state.get("vyhledavaci_podminky"):
+            stats.notes.append("pagination_state_missing")
+            break
+        polite_delay(config.delay_seconds)
+        more = client.post(
+            more_url,
+            content=encode_form_body(
+                [
+                    ("vyhledavaciPodminky", str(state["vyhledavaci_podminky"])),
+                    ("zobrazeniVysledkuId", str(state.get("zobrazeni_vysledku_id") or "1")),
+                    ("pageNum", str(page_num)),
+                    ("resultOrder", str(state.get("result_order") or "")),
+                ]
+            ),
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Origin": BASE_URL,
+                "Referer": SEARCH_URL,
+            },
+        )
+        more.raise_for_status()
+        stats.pages_visited += 1
+        fragment = more.text or ""
+        if len(fragment.strip()) <= 5:
+            stats.notes.append(f"pagination_end_page_{page_num}")
+            break
+        added = _absorb(fragment)
+        if added == 0:
+            stats.notes.append(f"no_links_on_page_{page_num + 1}")
+            break
+        page_num += 1
+    return candidates
 
 
 def scrape(config: ScrapeConfig) -> ScrapeStats:
@@ -205,58 +293,39 @@ def scrape(config: ScrapeConfig) -> ScrapeStats:
 
     stats = ScrapeStats()
     known = load_canonical_index([config.out_path])
-    candidates: list[dict[str, str]] = []
-    seen_urls: set[str] = set()
 
     with _client() as client:
-        for page in range(1, config.max_pages + 1):
-            polite_delay(config.delay_seconds)
-            try:
-                html = _search_get(client, query=config.query, page=page)
-            except Exception as exc:
-                stats.failure_reasons["search_page"] = stats.failure_reasons.get("search_page", 0) + 1
-                stats.notes.append(f"search_page_failed:{page}:{exc}")
-                break
-            stats.pages_visited += 1
-            page_links, total = extract_result_links(html)
-            if total is not None:
-                stats.site_total_results = total
-            if not page_links:
-                stats.notes.append(f"no_links_on_page_{page}")
-                # Still try homepage once for pilot discovery.
-                if page == 1:
-                    home = client.get(SEARCH_URL)
-                    home.raise_for_status()
-                    page_links, total = extract_result_links(home.text)
-                    if total is not None:
-                        stats.site_total_results = total
-                if not page_links:
-                    break
+        try:
+            candidates = _search_pages(client, config, stats)
+        except Exception as exc:
+            stats.failure_reasons["search_page"] = stats.failure_reasons.get("search_page", 0) + 1
+            stats.notes.append(f"search_page_failed:{exc}")
+            logger.exception("NSS search failed")
+            return stats
 
-            new_on_page = 0
-            for link in page_links:
-                url = link["url"]
-                if url in seen_urls:
-                    continue
-                seen_urls.add(url)
-                candidates.append(link)
-                new_on_page += 1
-            stats.records_discovered = len(candidates)
-            if new_on_page == 0:
-                break
-            if not config.exhaust and len(candidates) >= config.limit * 3:
-                break
-
+        stats.records_discovered = len(candidates)
         stats.unique_candidates = len(candidates)
+
         for index, candidate in enumerate(candidates, start=1):
             if not config.exhaust and (stats.records_written + stats.records_updated) >= config.limit:
                 break
-            polite_delay(config.delay_seconds)
             url = candidate["url"]
+            html_url = candidate.get("html_url") or ""
+            polite_delay(config.delay_seconds)
             try:
-                response = client.get(url)
-                response.raise_for_status()
-                record = parse_decision_detail(response.text, str(response.url))
+                detail_response = client.get(url)
+                detail_response.raise_for_status()
+                full_text_html = None
+                if html_url:
+                    polite_delay(config.delay_seconds)
+                    html_response = client.get(html_url)
+                    html_response.raise_for_status()
+                    full_text_html = html_response.text
+                record = parse_decision_detail(
+                    detail_response.text,
+                    str(detail_response.url),
+                    full_text_html=full_text_html,
+                )
             except Exception as exc:
                 stats.parse_failures += 1
                 stats.failure_reasons["detail_fetch_or_parse"] = (
@@ -271,11 +340,18 @@ def scrape(config: ScrapeConfig) -> ScrapeStats:
                 )
                 continue
 
-            # Optional local date filter when dates available.
+            if not record.get("decision_date") and candidate.get("decision_date_raw"):
+                record["decision_date"] = parse_czech_date(candidate.get("decision_date_raw"))
+            if not record.get("case_number") and candidate.get("case_number"):
+                record["case_number"] = candidate["case_number"]
+                record["spisova_znacka"] = candidate["case_number"]
+                record = enrich_record_identity(record, source="nssoud")
+
             if config.date_from and config.date_to and record.get("decision_date"):
                 try:
-                    d = date.fromisoformat(str(record["decision_date"]))
-                    if d < config.date_from or d > config.date_to:
+                    decision_day = date.fromisoformat(str(record["decision_date"]))
+                    if decision_day < config.date_from or decision_day > config.date_to:
+                        stats.notes.append(f"local_date_filter_skip:{record.get('canonical_id')}")
                         continue
                 except ValueError:
                     pass
@@ -291,31 +367,32 @@ def scrape(config: ScrapeConfig) -> ScrapeStats:
             if not stats.first_record_keys:
                 stats.first_record_keys = list(record.keys())
             logger.info(
-                "NSS upsert kind=%s id=%s (%s/%s)",
+                "NSS upsert kind=%s id=%s date=%s (%s/%s)",
                 change.value,
                 record.get("canonical_id"),
+                record.get("decision_date"),
                 index,
                 len(candidates),
             )
 
     if stats.records_written + stats.records_updated == 0:
         stats.notes.append(
-            "No records written. Run probe_source and refine search/detail selectors for DXCFTS UI."
+            "No records written. NSS search uses POST form#findform; check CSRF/session and date fields."
         )
     return stats
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Pilot/sample scrape of NSS decisions into court_staging.")
-    p.add_argument("--limit", type=int, default=20)
-    p.add_argument("--out", type=Path, required=True)
-    p.add_argument("--date-from", type=parse_cli_date)
-    p.add_argument("--date-to", type=parse_cli_date)
-    p.add_argument("--delay", type=float, default=DEFAULT_DELAY)
-    p.add_argument("--max-pages", type=int, default=5)
-    p.add_argument("--exhaust", action="store_true")
-    p.add_argument("--query", default="*")
-    return p.parse_args()
+    parser = argparse.ArgumentParser(description="Pilot/sample scrape of NSS decisions into court_staging.")
+    parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--date-from", type=parse_cli_date)
+    parser.add_argument("--date-to", type=parse_cli_date)
+    parser.add_argument("--delay", type=float, default=DEFAULT_DELAY)
+    parser.add_argument("--max-pages", type=int, default=5)
+    parser.add_argument("--exhaust", action="store_true")
+    parser.add_argument("--query", default="*")
+    return parser.parse_args()
 
 
 def main() -> int:
@@ -344,11 +421,12 @@ def main() -> int:
     print(f"pages_visited: {stats.pages_visited}")
     print(f"unique_candidates: {stats.unique_candidates}")
     print(f"site_total_results: {stats.site_total_results}")
+    print(f"remote_date_filter_applied: {stats.remote_date_filter_applied}")
     print(f"parse_failures: {stats.parse_failures}")
     print(f"out: {out}")
     if stats.notes:
         print(f"notes: {stats.notes}")
-    return 0 if (stats.records_written + stats.records_updated) > 0 or stats.unique_candidates == 0 else 0
+    return 0
 
 
 if __name__ == "__main__":

@@ -16,9 +16,25 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.court_staging.jsonl_store import atomic_write_json
 from app.court_staging.paths import assert_safe_staging_path, default_staging_root, ensure_staging_tree
+from app.nssoud.form import summarize_findform
 
 BASE = "https://vyhledavac.nssoud.cz"
 USER_AGENT = "nalus-scraper/nssoud-probe (+https://vyhledavac.nssoud.cz/)"
+
+
+def _js_hits(html: str) -> dict[str, bool]:
+    lowered = html.lower()
+    keys = (
+        "findform",
+        "setcondition",
+        "myrestrrowscont",
+        "zobrazenivysledkuvolba",
+        "export",
+        "btSubmit",
+        "xmlhttprequest",
+        "dxcfts",
+    )
+    return {key: key.lower() in lowered for key in keys}
 
 
 def main() -> int:
@@ -51,6 +67,8 @@ def main() -> int:
         "pages": [],
         "url_candidates": [],
         "form_actions": [],
+        "findform": None,
+        "js_behavior": {},
         "notes": [],
     }
 
@@ -73,25 +91,39 @@ def main() -> int:
                         "id": form.get("id"),
                     }
                 )
-            report["pages"].append(
-                {
-                    "url": str(response.url),
-                    "status_code": response.status_code,
-                    "bytes": len(html),
-                    "title": (soup.title.get_text(strip=True) if soup.title else None),
-                    "forms": forms[:20],
+            page = {
+                "url": str(response.url),
+                "status_code": response.status_code,
+                "bytes": len(html),
+                "title": (soup.title.get_text(strip=True) if soup.title else None),
+                "forms": forms[:20],
+                "cookie_names": sorted(client.cookies.keys()),
+            }
+            if "formular=4" in str(response.url) or path.endswith("formular=4"):
+                report["findform"] = summarize_findform(html)
+                report["js_behavior"] = _js_hits(html)
+                report["js_behavior"]["add_condition"] = "function AddCondition" in html
+                report["js_behavior"]["more_rows_url"] = "/Home/MyResTRowsCont" in html
+                report["js_behavior"]["csrf_cookie_present"] = any(
+                    "Antiforgery" in name for name in client.cookies.keys()
+                )
+                page["findform_summary"] = {
+                    "present": bool(report["findform"] and report["findform"].get("present")),
+                    "method": (report["findform"] or {}).get("method"),
+                    "csrf_field": (report["findform"] or {}).get("csrf_field"),
+                    "condition_count": (report["findform"] or {}).get("condition_count"),
+                    "has_decision_date": (report["findform"] or {}).get("has_decision_date"),
                 }
-            )
+            report["pages"].append(page)
             report["form_actions"].extend(forms)
             for match in re.findall(
-                r"""['"](/[^'"]*(?:Search|Document|Api|Detail|Export|Home)[^'"]*)['"]""",
+                r"""['"](/[^'"]*(?:Search|Document|Api|Detail|Export|Home|SetCondition|MyResTRowsCont)[^'"]*)['"]""",
                 html,
                 flags=re.I,
             ):
                 report["url_candidates"].append(match)
 
     report["url_candidates"] = sorted(set(report["url_candidates"]))[:100]
-    # Dedup forms
     seen = set()
     unique_forms = []
     for form in report["form_actions"]:
@@ -101,11 +133,28 @@ def main() -> int:
         seen.add(key)
         unique_forms.append(form)
     report["form_actions"] = unique_forms[:50]
-    report["notes"].append(
-        "Primary source is vyhledavac.nssoud.cz. Sbírka is not the full-corpus target."
+    report["notes"].extend(
+        [
+            "Primary source is vyhledavac.nssoud.cz. Search is POST form#findform to the current Index URL.",
+            "SetCondition is AJAX POST that injects extra condition rows; default form already has datumvydanirozhodnuti.",
+            "MyResTRowsCont is POST infinite-scroll pagination (pageNum, vyhledavaciPodminky, zobrazeniVysledkuId).",
+            "Detail URLs are /DokumentDetail/Index/{id}; full text is /DokumentOriginal/Html/{id}.",
+            "Do not store antiforgery cookie or token values in git.",
+        ]
     )
     atomic_write_json(out, report)
-    print(json.dumps({"out": str(out), "pages": len(report["pages"]), "url_candidates": len(report["url_candidates"])}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "out": str(out),
+                "pages": len(report["pages"]),
+                "url_candidates": len(report["url_candidates"]),
+                "findform_present": bool(report.get("findform") and report["findform"].get("present")),
+                "has_decision_date": (report.get("findform") or {}).get("has_decision_date"),
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

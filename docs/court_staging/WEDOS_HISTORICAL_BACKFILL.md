@@ -191,12 +191,11 @@ docker compose -f docker-compose.court-staging.yml run --rm --no-deps --entrypoi
 
 docker compose -f docker-compose.court-staging.yml run --rm --no-deps --entrypoint python ns-historical \
   -m app.nssoud.scraper --limit 20 --max-pages 3 --delay 1.5 \
+  --date-from 2024-01-01 --date-to 2024-01-31 \
   --out artifacts/court_staging/nss/historical/pilot/pilot.jsonl
 ```
 
-Pilot PASS: HTTP OK, JSONL with real decisions (about 20), valid lines, meaningful ids.
-
-`vyhledavac.nssoud.cz` DXCFTS may return **zero** documents until POST/session wiring is right. Zero docs is **not** PASS. Do not start full NSS historical in that case.
+Search is POST `form#findform` (cookies + antiforgery). Use a remote `datumvydanirozhodnuti` window; do not GET `?q=*`. Pilot PASS: HTTP OK, JSONL with real `/DokumentDetail/Index/{id}` decisions (about 20), valid lines, meaningful ids. Do not start full NSS historical until that PASS.
 
 After PASS only:
 

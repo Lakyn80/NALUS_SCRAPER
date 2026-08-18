@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="cs">
+<body>
+<form id="findform" method="post">
+<input type="hidden" name="vyhledavaciSekce[0].vyhledavaciPodminka[6].TechnickyNazev" value="ecli" />
+<input type="hidden" name="vyhledavaciSekce[0].vyhledavaciPodminka[6].ZobrazovanyNazev" value="ECLI" />
+<input type="hidden" name="vyhledavaciSekce[0].vyhledavaciPodminka[6].DatovyTyp" value="FIELD_TEXT" />
+<input type="text" name="vyhledavaciSekce[0].vyhledavaciPodminka[6].vyhledavaciPodminkaHodnota[0].HodnotaText" value="" />
+<input type="hidden" name="vyhledavaciSekce[1].vyhledavaciPodminka[0].TechnickyNazev" value="datumvydanirozhodnuti" />
+<input type="hidden" name="vyhledavaciSekce[1].vyhledavaciPodminka[0].ZobrazovanyNazev" value="Datum vydání rozhodnutí" />
+<input type="hidden" name="vyhledavaciSekce[1].vyhledavaciPodminka[0].DatovyTyp" value="FIELD_DATETIME" />
+<input type="text" name="vyhledavaciSekce[1].vyhledavaciPodminka[0].vyhledavaciPodminkaHodnota[0].HodnotaDatumACasOd" value="" />
+<input type="text" name="vyhledavaciSekce[1].vyhledavaciPodminka[0].vyhledavaciPodminkaHodnota[0].HodnotaDatumACasDo" value="" />
+<input type="hidden" name="vyhledavaciSekce[6].vyhledavaciPodminka[0].TechnickyNazev" value="textDokumentu" />
+<input type="text" name="vyhledavaciSekce[6].vyhledavaciPodminka[0].vyhledavaciPodminkaHodnota[0].HodnotaText" value="" />
+<input type="radio" name="vyhledavaciSekce[1].vyhledavaciPodminka[0].VazbaKDotazu" value="AND" checked />
+<input type="radio" name="vyhledavaciSekce[1].vyhledavaciPodminka[0].VazbaKDotazu" value="OR" />
+<input type="hidden" name="NavColor" value="btn-danger" />
+<input type="hidden" name="__RequestVerificationToken" value="TOKEN" />
+<button type="submit" name="btSubmit">Vyhledat</button>
+</form>
+<script>
+var moreRowsUrl = '/Home/MyResTRowsCont';
+var currParams = '[{"TechnickyNazev":"datumvydanirozhodnuti","vyhledavaciPodminkaHodnota":[{"HodnotaDatumACasOd":"01.01.2024 00:00:00","HodnotaDatumACasDo":"31.01.2024 23:59:59"}]}]';
+var currViewId = '1';
+var currSort = ' order by zvhdt1.Hodnota DESC ';
+function AddCondition(sekce) {
+    var frmdata = $('#findform').serialize();
+    $.ajax({ type: "POST", url: '/Home/SetCondition?sekce=' + sekce, data: frmdata });
+}
+</script>
+</body>
+</html>

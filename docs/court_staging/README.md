@@ -52,12 +52,12 @@ cd C:\Users\lukas\Desktop\PYTHON_PROJECTS_DESKTOP\PYTHON_PROJECTS\nalus-scraper
 # NS historical (multi-year exhaust → staging)
 python -m app.nsoud.run_historical_backfill --year-from 2024 --year-to 2025 --resume --delay 1.0
 
-# NSS probe + pilot
+# NSS probe + POST pilot (remote Datum vydání rozhodnutí)
 python -m app.nssoud.probe_source
-python -m app.nssoud.scraper --limit 20 --out artifacts/court_staging/nss/historical/pilot/pilot.jsonl --max-pages 3
+python -m app.nssoud.scraper --limit 20 --max-pages 3 --delay 1.5 --date-from 2024-01-01 --date-to 2024-01-31 --out artifacts/court_staging/nss/historical/pilot/pilot.jsonl
 
-# NSS historical
-python -m app.nssoud.run_historical_backfill --year-from 2024 --year-to 2025 --resume
+# NSS historical (month windows are sent remotely; do not start 2003–2026 until pilot PASS)
+python -m app.nssoud.run_historical_backfill --year-from 2024 --year-to 2025 --resume --delay 1.5
 
 # Daily unified updater (staging only)
 python scripts/court_staging_updater.py --courts us,ns,nss --mode incremental --overlap-days 7
@@ -94,6 +94,4 @@ Those timer units call `scripts/court_staging_updater.py` (incremental). Do **no
 
 ## NSS note
 
-`vyhledavac.nssoud.cz` is a DXCFTS UI (`findform` POST + session endpoints like `/Home/MyResTRowsCont`).
-Probe report is under `artifacts/court_staging/nss/historical/pilot/probe_report.json`.
-The current HTTP pilot may return zero docs until search POST/session wiring is refined; historical runner + identity/completeness path is ready.
+`vyhledavac.nssoud.cz` is a DXCFTS UI. Search is **POST** `form#findform` to `/Home/Index?formular=4` (cookies + `__RequestVerificationToken`). Result rows are `/DokumentDetail/Index/{id}`; full text is `/DokumentOriginal/Html/{id}`. Pagination is POST `/Home/MyResTRowsCont` (`pageNum`). Monthly backfill uses remote `datumvydanirozhodnuti` (`HodnotaDatumACasOd`/`Do`), not GET `?q=*`. Probe report is under `artifacts/court_staging/nss/historical/pilot/probe_report.json`.

@@ -1,5 +1,70 @@
 # Project Progress
 
+## 2026-08-18 - NSS DXCFTS POST discovery + 20-doc pilot PASS
+
+- NSS search now uses live `POST /Home/Index?formular=4` `form#findform` (session cookie + `__RequestVerificationToken`). GET `?q=*` is not used.
+- Remote month filter: `datumvydanirozhodnuti` → `HodnotaDatumACasOd` / `HodnotaDatumACasDo` (`DD.MM.YYYY HH:MM:SS`). `SetCondition` only adds extra UI rows; not required for dates already on the default form.
+- Results: `/DokumentDetail/Index/{id}` + full text `/DokumentOriginal/Html/{id}`. Pagination: POST `/Home/MyResTRowsCont` `pageNum`.
+- Local pilot 2024-01: `records_written=20`, `unique_candidates=40`, `pages_visited=1`, remote date filter confirmed; JSONL dates all `2024-01-31` (sort DESC). Pagination check: page 2 → 60 unique ids.
+- Tests: `tests/test_nssoud_dxcfts.py` + `tests/test_court_staging.py` (11 passed). No commit/push/deploy. NS WEDOS job untouched. Full NSS 2003–2026 not started.
+
+## 2026-08-18 - Legal v2 CI: metadata-only / incomplete hard gate
+
+- CI failed `tests/rag/test_legal_v2_header_holding_source.py` (2 tests) after QuerySpec structural slots became SOFT and lexical concept proof used header metadata.
+- Gate now maps `holding_supports_query=False` to `not_proven` even when the compact path left `ambiguous`.
+- Lexical legal-concept proof uses only `court_finding` windows (not metadata/header).
+- Incomplete-hard test injects a second hard constraint instead of requiring origin/destination to be HARD.
+- Local NS historical backfill was not stopped; JSONL unchanged.
+
+## 2026-08-18 - Court-staging GHCR + WEDOS historical compose (code/docs only)
+
+- Docker publish retargeted from Docker Hub to GHCR: `ghcr.io/lakyn80/nalus-scraper-api` and `ghcr.io/lakyn80/nalus-scraper-eval-exporter`.
+- Files: `.github/workflows/docker-publish.yml` (`packages: write`, `GITHUB_TOKEN` login), `scripts/docker_publish.ps1`, `docs/DOCKER_UPLOAD.md`, `docker-compose.registry.yml` API/exporter images.
+- New isolated stack: `docker-compose.court-staging.yml` (pull-only, bind mount `/opt/nalus-data/court_staging`). Services: `ns-historical` (2020–2026 default), `ns-historical-pre2020` (profile `ns-pre2020`), `nss-historical` (profile `nss`). No `nss-pilot` service; probe/pilot via `docker compose run --rm`.
+- Runbook: `docs/court_staging/WEDOS_HISTORICAL_BACKFILL.md`. Daily systemd timer remains incremental-only.
+- This task did not commit, push, publish, deploy, stop the local NS 2020–2026 writer, or change historical JSONL.
+- Next: commit + GHA publish of an image that includes `app/court_staging` + `app/nssoud`; then WEDOS pull/validate; then stop local writer and copy `artifacts/court_staging/ns/historical/`.
+
+## 2026-08-16 - Court staging scrapers + daily updater (in progress)
+
+- Added isolated staging under `artifacts/court_staging/` (never writes Full B `batches/`).
+- Shared `app/court_staging/` identity (ECLI-first canonical_id; content_hash = change detection), path guards, rich month completeness.
+- NS: `app/nsoud/run_historical_backfill.py` multi-year exhaust + resume; scraper `--exhaust` + canonical upserts.
+- NSS: new `app/nssoud/` (probe → scraper → historical backfill) targeting `vyhledavac.nssoud.cz`.
+- Unified updater: `scripts/court_staging_updater.py` + Windows Task Scheduler script `scripts/court_staging/register_daily_task.ps1`.
+- Docs: `docs/court_staging/README.md`. Tests: `tests/test_court_staging.py` (6 passed).
+- Merge NS/NSS → `batches/` explicitly deferred until canonical ingestion layer.
+- Next: run NS/NSS historical backfills into staging; register daily task; refine NSS DXCFTS selectors after pilot.
+
+## 2026-08-05 Europe/Moscow - Task: NALUS Parser Review Status and UX Redesign (COMPLETE)
+
+- Status: **Complete** (acceptance passed; no failed criteria).
+- Git:
+  - Branch: `fix/legal-paragraph-parser`
+  - Starting / ending HEAD: `14c1e300c46872640ebebfb84cf6e8d6686dec7b` (no new commit; no push).
+  - Working tree may still hold uncommitted review/UI work on that branch — do not assume clean `main`.
+- Status model (UI primary):
+  - Parser: `AUTO_VALIDATED_GOLDEN`, `PARSER_VALIDATED`, `PARSER_CHANGED_NEEDS_REVIEW`, `PARSER_CONFLICT`, `PARSER_UNVALIDATED`
+  - Manual: `NOT_MANUALLY_REVIEWED`, `MANUALLY_ACCEPTED`, `MANUALLY_OVERRIDDEN`, `MANUAL_DECISION_STALE`, `MANUAL_CONFLICT`
+  - Legacy pending / unresolved: preserved internally / backward-compatible; **not** primary UI status.
+  - Automatic manual approvals: **none**.
+- Golden validation: docs 05 / 11 / 16 → `GOLDEN PASS`; lines 809, boundaries 806, blocks 179, conflicts 0.
+- Non-golden: parser validated 1080; review recommended 547; conflicts 0; unvalidated 0.
+- UI redesign: header separates Parser v6 validation vs Manual review; nav per-doc parser badge + manual counts; lines/boundaries show parser validation badge + Parser v6 class / SPLIT|MERGE as primary; Changed-by-v6 shows separate parser/manual badges; Problems = genuine conflicts only; Progress separates parser vs manual; manual controls collapsed by default; bare pending/unresolved not primary.
+- Document 11 spot-check: badge `GOLDEN PASS`; L36 `AUTO-VALIDATED · GOLDEN v6` / `list_or_table`; L35→L36 MERGE + L42→L43 SPLIT golden; Manual review: not performed.
+- Manual-review safety: decision store + history byte size / SHA256 unchanged before→after; automatic decisions created 0; existing decisions lost 0; Document 2 completion 13/13 lines, 12/12 boundaries, unresolved 0.
+- Tests: status-model, golden-status, API, UI, parser v6, ruff, mypy, git diff check, secret scan → passed. Snapshot integrity passed; manual completion validator still expected-fails (19 incomplete docs + 3 pre-existing stale decisions).
+- Execution safety: providers/models/Qdrant/BM25/Redis/Celery/Docker/downloads/raw mods/auto-approvals/commits/pushes → all 0.
+- Remaining limitations: broader corpus manual review still incomplete; this task intentionally created no human approvals. Blockers: none.
+- Next recommended task:
+  Restart local review server and inspect document 11 in Lines, Boundaries, Progress, and Changed by parser v6:
+  ```powershell
+  Get-NetTCPConnection -LocalPort 8765 -State Listen
+  # Stop-Process -Id <pid>   # if already listening
+  python scripts/legal_v2/run_parser_review_web.py --host 127.0.0.1 --port 8765
+  ```
+  Open `http://127.0.0.1:8765/` → review `11` / `doc-cfa470876b0d5ed7`.
+
 ## 2026-08-03 Europe/Moscow - Task: Retrieval enterprise architecture document set
 
 - Created controlling architecture docs under `docs/retrieval-enterprise/` for the next retrieval modernization track:
