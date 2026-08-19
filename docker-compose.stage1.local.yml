@@ -66,6 +66,7 @@ services:
     volumes:
       - ./app:/app/app
       - ./scripts:/app/scripts
+      - ./benchmarks:/app/benchmarks:ro
       - ./artifacts:/app/artifacts
       - ../nalus-scraper/storage:/app/storage
       - ../nalus-scraper/models:/app/models:ro

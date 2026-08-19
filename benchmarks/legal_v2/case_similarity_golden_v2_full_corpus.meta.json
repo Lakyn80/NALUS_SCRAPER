@@ -1,0 +1,24 @@
+{
+  "schema_version": "nalus-case-similarity-golden-meta.v2",
+  "benchmark_id": "case_similarity_golden_v2_full_corpus",
+  "benchmark_scope": "current_full_A_constitutional_court_only",
+  "scope_note": "Current full FAST A Qdrant collection is constitutional-court (ÚS) only. This benchmark does not cover NS/NSS until those courts are indexed.",
+  "collection": "nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full",
+  "corpus_unique_documents": 103488,
+  "corpus_courts": ["constitutional_court"],
+  "corpus_sources": ["constitutional"],
+  "total_queries": 60,
+  "evaluable_queries": 60,
+  "split_counts": {
+    "dev": 40,
+    "test": 20
+  },
+  "split_policy": "frozen_sha256_by_query_id",
+  "generation_counts": {
+    "auto_from_court_reasoning": 59,
+    "reused_v1_pilot": 1
+  },
+  "dense_baseline_verdict": "BENCHMARK_NEEDS_REVIEW",
+  "human_review_status": "READY_FOR_HUMAN_REVIEW",
+  "retrieval_tuning_policy": "blocked_until_60_of_60_human_approved"
+}
