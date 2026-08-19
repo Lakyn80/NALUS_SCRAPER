@@ -25,7 +25,13 @@ class QdrantDenseStore:
         self._embedder = embedder
         self._config = config
 
-    def search(self, query: str, top_k: int) -> list[RetrievedChunk]:
+    def search(
+        self,
+        query: str,
+        top_k: int,
+        *,
+        query_filter: Any | None = None,
+    ) -> list[RetrievedChunk]:
         started = time.perf_counter()
 
         embed_started = time.perf_counter()
@@ -39,13 +45,16 @@ class QdrantDenseStore:
 
         quantization = qdrant_quantization_policy_from_env()
         qdrant_started = time.perf_counter()
-        result = self._client.query_points(
-            collection_name=self._config.qdrant_collection,
-            query=vector,
-            limit=top_k,
-            with_payload=True,
-            search_params=quantization.to_search_params(),
-        )
+        query_kwargs: dict[str, Any] = {
+            "collection_name": self._config.qdrant_collection,
+            "query": vector,
+            "limit": top_k,
+            "with_payload": True,
+            "search_params": quantization.to_search_params(),
+        }
+        if query_filter is not None:
+            query_kwargs["query_filter"] = query_filter
+        result = self._client.query_points(**query_kwargs)
         qdrant_latency_ms = _elapsed_ms(qdrant_started)
 
         conversion_started = time.perf_counter()
