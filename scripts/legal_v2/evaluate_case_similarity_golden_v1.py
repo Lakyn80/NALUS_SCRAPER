@@ -99,6 +99,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--candidate-documents", type=int, default=40)
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument(
+        "--retrieval-mode",
+        choices=("dense_only", "hybrid_bm25_rrf"),
+        default="hybrid_bm25_rrf",
+        help="dense_only = BGE-M3 only; hybrid_bm25_rrf = BGE-M3 + BM25 + RRF (default).",
+    )
+    parser.add_argument(
         "--profile",
         choices=("fast", "fast_ce"),
         default="fast",
@@ -192,11 +198,13 @@ def main(argv: list[str] | None = None) -> int:
         "embedding_model": os.getenv("EMBEDDING_MODEL_NAME", "/app/models/BAAI/bge-m3"),
         "embedding_provider": "sentence_transformer",
         "embedding_local_files_only": os.getenv("EMBEDDING_LOCAL_FILES_ONLY", "1"),
-        "sparse_method": "Bm25Sidecar",
+        "sparse_method": None if args.retrieval_mode == "dense_only" else "Bm25Sidecar",
         "bm25_k1": LEGAL_V2_PROFILE.bm25_k1,
         "bm25_b": LEGAL_V2_PROFILE.bm25_b,
-        "fusion": "rrf",
+        "fusion": "dense_only" if args.retrieval_mode == "dense_only" else "rrf",
         "rrf_k": LEGAL_V2_PROFILE.rrf_k,
+        "retrieval_mode": args.retrieval_mode,
+        "bm25_enabled": args.retrieval_mode != "dense_only",
         "dense_candidate_chunks": args.dense_candidate_chunks,
         "bm25_candidate_chunks": args.bm25_candidate_chunks,
         "fused_candidate_chunks": args.fused_candidate_chunks,
@@ -330,7 +338,8 @@ def main(argv: list[str] | None = None) -> int:
         print("BLOCKED: primary ECLIs missing from target collection; scoring skipped.")
         return 2
 
-    if not args.bm25_sidecar_path.exists():
+    dense_only = args.retrieval_mode == "dense_only"
+    if (not dense_only) and (not args.bm25_sidecar_path.exists()):
         raise SystemExit(f"BM25 sidecar missing: {args.bm25_sidecar_path}")
 
     retriever_config = LegalV2RetrieverConfig(
@@ -342,6 +351,7 @@ def main(argv: list[str] | None = None) -> int:
         fused_candidate_chunks=args.fused_candidate_chunks,
         candidate_documents=args.candidate_documents,
         model_path=os.getenv("EMBEDDING_MODEL_NAME", "/app/models/BAAI/bge-m3"),
+        bm25_enabled=not dense_only,
     )
     embedder = BgeM3Embedder(_embedder_config(retriever_config))
     retriever = build_live_legal_v2_retriever(client, embedder, retriever_config)
