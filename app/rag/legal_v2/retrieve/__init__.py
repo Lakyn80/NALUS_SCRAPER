@@ -7,11 +7,13 @@ from app.rag.legal_v2.retrieve.retriever import (
     build_live_legal_v2_retriever,
     legal_v2_retriever_config_from_env,
 )
+from app.rag.legal_v2.retrieve.source_filters import RetrievalSourceFilters
 
 __all__ = [
     "LegalV2HybridRetriever",
     "LegalV2RetrievalResult",
     "LegalV2RetrieverConfig",
+    "RetrievalSourceFilters",
     "build_live_legal_v2_retriever",
     "legal_v2_retriever_config_from_env",
 ]

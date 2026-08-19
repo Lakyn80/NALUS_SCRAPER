@@ -16,6 +16,11 @@ from app.rag.legal_v2.indexing import (
 )
 from app.rag.legal_v2.models import LegalParagraph, MetadataProvenance, SectionType
 from app.rag.legal_v2.query_spec import QuerySpecV2
+from app.rag.legal_v2.retrieve.source_filters import (
+    RetrievalSourceFilters,
+    filter_chunks,
+    metadata_predicate_for,
+)
 from app.rag.retrieval.bm25_sidecar import Bm25Sidecar
 from app.rag.retrieval.models import RetrievedChunk
 from app.rag.retrieval.production_profile import ProductionRetrievalConfig
@@ -79,22 +84,59 @@ class LegalV2HybridRetriever:
     def config(self) -> LegalV2RetrieverConfig:
         return self._config
 
-    def retrieve(self, query_spec: QuerySpecV2) -> LegalV2RetrievalResult:
+    def retrieve(
+        self,
+        query_spec: QuerySpecV2,
+        *,
+        source_filters: RetrievalSourceFilters | None = None,
+    ) -> LegalV2RetrievalResult:
         started = time.perf_counter()
         query = _retrieval_query(query_spec)
+        filters_active = bool(source_filters is not None and source_filters.is_active())
+        dense_search_k = int(self._config.dense_candidate_chunks)
+        if filters_active:
+            # Oversample before the generic metadata filter so both channels
+            # still contribute court/year/type-constrained candidates.
+            dense_search_k = min(dense_search_k * 4, 320)
         dense_started = time.perf_counter()
-        dense = self._dense.search(query, top_k=self._config.dense_candidate_chunks)
+        dense = self._dense.search(query, top_k=dense_search_k)
+        dense = filter_chunks(dense, source_filters)[: self._config.dense_candidate_chunks]
         dense_ms = _elapsed_ms(dense_started)
         trace_event(logger, "legal_v2.dense_retrieval.completed", result_count=len(dense))
         bm25_started = time.perf_counter()
         if self._config.bm25_enabled:
-            bm25 = self._bm25.search(query, top_k=self._config.bm25_candidate_chunks)
+            bm25 = self._bm25.search(
+                query,
+                top_k=self._config.bm25_candidate_chunks,
+                metadata_predicate=metadata_predicate_for(source_filters),
+            )
             bm25_ms = _elapsed_ms(bm25_started)
             trace_event(logger, "legal_v2.bm25_retrieval.completed", result_count=len(bm25))
-            if not dense or not bm25:
-                raise RuntimeError("Legal v2 dense and BM25 indexes must both return candidates.")
             fused_started = time.perf_counter()
-            fused = rrf_fuse([dense, bm25], top_k=self._config.fused_candidate_chunks, rrf_k=LEGAL_V2_PROFILE.rrf_k)
+            if dense and bm25:
+                fused = rrf_fuse(
+                    [dense, bm25],
+                    top_k=self._config.fused_candidate_chunks,
+                    rrf_k=LEGAL_V2_PROFILE.rrf_k,
+                )
+            elif dense:
+                if not filters_active:
+                    raise RuntimeError(
+                        "Legal v2 dense and BM25 indexes must both return candidates."
+                    )
+                fused = dense[: self._config.fused_candidate_chunks]
+            elif bm25:
+                if not filters_active:
+                    raise RuntimeError(
+                        "Legal v2 dense and BM25 indexes must both return candidates."
+                    )
+                fused = bm25[: self._config.fused_candidate_chunks]
+            else:
+                raise RuntimeError(
+                    "Legal v2 dense and BM25 indexes must both return candidates."
+                    if not filters_active
+                    else "Legal v2 source filters removed every dense and BM25 candidate."
+                )
             fused_ms = _elapsed_ms(fused_started)
             trace_event(logger, "legal_v2.rrf_fusion.completed", result_count=len(fused))
         else:
@@ -133,6 +175,11 @@ class LegalV2HybridRetriever:
                 "bm25_index_id": self._config.bm25_index_id,
                 "bm25_enabled": bool(self._config.bm25_enabled),
                 "dense_only": not bool(self._config.bm25_enabled),
+                "source_filters": (
+                    source_filters.as_dict()
+                    if source_filters is not None and source_filters.is_active()
+                    else None
+                ),
             },
         )
 
@@ -149,6 +196,7 @@ def legal_v2_retriever_config_from_env() -> LegalV2RetrieverConfig:
         candidate_documents=_int_env("NALUS_LEGAL_V2_CANDIDATE_DOCUMENTS", 50),
         returned_verified_documents=_int_env("NALUS_LEGAL_V2_RETURNED_VERIFIED_DOCUMENTS", 10),
         evidence_windows_per_constraint=_int_env("NALUS_LEGAL_V2_EVIDENCE_WINDOWS_PER_CONSTRAINT", 2),
+        bm25_enabled=_bool_env("NALUS_LEGAL_V2_BM25_ENABLED", True),
     )
 
 
@@ -418,6 +466,13 @@ def _int_env(name: str, default: int) -> int:
         return int(os.getenv(name, str(default)))
     except ValueError:
         return default
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _elapsed_ms(started: float) -> float:
