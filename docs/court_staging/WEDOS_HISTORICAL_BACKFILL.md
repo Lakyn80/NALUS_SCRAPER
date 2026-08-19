@@ -8,7 +8,7 @@ Pipeline:
 GitHub Actions → ghcr.io/lakyn80/nalus-scraper-api:<tag>
 → WEDOS docker compose pull (no VPS build)
 → bind mount /opt/nalus-data/court_staging
-→ NS 2020–2026 resume, then NS 1993–2019, then NSS after pilot PASS
+→ NS 2020–2026 resume, then NS 2019–12→2000-06 (reverse), then NSS after pilot PASS
 ```
 
 Do **not** start NSS 2003–2026 until the 20-document pilot PASSes.
@@ -26,7 +26,7 @@ Services only:
 | Service | Profile | Job |
 |---|---|---|
 | `ns-historical` | default | NS `--year-from 2020 --year-to 2026 --resume --delay 1.0` |
-| `ns-historical-pre2020` | `ns-pre2020` | NS `--year-from 1993 --year-to 2019 --resume --delay 1.0` |
+| `ns-historical-pre2020` | `ns-pre2020` | NS `--date-from 2000-06-01 --date-to 2019-12-31 --reverse --resume --delay 1.0` |
 | `nss-historical` | `nss` | NSS `--year-from 2003 --year-to 2026 --resume --delay 1.5` |
 
 There is **no** `nss-pilot` service. Probe and 20-doc pilot use `docker compose run --rm` against the same image (service `ns-historical` is only a vehicle for the image + bind mount; `--entrypoint` replaces its command so NS 2020–2026 does not start).
@@ -95,9 +95,11 @@ echo "$GHCR_TOKEN" | docker login ghcr.io -u lakyn80 --password-stdin
 
 Repo checkout on the VPS must include `docker-compose.court-staging.yml`.
 
+Pin the image tag in `/opt/nalus-scraper/.env` (see [.env.court-staging.example](../../.env.court-staging.example)) so `docker compose up` does not fall back to `:latest`.
+
 ```bash
 export GHCR_OWNER=lakyn80
-export IMAGE_TAG=v1.0.0   # the tag you published
+export IMAGE_TAG=court-ns-backfill-d87026f   # explicit tag with Playwright + reverse runner
 export COURT_STAGING_HOST_DIR=/opt/nalus-data/court_staging
 
 mkdir -p /opt/nalus-data/court_staging/{ns/historical,nss/historical,updater}
