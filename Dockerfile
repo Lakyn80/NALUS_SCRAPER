@@ -30,6 +30,10 @@ RUN set -eux; \
     done
 RUN python -m pip check
 
+# Install Playwright browser binaries + required Linux dependencies.
+# This is required for NS soud discovery which uses Playwright at runtime.
+RUN python -m playwright install --with-deps chromium
+
 COPY app ./app
 
 RUN mkdir -p /app/batches /app/storage /app/models /app/artifacts /app/app/artifacts \
