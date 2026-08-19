@@ -84,6 +84,7 @@ class DiscoveryResult:
     pagination_urls: list[str] = field(default_factory=list)
     detail_urls: list[str] = field(default_factory=list)
     attempted_urls: list[str] = field(default_factory=list)
+    total_results: int | None = None
 
 
 @dataclass
@@ -581,6 +582,7 @@ def run_discovery(
     search_page = provider.submit_search(window_start, window_end, page_size)
     discovery.transport_name = provider.transport_name
     discovery.search_url = search_page.url
+    discovery.total_results = search_page.total_results
     discovery.attempted_urls.append(search_page.url)
     discovery.query_params = list(parse_qsl(urlparse(search_page.url).query, keep_blank_values=True))
     remote_supported, remote_field = extract_remote_date_filter_support(discovery.query_params)
@@ -603,6 +605,11 @@ def run_discovery(
         discovery.detail_urls.append(link.detail_url)
 
     logger.info("Discovery detail URLs: %s", discovery.detail_urls)
+
+    # Legitimately empty month: query executed successfully, but no rows exist.
+    if not discovery.detail_urls and (search_page.total_results or 0) == 0:
+        logger.info("Discovery found zero site results for requested month/window.")
+        return discovery
 
     if not discovery.detail_urls:
         raise RuntimeError("Discovery did not yield any detail URLs.")

@@ -40,8 +40,25 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Exhaustive multi-year Nejvyšší soud backfill into artifacts/court_staging."
     )
-    parser.add_argument("--year-from", type=int, required=True)
-    parser.add_argument("--year-to", type=int, required=True)
+    parser.add_argument("--year-from", type=int)
+    parser.add_argument("--year-to", type=int)
+    parser.add_argument(
+        "--date-from",
+        type=date.fromisoformat,
+        default=None,
+        help="Inclusive lower date bound in YYYY-MM-DD (month granularity).",
+    )
+    parser.add_argument(
+        "--date-to",
+        type=date.fromisoformat,
+        default=None,
+        help="Inclusive upper date bound in YYYY-MM-DD (month granularity).",
+    )
+    parser.add_argument(
+        "--reverse",
+        action="store_true",
+        help="Process months from newest to oldest within the requested range.",
+    )
     parser.add_argument("--delay", type=float, default=1.0)
     parser.add_argument(
         "--max-pages",
@@ -73,6 +90,48 @@ def parse_args() -> argparse.Namespace:
 def month_window(year: int, month: int) -> tuple[date, date]:
     last_day = calendar.monthrange(year, month)[1]
     return date(year, month, 1), date(year, month, last_day)
+
+
+def iter_months(
+    *,
+    year_from: int | None,
+    year_to: int | None,
+    date_from: date | None,
+    date_to: date | None,
+    reverse: bool,
+) -> list[tuple[int, int]]:
+    if (year_from is None) ^ (year_to is None):
+        raise ValueError("--year-from and --year-to must be provided together.")
+    if (date_from is None) ^ (date_to is None):
+        raise ValueError("--date-from and --date-to must be provided together.")
+    if date_from is None and year_from is None:
+        raise ValueError("Provide either --year-from/--year-to or --date-from/--date-to.")
+    if date_from is not None and year_from is not None:
+        raise ValueError("Use either year bounds or date bounds, not both.")
+
+    if date_from is not None and date_to is not None:
+        start_year, start_month = date_from.year, date_from.month
+        end_year, end_month = date_to.year, date_to.month
+    else:
+        assert year_from is not None and year_to is not None
+        start_year, start_month = year_from, 1
+        end_year, end_month = year_to, 12
+
+    if (start_year, start_month) > (end_year, end_month):
+        raise ValueError("Lower bound must be <= upper bound.")
+
+    months: list[tuple[int, int]] = []
+    year, month = start_year, start_month
+    while (year, month) <= (end_year, end_month):
+        months.append((year, month))
+        if month == 12:
+            year += 1
+            month = 1
+        else:
+            month += 1
+    if reverse:
+        months.reverse()
+    return months
 
 
 def manifest_path(out_dir: Path) -> Path:
@@ -170,8 +229,16 @@ def run_month(
 def main() -> int:
     configure_logging()
     args = parse_args()
-    if args.year_from > args.year_to:
-        logger.error("--year-from must be <= --year-to")
+    try:
+        planned_months = iter_months(
+            year_from=args.year_from,
+            year_to=args.year_to,
+            date_from=args.date_from,
+            date_to=args.date_to,
+            reverse=args.reverse,
+        )
+    except ValueError as exc:
+        logger.error("%s", exc)
         return 1
 
     staging_root = ensure_staging_tree(default_staging_root())
@@ -194,35 +261,37 @@ def main() -> int:
     months: dict[str, Any] = dict(manifest.get("months") or {})
 
     results: list[MonthResult] = []
-    for year in range(args.year_from, args.year_to + 1):
-        for month in range(1, 13):
-            key = month_key(year, month)
-            if args.resume and months.get(key, {}).get("status") == "ok":
-                logger.info("Skipping completed month %s", key)
-                continue
-            # Do not scrape future months.
-            first_day = date(year, month, 1)
-            if first_day > date.today():
-                continue
-            result = run_month(
-                year=year,
-                month=month,
-                out_dir=out_dir,
-                delay=args.delay,
-                max_pages=args.max_pages,
-            )
-            results.append(result)
-            months[key] = asdict(result)
-            manifest = {
-                "version": 1,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-                "year_from": args.year_from,
-                "year_to": args.year_to,
-                "out_dir": str(out_dir),
-                "seeded_canonical_ids": len(known),
-                "months": months,
-            }
-            atomic_write_json(man_path, manifest)
+    for year, month in planned_months:
+        key = month_key(year, month)
+        if args.resume and months.get(key, {}).get("status") == "ok":
+            logger.info("Skipping completed month %s", key)
+            continue
+        # Do not scrape future months.
+        first_day = date(year, month, 1)
+        if first_day > date.today():
+            continue
+        result = run_month(
+            year=year,
+            month=month,
+            out_dir=out_dir,
+            delay=args.delay,
+            max_pages=args.max_pages,
+        )
+        results.append(result)
+        months[key] = asdict(result)
+        manifest = {
+            "version": 1,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "year_from": args.year_from,
+            "year_to": args.year_to,
+            "date_from": args.date_from.isoformat() if args.date_from else None,
+            "date_to": args.date_to.isoformat() if args.date_to else None,
+            "reverse": bool(args.reverse),
+            "out_dir": str(out_dir),
+            "seeded_canonical_ids": len(known),
+            "months": months,
+        }
+        atomic_write_json(man_path, manifest)
 
     ok = sum(1 for r in results if r.status == "ok")
     partial = sum(1 for r in results if r.status == "partial")
