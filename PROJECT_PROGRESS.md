@@ -2838,3 +2838,57 @@
   No manual decisions or history were written. Manual store stayed `31002` bytes with SHA-256 `F98CD519CCF28310706F70B0D65F2F15FDFC28CC530304CD4FF79890219A28FB`; history stayed `98322` bytes with SHA-256 `5E0E86E5A2210800A514341E6A7A87210EBC2EC7504D379BA6DB2542EB82FACD`. Document 2 remains manually complete at 13/13 lines and 12/12 boundaries with 0 unresolved.
 - Validation:
   Focused visual-review and parser tests passed: 77 tests. HTTP smoke on a temporary loopback port passed for documents, progress, lines, boundary cards, v6 changes, problems, assisted summary, and static assets. Document 11 shows `GOLDEN PASS`; line 36 shows `AUTO-VALIDATED · GOLDEN v6` and `list_or_table`; boundary L35 -> L36 shows `MERGE`; boundary L42 -> L43 shows `SPLIT`.
+## 2026-08-19 15:37 Europe/Moscow — Task: WEDOS NS pre-2020 court backfill execution & verification
+
+- Goal:
+  Start existing WEDOS court-staging **NS pre-2020** backfill (1993-2019) only, verify real resume progress, and leave **NSS** running/untouched.
+- Worktree:
+  No local code changes were made for this operational task. Local worktree stayed on `feature/qdrant-int8` with pre-existing unrelated dirty/untracked files.
+- Remote execution:
+  - Compose checkout / definition:
+    - `/opt/nalus-scraper/docker-compose.court-staging.yml`
+  - Started:
+    - profile `ns-pre2020`
+    - service `ns-historical-pre2020`
+  - Runtime start guardrails:
+    - Overrode `IMAGE_TAG=f1915ba` (reused the same image tag already running for NSS) and used `--pull never` to avoid a blocked GHCR pull for `:latest`.
+    - Did not restart/modify NSS, Lex, Qdrant, or other compose services.
+- Verification results:
+  - NS container became `running` (`nalus-scraper-ns-historical-pre2020-1`, `RestartCount=0`).
+  - Real progress signal check:
+    - Logs show the runner reaching discovery/scrape for successive 1993+ months, but discovery consistently failed because Playwright headless browser executable is missing in the container image:
+      `BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell`
+    - `nsoud_historical_manifest.json` was updated with pre-2020 months marked `failed`.
+    - No `nsoud_199x_*.jsonl` output files were produced (0 files found under the mounted ns/historical directory for `nsoud_199*`).
+  - NSS continuity:
+    - NSS container stayed `running` and continued emitting upsert progress logs (current activity observed around 2010-09).
+- Resources:
+  Host headroom remained acceptable during concurrent runs (NS container RSS ~106 MiB).
+- Remaining blocker:
+  Backfill cannot proceed until Playwright browsers are available in the NS backfill runtime (either bake them into the image or run `playwright install` as a one-time setup step in the court-staging environment). After that, re-run the NS pre-2020 backfill.
+
+## 2026-08-19 14:45 Europe/Moscow — Task: Playwright runtime fix + NS pre-2020 discovery verification (BLOCKED)
+
+- Goal:
+  Bake Playwright Chromium into the court-staging Docker image, publish a new explicit GHCR tag, restart only `ns-historical-pre2020`, and verify real NS pre-2020 progress while keeping NSS healthy.
+- What changed (code/image):
+  - `Dockerfile`: added `python -m playwright install --with-deps chromium` so the runtime contains `chrome-headless-shell`.
+  - `app/nsoud/scraper.py`: Playwright discovery now waits for `table#tabl` after submitting the NS search form.
+- Published images (GHCR):
+  - `court-playwright-66dcda8` (Dockerfile-only fix)
+  - `court-playwright-b6c825a` (Dockerfile + Playwright discovery wait)
+- WEDOS deployment:
+  - Restarted ONLY `ns-historical-pre2020` via `/opt/nalus-scraper/docker-compose.court-staging.yml` using `--profile ns-pre2020` and `IMAGE_TAG=<tag>`.
+  - NSS (`nalus-scraper-nss-historical-1`) was not restarted.
+- Verification results:
+  - Playwright in the restarted NS container reports `playwright==1.62.0`.
+  - Chromium executable exists in-container at `/root/.cache/ms-playwright/.../chrome-headless-shell`.
+  - However, NS discovery still fails with:
+    - `Discovery detail URLs: []`
+    - `All scraper providers failed discovery ... direct_http ... playwright ... Discovery did not yield any detail URLs.`
+  - No pre-2020 output files were created/observed:
+    - `nsoud_199*.jsonl` count remained `0`
+  - Manifest still shows persistent pre-2020 non-ok state (no successful month progress yet).
+  - NSS remained `running` with `RestartCount=0` and continued upsert progress logs.
+- Known limitations / remaining blocker:
+  Even with Playwright runtime fixed, the NS search-result HTML (for early years) still doesn’t yield detail links that `parse_search_results()` can extract. Next step is to inspect the actual rendered HTML used by `parse_search_results()` for these months and adjust selectors/parsing accordingly (for NS pre-2020 pages).
