@@ -524,6 +524,15 @@ class PlaywrightProvider(BaseProvider):
                 page.select_option('select[name="pocet_vysledku"]', label=page_size_label)
                 with page.expect_navigation(wait_until="networkidle", timeout=REQUEST_TIMEOUT_SECONDS * 1000):
                     page.click('button[type="submit"]')
+                # The NS search results table is required by parse_search_results()
+                # (it selects table#tabl and anchor rows). On some runs, networkidle can
+                # be reached before the table is fully rendered, so we wait explicitly.
+                try:
+                    page.wait_for_selector("table#tabl", timeout=REQUEST_TIMEOUT_SECONDS * 1000)
+                except Exception:
+                    # Preserve fail-closed behavior in run_discovery(); if the table never appears,
+                    # parse_search_results will still return empty links and raise.
+                    pass
             else:
                 page.goto(action, wait_until="networkidle", timeout=REQUEST_TIMEOUT_SECONDS * 1000)
 
