@@ -5,6 +5,7 @@ import math
 import re
 import sqlite3
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,13 @@ class Bm25Record:
 
 
 class Bm25Sidecar:
-    """SQLite-backed BM25 sidecar, loaded lazily on first query."""
+    """SQLite-backed BM25 sidecar, loaded lazily on first query.
+
+    Full-corpus sidecars are too large to materialize as Python strings. The
+    in-memory structure is an inverted index (same BM25 k1/b/IDF formula as
+    before); chunk text and full metadata are hydrated from SQLite for the
+    returned top-k only.
+    """
 
     def __init__(
         self,
@@ -50,11 +57,24 @@ class Bm25Sidecar:
                 f"BM25 sidecar is required for production retrieval but is missing: {self._path}"
             )
 
-    def search(self, query: str, top_k: int) -> list[RetrievedChunk]:
+    def search(
+        self,
+        query: str,
+        top_k: int,
+        *,
+        metadata_predicate: Callable[[dict[str, Any]], bool] | None = None,
+    ) -> list[RetrievedChunk]:
         if self._index is None:
             self.assert_ready()
-            self._index = _Bm25Index.from_records(_load_records(self._path), k1=self._k1, b=self._b)
-        return self._index.search(query, top_k=top_k, index_id=self._index_id)
+            self._index = _Bm25Index.from_sqlite(
+                self._path, k1=self._k1, b=self._b
+            )
+        return self._index.search(
+            query,
+            top_k=top_k,
+            index_id=self._index_id,
+            metadata_predicate=metadata_predicate,
+        )
 
     @classmethod
     def from_records(
@@ -71,94 +91,269 @@ class Bm25Sidecar:
 
 
 class _Bm25Index:
-    def __init__(self, records: list[Bm25Record], *, k1: float, b: float) -> None:
-        self._records = records
+    def __init__(
+        self,
+        *,
+        ids: list[str],
+        doc_lengths: list[int],
+        metadata: list[dict[str, Any]],
+        postings: dict[str, list[tuple[int, int]]],
+        idf: dict[str, float],
+        avg_doc_length: float,
+        k1: float,
+        b: float,
+        texts: list[str] | None = None,
+        sqlite_path: Path | None = None,
+    ) -> None:
+        self._ids = ids
+        self._doc_lengths = doc_lengths
+        self._metadata = metadata
+        self._postings = postings
+        self._idf = idf
+        self._avg_doc_length = avg_doc_length
         self._k1 = k1
         self._b = b
-        self._tokens = [_tokenize(record.text) for record in records]
-        self._term_counts = [Counter(tokens) for tokens in self._tokens]
-        self._doc_lengths = [len(tokens) for tokens in self._tokens]
-        self._avg_doc_length = (
-            sum(self._doc_lengths) / len(self._doc_lengths) if self._doc_lengths else 0.0
-        )
-        self._idf = self._build_idf()
+        self._texts = texts
+        self._sqlite_path = sqlite_path
 
     @classmethod
     def from_records(cls, records: list[Bm25Record], *, k1: float, b: float) -> "_Bm25Index":
-        return cls(records, k1=k1, b=b)
+        ids: list[str] = []
+        texts: list[str] = []
+        metadata: list[dict[str, Any]] = []
+        token_lists: list[list[str]] = []
+        for record in records:
+            ids.append(record.id)
+            texts.append(record.text)
+            metadata.append(dict(record.metadata))
+            token_lists.append(_tokenize(record.text))
+        return cls._from_token_lists(
+            ids=ids,
+            token_lists=token_lists,
+            metadata=metadata,
+            k1=k1,
+            b=b,
+            texts=texts,
+            sqlite_path=None,
+        )
 
-    def search(self, query: str, *, top_k: int, index_id: str) -> list[RetrievedChunk]:
-        query_terms = _tokenize(query)
-        if not query_terms or not self._records:
-            return []
-
-        scored: list[RetrievedChunk] = []
-        for index, record in enumerate(self._records):
-            score = self._score_document(index, query_terms)
-            if score <= 0:
-                continue
-            metadata = dict(record.metadata)
-            metadata["bm25_score"] = score
-            metadata["bm25_index_id"] = index_id
-            scored.append(
-                RetrievedChunk(
-                    id=record.id,
-                    text=record.text,
-                    score=score,
-                    source="bm25",
-                    metadata=metadata,
-                )
-            )
-
-        scored.sort(key=lambda chunk: (-chunk.score, chunk.id))
-        return scored[:top_k]
-
-    def _build_idf(self) -> dict[str, float]:
-        doc_count = len(self._records)
+    @classmethod
+    def from_sqlite(cls, path: Path, *, k1: float, b: float) -> "_Bm25Index":
+        ids: list[str] = []
+        metadata: list[dict[str, Any]] = []
+        doc_lengths: list[int] = []
         document_frequency: Counter[str] = Counter()
-        for tokens in self._tokens:
-            document_frequency.update(set(tokens))
-
-        return {
+        postings: dict[str, list[tuple[int, int]]] = {}
+        with sqlite3.connect(path) as connection:
+            table_name = _select_chunks_table(connection)
+            columns = [
+                item[1] for item in connection.execute(f"PRAGMA table_info({table_name})")
+            ]
+            rows = connection.execute(f"SELECT * FROM {table_name}")
+            for row in rows:
+                item = dict(zip(columns, row, strict=True))
+                chunk_id = str(
+                    item.get("id")
+                    or item.get("chunk_id")
+                    or item.get("original_id")
+                    or ""
+                ).strip()
+                text = str(item.get("text") or item.get("chunk_text") or "").strip()
+                if not chunk_id or not text:
+                    continue
+                payload = _parse_metadata(
+                    item.get("metadata") or item.get("payload") or item.get("payload_json")
+                )
+                _set_metadata_defaults(payload, item)
+                tokens = _tokenize(text)
+                counts = Counter(tokens)
+                doc_index = len(ids)
+                ids.append(chunk_id)
+                metadata.append(_lite_metadata(payload, item))
+                doc_lengths.append(len(tokens))
+                document_frequency.update(counts.keys())
+                for term, term_frequency in counts.items():
+                    postings.setdefault(term, []).append((doc_index, term_frequency))
+        doc_count = len(ids)
+        avg_doc_length = (sum(doc_lengths) / doc_count) if doc_count else 0.0
+        idf = {
             term: math.log(1 + (doc_count - freq + 0.5) / (freq + 0.5))
             for term, freq in document_frequency.items()
         }
+        return cls(
+            ids=ids,
+            doc_lengths=doc_lengths,
+            metadata=metadata,
+            postings=postings,
+            idf=idf,
+            avg_doc_length=avg_doc_length,
+            k1=k1,
+            b=b,
+            texts=None,
+            sqlite_path=Path(path),
+        )
 
-    def _score_document(self, index: int, query_terms: list[str]) -> float:
-        score = 0.0
-        term_counts = self._term_counts[index]
-        doc_length = self._doc_lengths[index]
-        if doc_length == 0 or self._avg_doc_length == 0:
-            return 0.0
+    @classmethod
+    def _from_token_lists(
+        cls,
+        *,
+        ids: list[str],
+        token_lists: list[list[str]],
+        metadata: list[dict[str, Any]],
+        k1: float,
+        b: float,
+        texts: list[str] | None,
+        sqlite_path: Path | None,
+    ) -> "_Bm25Index":
+        doc_count = len(ids)
+        doc_lengths = [len(tokens) for tokens in token_lists]
+        avg_doc_length = (sum(doc_lengths) / doc_count) if doc_count else 0.0
+        document_frequency: Counter[str] = Counter()
+        postings: dict[str, list[tuple[int, int]]] = {}
+        for index, tokens in enumerate(token_lists):
+            counts = Counter(tokens)
+            document_frequency.update(counts.keys())
+            for term, term_frequency in counts.items():
+                postings.setdefault(term, []).append((index, term_frequency))
+        idf = {
+            term: math.log(1 + (doc_count - freq + 0.5) / (freq + 0.5))
+            for term, freq in document_frequency.items()
+        }
+        return cls(
+            ids=ids,
+            doc_lengths=doc_lengths,
+            metadata=metadata,
+            postings=postings,
+            idf=idf,
+            avg_doc_length=avg_doc_length,
+            k1=k1,
+            b=b,
+            texts=texts,
+            sqlite_path=sqlite_path,
+        )
 
+    def search(
+        self,
+        query: str,
+        *,
+        top_k: int,
+        index_id: str,
+        metadata_predicate: Callable[[dict[str, Any]], bool] | None = None,
+    ) -> list[RetrievedChunk]:
+        query_terms = _tokenize(query)
+        if not query_terms or not self._ids:
+            return []
+
+        scores: dict[int, float] = {}
         for term in query_terms:
-            term_frequency = term_counts.get(term, 0)
-            if term_frequency == 0:
+            idf = self._idf.get(term)
+            if not idf:
                 continue
-            denominator = term_frequency + self._k1 * (
-                1 - self._b + self._b * doc_length / self._avg_doc_length
+            for doc_index, term_frequency in self._postings.get(term, ()):
+                if metadata_predicate is not None and not metadata_predicate(
+                    self._metadata[doc_index]
+                ):
+                    continue
+                doc_length = self._doc_lengths[doc_index]
+                if doc_length == 0 or self._avg_doc_length == 0:
+                    continue
+                denominator = term_frequency + self._k1 * (
+                    1 - self._b + self._b * doc_length / self._avg_doc_length
+                )
+                scores[doc_index] = (
+                    scores.get(doc_index, 0.0)
+                    + idf * (term_frequency * (self._k1 + 1)) / denominator
+                )
+
+        ranked = sorted(
+            (
+                (score, self._ids[index], index)
+                for index, score in scores.items()
+                if score > 0
+            ),
+            key=lambda item: (-item[0], item[1]),
+        )[:top_k]
+        hydrated = self._hydrate([index for _, _, index in ranked])
+        results: list[RetrievedChunk] = []
+        for score, chunk_id, doc_index in ranked:
+            text, metadata = hydrated[doc_index]
+            payload = dict(metadata)
+            payload["bm25_score"] = score
+            payload["bm25_index_id"] = index_id
+            results.append(
+                RetrievedChunk(
+                    id=chunk_id,
+                    text=text,
+                    score=score,
+                    source="bm25",
+                    metadata=payload,
+                )
             )
-            score += self._idf.get(term, 0.0) * (term_frequency * (self._k1 + 1)) / denominator
-        return score
+        return results
+
+    def _hydrate(self, indices: list[int]) -> dict[int, tuple[str, dict[str, Any]]]:
+        if not indices:
+            return {}
+        if self._texts is not None:
+            return {
+                index: (self._texts[index], dict(self._metadata[index]))
+                for index in indices
+            }
+        if self._sqlite_path is None:
+            return {index: ("", dict(self._metadata[index])) for index in indices}
+        wanted = {self._ids[index]: index for index in indices}
+        hydrated: dict[int, tuple[str, dict[str, Any]]] = {
+            index: ("", dict(self._metadata[index])) for index in indices
+        }
+        placeholders = ",".join("?" for _ in wanted)
+        with sqlite3.connect(self._sqlite_path) as connection:
+            table_name = _select_chunks_table(connection)
+            columns = [
+                item[1] for item in connection.execute(f"PRAGMA table_info({table_name})")
+            ]
+            id_column = "chunk_id" if "chunk_id" in columns else "id"
+            rows = connection.execute(
+                f"SELECT * FROM {table_name} WHERE {id_column} IN ({placeholders})",
+                list(wanted.keys()),
+            ).fetchall()
+        for row in rows:
+            item = dict(zip(columns, row, strict=True))
+            chunk_id = str(
+                item.get("id") or item.get("chunk_id") or item.get("original_id") or ""
+            ).strip()
+            doc_index = wanted.get(chunk_id)
+            if doc_index is None:
+                continue
+            text = str(item.get("text") or item.get("chunk_text") or "").strip()
+            payload = _parse_metadata(
+                item.get("metadata") or item.get("payload") or item.get("payload_json")
+            )
+            _set_metadata_defaults(payload, item)
+            hydrated[doc_index] = (text, payload)
+        return hydrated
 
 
-def _load_records(path: Path) -> list[Bm25Record]:
-    with sqlite3.connect(path) as connection:
-        table_name = _select_chunks_table(connection)
-        rows = connection.execute(f"SELECT * FROM {table_name}").fetchall()
-        columns = [item[1] for item in connection.execute(f"PRAGMA table_info({table_name})")]
-
-    records: list[Bm25Record] = []
-    for row in rows:
-        item = dict(zip(columns, row, strict=True))
-        chunk_id = str(item.get("id") or item.get("chunk_id") or item.get("original_id") or "").strip()
-        text = str(item.get("text") or item.get("chunk_text") or "").strip()
-        if not chunk_id or not text:
-            continue
-        metadata = _parse_metadata(item.get("metadata") or item.get("payload") or item.get("payload_json"))
-        _set_metadata_defaults(metadata, item)
-        records.append(Bm25Record(id=chunk_id, text=text, metadata=metadata))
-    return records
+def _lite_metadata(metadata: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
+    lite: dict[str, Any] = {}
+    for key in (
+        "source",
+        "document_id",
+        "source_document_id",
+        "ecli",
+        "canonical_document_id",
+        "case_number",
+        "case_reference",
+        "spisova_znacka",
+        "court",
+        "court_name",
+        "decision_date",
+        "document_type",
+        "chunk_index",
+    ):
+        value = metadata.get(key, row.get(key))
+        if value is not None and str(value).strip():
+            lite[key] = value
+    return lite
 
 
 def _select_chunks_table(connection: sqlite3.Connection) -> str:
