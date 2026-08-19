@@ -1,0 +1,17 @@
+{
+  "schema_version": "nalus-case-similarity-golden-meta.v3",
+  "benchmark_id": "case_similarity_golden_v3_graded",
+  "benchmark_scope": "current_full_A_constitutional_court_only",
+  "scope_note": "Graded multi-relevance benchmark for constitutional-court (ÚS) full FAST A corpus only.",
+  "source_benchmark_v2": "case_similarity_golden_v2_full_corpus.jsonl",
+  "total_queries": 60,
+  "split_counts": {"dev": 40, "test": 20},
+  "split_policy": "frozen_from_v2_query_id",
+  "relevance_model": {
+    "grades": [0, 1, 2, 3],
+    "binary_relevance_threshold": 2,
+    "multiple_grade_3_allowed": true
+  },
+  "evaluator": "case_similarity_graded_eval.py",
+  "human_review_status": "NEEDS_QUERY_REVIEW"
+}
