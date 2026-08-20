@@ -2,16 +2,42 @@
   "schema_version": "nalus-case-similarity-golden-meta.v3",
   "benchmark_id": "case_similarity_golden_v3_graded",
   "benchmark_scope": "current_full_A_constitutional_court_only",
-  "scope_note": "Graded multi-relevance benchmark for constitutional-court (ÚS) full FAST A corpus only.",
+  "scope_note": "Graded multi-relevance benchmark for constitutional-court (US) full FAST A corpus only.",
   "source_benchmark_v2": "case_similarity_golden_v2_full_corpus.jsonl",
   "total_queries": 60,
-  "split_counts": {"dev": 40, "test": 20},
+  "split_counts": {
+    "dev": 40,
+    "test": 20
+  },
   "split_policy": "frozen_from_v2_query_id",
   "relevance_model": {
-    "grades": [0, 1, 2, 3],
+    "grades": [
+      0,
+      1,
+      2,
+      3
+    ],
     "binary_relevance_threshold": 2,
     "multiple_grade_3_allowed": true
   },
   "evaluator": "case_similarity_graded_eval.py",
-  "human_review_status": "NEEDS_QUERY_REVIEW"
+  "human_review_status": "DEV_QRELS_FROZEN_WITH_AGENT_LOW_GRADE_TAIL",
+  "dev_qrels_status": "DEV_QRELS_FROZEN_WITH_AGENT_LOW_GRADE_TAIL",
+  "test_qrels_status": "NOT_FROZEN",
+  "full_qrels_frozen": false,
+  "dev_qrels_count": 1583,
+  "dev_query_count": 40,
+  "dev_human_reviewed_count": 198,
+  "dev_agent_only_count": 1385,
+  "dev_relevant_ge2_count": 108,
+  "dev_grade_histogram": {
+    "0": 817,
+    "1": 658,
+    "2": 58,
+    "3": 50
+  },
+  "dev_qrels_path": "artifacts/legal_v2/golden_v3_graded/qrels_dev_reviewed.jsonl",
+  "dev_qrels_frozen_at_utc": "2026-08-20T21:42:29.293534+00:00",
+  "qrels_frozen_at_utc": null,
+  "notes": "DEV relevance audit closed (g3+g2+QA spot-check). DEV qrels frozen with human-reviewed grades where available and agent-first-pass for remaining 0/1 tail. NOT every DEV 0/1 was human-reviewed. TEST qrels NOT frozen. Full QRELS_FROZEN not claimed."
 }
