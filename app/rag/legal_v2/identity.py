@@ -70,6 +70,25 @@ def eclis_equal(left: str | None, right: str | None) -> bool:
     return bool(left_key) and left_key == right_key
 
 
+def eclis_are_representation_variants(left: str | None, right: str | None) -> bool:
+    """True when one ECLI is the other plus a dotted numeric representation suffix.
+
+    Example: `ECLI:CZ:US:1999:4.US.23.99` and `...4.US.23.99.1` are variants.
+    Sibling ordinals (`...19.1` vs `...19.2`) are not.
+    """
+    left_key = ecli_key(left)
+    right_key = ecli_key(right)
+    if not left_key or not right_key or left_key == right_key:
+        return False
+    shorter, longer = (
+        (left_key, right_key) if len(left_key) <= len(right_key) else (right_key, left_key)
+    )
+    if not longer.startswith(shorter + '.'):
+        return False
+    suffix = longer[len(shorter) + 1 :]
+    return suffix.isdigit()
+
+
 def is_valid_ecli(value: str | None) -> bool:
     text = normalize_ecli(value)
     return bool(text) and _ECLI_RE.match(text) is not None
