@@ -155,6 +155,32 @@ def test_unjudged_not_in_reviewed_qrels() -> None:
     assert grades["d3"] == 3
 
 
+def test_exclude_from_qrels_skips_merged_duplicate_alias() -> None:
+    queue = [
+        _queue_row(
+            query_id="nalus-cs-v2-015",
+            document_id="ECLI:CZ:US:1999:4.US.23.99.1",
+            review_status="human_reviewed",
+            relevance_grade=3,
+        ),
+        {
+            **_queue_row(
+                query_id="nalus-cs-v2-015",
+                document_id="ECLI:CZ:US:1999:4.US.23.99",
+                review_status="human_reviewed",
+                relevance_grade=3,
+            ),
+            "exclude_from_qrels": True,
+            "is_duplicate": True,
+            "dedup_status": "merged_into_canonical",
+            "duplicate_of": "ECLI:CZ:US:1999:4.US.23.99.1",
+        },
+    ]
+    entries = reviewed_qrel_entries(queue, split="dev")
+    assert [entry.document_id for entry in entries] == ["ECLI:CZ:US:1999:4.US.23.99.1"]
+    assert split_review_complete(queue, "dev") is True
+
+
 def test_split_dev_export_and_freeze_gate(tmp_path: Path) -> None:
     queue = [
         _queue_row(query_id="q1", document_id="d1", split="dev", review_status="reviewed", relevance_grade=2),

@@ -388,6 +388,16 @@ def apply_confirmed_to_queue(
     return out, updated
 
 
+_REVIEWED_STATUSES = frozenset({"reviewed", "human_reviewed"})
+
+
+def _row_excluded_from_qrels(row: dict[str, Any]) -> bool:
+    if row.get("exclude_from_qrels") is True:
+        return True
+    status = str(row.get("dedup_status") or "")
+    return status in {"merged_into_canonical", "pending_merge"} and row.get("is_duplicate") is True
+
+
 def reviewed_qrel_entries(
     queue_rows: Sequence[dict[str, Any]],
     *,
@@ -397,7 +407,9 @@ def reviewed_qrel_entries(
     for row in queue_rows:
         if split and row.get("split") != split:
             continue
-        if row.get("review_status") != "reviewed":
+        if _row_excluded_from_qrels(row):
+            continue
+        if row.get("review_status") not in _REVIEWED_STATUSES:
             continue
         grade = row.get("relevance_grade")
         if grade is None:
@@ -417,13 +429,16 @@ def reviewed_qrel_entries(
 
 
 def split_review_complete(queue_rows: Sequence[dict[str, Any]], split: str) -> bool:
-    rows = [row for row in queue_rows if row.get("split") == split]
+    rows = [row for row in queue_rows if row.get("split") == split and not _row_excluded_from_qrels(row)]
     if not rows:
         return False
     query_ids = {str(row["query_id"]) for row in rows}
     for query_id in query_ids:
         qrows = [row for row in rows if row.get("query_id") == query_id]
-        if any(row.get("review_status") != "reviewed" or row.get("relevance_grade") is None for row in qrows):
+        if any(
+            row.get("review_status") not in _REVIEWED_STATUSES or row.get("relevance_grade") is None
+            for row in qrows
+        ):
             return False
     return True
 
