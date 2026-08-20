@@ -33,7 +33,11 @@ from app.rag.legal_v2.benchmark.case_similarity_query_audit import (  # noqa: E4
     audit_and_rewrite_v2_query,
     classify_query,
 )
-from app.rag.legal_v2.identity import is_valid_ecli, normalize_ecli  # noqa: E402
+from app.rag.legal_v2.identity import (  # noqa: E402
+    collapse_document_ids_for_pool,
+    is_valid_ecli,
+    normalize_ecli,
+)
 from app.rag.legal_v2.indexing import LEGAL_V2_PROFILE  # noqa: E402
 from app.rag.legal_v2.query_spec import build_query_spec_v2  # noqa: E402
 from app.rag.legal_v2.retrieve.retriever import (  # noqa: E402
@@ -190,9 +194,12 @@ def _pool_candidates_for_query(
         if doc not in seen:
             seen.add(doc)
             all_docs.append(doc)
-    if legacy_ecli not in seen:
-        all_docs.insert(0, legacy_ecli)
-        seen.add(legacy_ecli)
+    legacy_norm = normalize_ecli(legacy_ecli) if legacy_ecli else ""
+    # Force-insert legacy target, then collapse bare↔``.N`` representation
+    # variants (e.g. IV.ÚS 23/99 vs IV.ÚS 23/99 #1) without merging ``.1``/``.2``.
+    if legacy_norm and legacy_norm not in seen:
+        all_docs.insert(0, legacy_norm)
+    all_docs = collapse_document_ids_for_pool(all_docs)
     return {
         "candidates": all_docs,
         "dense_map": dense_map,

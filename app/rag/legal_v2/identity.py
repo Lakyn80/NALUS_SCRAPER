@@ -70,23 +70,94 @@ def eclis_equal(left: str | None, right: str | None) -> bool:
     return bool(left_key) and left_key == right_key
 
 
-def eclis_are_representation_variants(left: str | None, right: str | None) -> bool:
-    """True when one ECLI is the other plus a dotted numeric representation suffix.
+_TRAILING_ORDINAL_SEGMENT_RE = re.compile(r"^(?P<stem>.+)\.(?P<ord>\d+)$", re.IGNORECASE)
 
-    Example: `ECLI:CZ:US:1999:4.US.23.99` and `...4.US.23.99.1` are variants.
-    Sibling ordinals (`...19.1` vs `...19.2`) are not.
+
+def ecli_ordinal_stem_and_suffix(value: str | None) -> tuple[str, str | None]:
+    """Split a normalized ECLI into stem + optional trailing numeric ordinal segment.
+
+    Example:
+      ``ECLI:CZ:US:1999:4.US.23.99.1`` → (``ECLI:CZ:US:1999:4.US.23.99``, ``1``)
+      ``ECLI:CZ:US:1999:4.US.23.99``   → (``ECLI:CZ:US:1999:4.US.23``, ``99``)
+
+    Note: bare year-ending forms still have a numeric tail; use
+    ``eclis_are_representation_variants`` for bare↔``.1`` identity candidates.
     """
-    left_key = ecli_key(left)
-    right_key = ecli_key(right)
-    if not left_key or not right_key or left_key == right_key:
+    text = normalize_ecli(value)
+    if not text:
+        return "", None
+    # Only inspect the ordinal payload after year (preserve ECLI:CZ:COURT:YEAR:…).
+    parts = text.split(":")
+    if len(parts) < 5:
+        return text, None
+    prefix = ":".join(parts[:4])
+    ordinal = ":".join(parts[4:])
+    match = _TRAILING_ORDINAL_SEGMENT_RE.match(ordinal)
+    if not match:
+        return text, None
+    stem = f"{prefix}:{match.group('stem')}"
+    return stem, match.group("ord")
+
+
+def eclis_are_representation_variants(left: str | None, right: str | None) -> bool:
+    """True when one ID is the other plus a single trailing ``.<digits>`` segment.
+
+    Catches bare↔``.1`` NALUS pairs such as ``…4.US.23.99`` vs ``…4.US.23.99.1``.
+
+    Does **not** treat ``…19.1`` and ``…19.2`` as the same decision (neither is a
+    prefix of the other). Callers must still require content/metadata evidence
+    before merging judgments; this helper is only an identity-candidate signal
+    for pool deduplication / alias layers.
+    """
+    left_n = normalize_ecli(left)
+    right_n = normalize_ecli(right)
+    if not left_n or not right_n or eclis_equal(left_n, right_n):
         return False
-    shorter, longer = (
-        (left_key, right_key) if len(left_key) <= len(right_key) else (right_key, left_key)
-    )
-    if not longer.startswith(shorter + '.'):
+    shorter, longer = sorted((left_n, right_n), key=len)
+    if not longer.startswith(f"{shorter}."):
         return False
     suffix = longer[len(shorter) + 1 :]
-    return suffix.isdigit()
+    return bool(suffix) and suffix.isdigit()
+
+
+def prefer_canonical_ecli_form(left: str | None, right: str | None) -> str:
+    """Prefer the longer / suffixed form when two IDs are representation variants."""
+    left_n = normalize_ecli(left)
+    right_n = normalize_ecli(right)
+    if not left_n:
+        return right_n
+    if not right_n:
+        return left_n
+    if not eclis_are_representation_variants(left_n, right_n):
+        # Stable preference for non-variants: keep left.
+        return left_n
+    return left_n if len(left_n) >= len(right_n) else right_n
+
+
+def collapse_document_ids_for_pool(document_ids: list[str]) -> list[str]:
+    """Deduplicate pool IDs that are bare↔suffixed representation variants.
+
+    Preserves first-seen order of the surviving canonical form (preferring the
+    longer / ``.N`` form when a variant pair is found). Does not collapse
+    distinct ordinals such as ``.1`` vs ``.2``.
+    """
+    survivors: list[str] = []
+    for raw in document_ids:
+        doc = normalize_ecli(raw) if is_valid_ecli(str(raw)) else str(raw or "").strip()
+        if not doc:
+            continue
+        merged = False
+        for idx, existing in enumerate(survivors):
+            if eclis_equal(existing, doc):
+                merged = True
+                break
+            if eclis_are_representation_variants(existing, doc):
+                survivors[idx] = prefer_canonical_ecli_form(existing, doc)
+                merged = True
+                break
+        if not merged:
+            survivors.append(doc)
+    return survivors
 
 
 def is_valid_ecli(value: str | None) -> bool:

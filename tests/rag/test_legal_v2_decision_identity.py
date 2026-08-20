@@ -157,6 +157,41 @@ def test_aggregation_key_groups_same_ecli() -> None:
     assert ecli_key(left) == ecli_key(right)
 
 
+def test_iv_us_23_99_bare_and_dot1_are_representation_variants() -> None:
+    from app.rag.legal_v2.identity import (
+        collapse_document_ids_for_pool,
+        eclis_are_representation_variants,
+        prefer_canonical_ecli_form,
+    )
+
+    bare = "ECLI:CZ:US:1999:4.US.23.99"
+    dotted = "ECLI:CZ:US:1999:4.US.23.99.1"
+    assert eclis_are_representation_variants(bare, dotted)
+    assert prefer_canonical_ecli_form(bare, dotted) == dotted
+    collapsed = collapse_document_ids_for_pool([bare, dotted, "ECLI:CZ:US:2020:Pl.US.12.20.1"])
+    assert collapsed == [dotted, "ECLI:CZ:US:2020:Pl.US.12.20.1"]
+
+
+def test_distinct_ordinal_suffixes_are_not_representation_variants() -> None:
+    from app.rag.legal_v2.identity import (
+        collapse_document_ids_for_pool,
+        eclis_are_representation_variants,
+    )
+
+    part1 = "ECLI:CZ:US:2019:1.US.2389.19.1"
+    part2 = "ECLI:CZ:US:2019:1.US.2389.19.2"
+    assert not eclis_are_representation_variants(part1, part2)
+    assert collapse_document_ids_for_pool([part1, part2]) == [part1, part2]
+
+
+def test_normalize_ecli_does_not_silently_strip_trailing_ordinal() -> None:
+    from app.rag.legal_v2.identity import normalize_ecli
+
+    dotted = "ECLI:CZ:US:1999:4.US.23.99.1"
+    assert normalize_ecli(dotted) == dotted
+    assert normalize_ecli("ECLI:CZ:US:1999:4.US.23.99") == "ECLI:CZ:US:1999:4.US.23.99"
+
+
 def test_evaluator_compares_ecli_not_doc_star() -> None:
     row = evaluate_ranked_documents(
         query_id="q1",
