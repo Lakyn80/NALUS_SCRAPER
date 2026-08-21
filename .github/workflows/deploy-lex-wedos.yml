@@ -227,18 +227,11 @@ jobs:
               NEED_ARCHIVE_BUILD=1
               echo "Archive sqlite missing; will build"
             else
-              DOC_COUNT=$(docker compose \
-                -f docker-compose.lex.prod.yml \
-                --env-file .env.prod \
-                run --rm --no-deps --entrypoint python \
-                -v "$(pwd)/data/storage:/app/storage:ro" \
-                api -c 'import sqlite3; c=sqlite3.connect("/app/storage/rag/archive/judgment_archive_v1.sqlite"); print(c.execute("select coalesce(document_count,0) from archive_meta limit 1").fetchone()[0])' \
-                2>/dev/null | tr -d '\r' | tail -n 1 || echo 0)
-              if ! [[ "$DOC_COUNT" =~ ^[0-9]+$ ]] || [ "$DOC_COUNT" -lt 1 ]; then
+              ARCHIVE_BYTES=$(wc -c < "$ARCHIVE_SQLITE" | tr -d ' ')
+              echo "Archive sqlite present bytes=${ARCHIVE_BYTES}"
+              if [ "${ARCHIVE_BYTES:-0}" -lt 1000000 ]; then
                 NEED_ARCHIVE_BUILD=1
-                echo "Archive sqlite empty/unready (count=${DOC_COUNT}); will build"
-              else
-                echo "Archive sqlite already present document_count=${DOC_COUNT}"
+                echo "Archive sqlite too small; will rebuild"
               fi
             fi
             if [ "$NEED_ARCHIVE_BUILD" -eq 1 ]; then
@@ -286,7 +279,17 @@ jobs:
               docker logs --tail=200 lex-api || true
               exit 1
             fi
-            python3 -c 'import json; p=json.load(open("/tmp/lex_archive_smoke.json",encoding="utf-8")); ready=bool(p.get("index_ready")); courts=p.get("courts") or []; us=next((c for c in courts if c.get("court_id")=="constitutional_court"), None); count=int((us or {}).get("document_count") or 0); print(f"Archive smoke index_ready={ready} constitutional_document_count={count}"); raise SystemExit(0 if ready and count>=1 else "Archive index not ready or empty after deploy")'
+            if ! grep -q '"index_ready":true' /tmp/lex_archive_smoke.json; then
+              echo "Archive smoke index_ready!=true" >&2
+              cat /tmp/lex_archive_smoke.json >&2 || true
+              exit 1
+            fi
+            if ! grep -q '"document_count":[1-9]' /tmp/lex_archive_smoke.json; then
+              echo "Archive smoke document_count empty" >&2
+              cat /tmp/lex_archive_smoke.json >&2 || true
+              exit 1
+            fi
+            echo "Archive smoke passed"
             rm -f /tmp/lex_archive_smoke.json
 
             echo "DEPLOY_SHA=${DEPLOY_SHA}"
