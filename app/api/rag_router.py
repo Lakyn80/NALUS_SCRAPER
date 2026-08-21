@@ -1473,6 +1473,14 @@ async def case_similarity_stage1_search(
                 "original_query_length",
                 "input_processing",
                 "rerank",
+                "fast_retrieval_profile",
+                "fast_retrieval_profile_source",
+                "fast_dense_variant",
+                "fast_dense_variant_source",
+                "fast_dense_variant_applied",
+                "use_quantization_search_params",
+                "dense_enabled",
+                "bm25_enabled",
             }
         },
     )

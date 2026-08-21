@@ -219,77 +219,27 @@ jobs:
             echo "FAST smoke passed http=${smoke_code}"
             rm -f /tmp/lex_fast_smoke.json
 
-            ARCHIVE_SQLITE="data/storage/rag/archive/judgment_archive_v1.sqlite"
-            ARCHIVE_BATCHES="data/batches"
-            mkdir -p data/storage/rag/archive
-            NEED_ARCHIVE_BUILD=0
-            if [ ! -f "$ARCHIVE_SQLITE" ]; then
-              NEED_ARCHIVE_BUILD=1
-              echo "Archive sqlite missing; will build"
-            else
-              ARCHIVE_BYTES=$(wc -c < "$ARCHIVE_SQLITE" | tr -d ' ')
-              echo "Archive sqlite present bytes=${ARCHIVE_BYTES}"
-              if [ "${ARCHIVE_BYTES:-0}" -lt 1000000 ]; then
-                NEED_ARCHIVE_BUILD=1
-                echo "Archive sqlite too small; will rebuild"
-              fi
-            fi
-            if [ "$NEED_ARCHIVE_BUILD" -eq 1 ]; then
-              if [ ! -d "$ARCHIVE_BATCHES" ]; then
-                echo "Archive batches dir missing: ${ARCHIVE_BATCHES}" >&2
-                ls -la data || true
-                exit 1
-              fi
-              BATCH_FILES=$(find "$ARCHIVE_BATCHES" -type f \( -name '*.json' -o -name '*.jsonl' \) 2>/dev/null | wc -l | tr -d ' ')
-              echo "Archive build starting batches_dir=${ARCHIVE_BATCHES} batch_files=${BATCH_FILES}"
-              if [ "${BATCH_FILES:-0}" -lt 1 ]; then
-                echo "No batch JSON files found under ${ARCHIVE_BATCHES}" >&2
-                find "$ARCHIVE_BATCHES" -maxdepth 2 -type f | head -n 50 || true
-                exit 1
-              fi
-              docker compose \
-                -f docker-compose.lex.prod.yml \
-                --env-file .env.prod \
-                run --rm --no-deps \
-                --entrypoint python \
-                -v "$(pwd)/data/storage:/app/storage" \
-                -v "$(pwd)/data/batches:/app/batches:ro" \
-                api scripts/legal_v2/build_judgment_archive_index.py \
-                  --batches-dir /app/batches \
-                  --sqlite-path /app/storage/rag/archive/judgment_archive_v1.sqlite
-              docker compose \
-                -f docker-compose.lex.prod.yml \
-                --env-file .env.prod \
-                up -d --no-deps api
-              for i in $(seq 1 30); do
-                if curl -sf http://127.0.0.1:8029/health >/dev/null; then
-                  break
-                fi
-                sleep 3
-              done
-            fi
-
+            # Archive index is materialised on the host volume (not rebuilt every deploy).
+            # Fail deploy only when the public archive API is empty/unready.
             archive_code=$(curl -sS -o /tmp/lex_archive_smoke.json -w "%{http_code}" \
               --connect-timeout 10 \
               --max-time 30 \
               http://127.0.0.1:8029/api/judgments/archive || true)
+            echo "Archive smoke http=${archive_code}"
             if [ "$archive_code" != "200" ]; then
               echo "Archive smoke FAILED http=${archive_code}" >&2
               cat /tmp/lex_archive_smoke.json >&2 || true
               docker logs --tail=200 lex-api || true
               exit 1
             fi
-            if ! grep -q '"index_ready":true' /tmp/lex_archive_smoke.json; then
-              echo "Archive smoke index_ready!=true" >&2
+            if grep -q '"index_ready": *true' /tmp/lex_archive_smoke.json \
+              && grep -q '"document_count": *[1-9]' /tmp/lex_archive_smoke.json; then
+              echo "Archive smoke passed"
+            else
+              echo "Archive smoke index empty/unready" >&2
               cat /tmp/lex_archive_smoke.json >&2 || true
               exit 1
             fi
-            if ! grep -q '"document_count":[1-9]' /tmp/lex_archive_smoke.json; then
-              echo "Archive smoke document_count empty" >&2
-              cat /tmp/lex_archive_smoke.json >&2 || true
-              exit 1
-            fi
-            echo "Archive smoke passed"
             rm -f /tmp/lex_archive_smoke.json
 
             echo "DEPLOY_SHA=${DEPLOY_SHA}"
