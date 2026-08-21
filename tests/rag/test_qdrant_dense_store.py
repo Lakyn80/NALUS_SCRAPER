@@ -103,6 +103,31 @@ def test_search_maps_points_without_changing_retrieval_output(
     assert chunks[0].source == "dense"
 
 
+def test_v2_legacy_dense_search_omits_search_params(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Classic Legal v2 FAST dense (pre-INT8): plain query_points only."""
+    monkeypatch.setenv("NALUS_QDRANT_QUANTIZATION_ENABLED", "1")
+    embedder = _CountingEmbedder([0.1] * 1024)
+    client = MagicMock()
+    client.query_points.return_value = SimpleNamespace(
+        points=[_FakePoint(id="p1", score=0.5, payload=_payload())]
+    )
+    store = QdrantDenseStore(
+        client=client,
+        embedder=embedder,
+        config=_config(tmp_path),
+        use_quantization_search_params=False,
+    )
+
+    store.search("únos", top_k=10)
+
+    kwargs = client.query_points.call_args.kwargs
+    assert "search_params" not in kwargs
+    assert kwargs["limit"] == 10
+
+
 def test_search_logs_latency_breakdown_without_query_text(
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,

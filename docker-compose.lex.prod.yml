@@ -43,6 +43,8 @@ services:
       # Canonical FAST selector (dense on WEDOS). Legacy dense-only kept as alias.
       NALUS_FAST_RETRIEVAL_PROFILE: dense
       NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY: "1"
+      # Dense implementation: current (INT8 search policy) | v2 (classic plain query).
+      NALUS_FAST_DENSE_VARIANT: current
       NALUS_LEGAL_V2_LONG_INPUT_ENABLED: "0"
       NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED: "0"
       NALUS_LEGAL_V2_CE_ALLOW_DOWNLOAD: "0"

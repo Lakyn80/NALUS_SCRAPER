@@ -29,13 +29,25 @@ Compose sets:
 
 ```text
 NALUS_FAST_RETRIEVAL_PROFILE=dense
+NALUS_FAST_DENSE_VARIANT=current
 ```
 
-Supported values (env-only switch; no FE/API/source change):
+Supported FAST channel values (env-only switch; no FE/API/source change):
 
 - `dense` — BGE-M3 + Qdrant (WEDOS now)
 - `bm25` — BM25 only (stronger host)
 - `hybrid` — Dense + BM25 RRF (stronger host)
+
+Within `dense`, implementation variant:
+
+- `current` — live dense path (honors `NALUS_QDRANT_QUANTIZATION_*`)
+- `v2` — classic Legal v2 plain `query_points` (pre-INT8 search policy; commit `e9fa438^`)
+
+Rollback Dense only (API recreate required):
+
+```text
+NALUS_FAST_DENSE_VARIANT=v2
+```
 
 Legacy alias: `NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY=1` still forces dense when the
 new selector is unset.

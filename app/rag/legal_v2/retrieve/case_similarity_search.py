@@ -33,6 +33,12 @@ from app.rag.legal_v2.retrieve.fast_retrieval_profile import (
     fast_profile_uses_dense,
     resolve_fast_retrieval_profile,
 )
+from app.rag.legal_v2.retrieve.fast_dense_variant import (
+    V2_DENSE_SOURCE_COMMIT,
+    V2_DENSE_SOURCE_NOTE,
+    dense_variant_uses_legacy_qdrant_search,
+    resolve_fast_dense_variant,
+)
 from app.rag.legal_v2.retrieve.retriever import (
     LegalV2HybridRetriever,
     LegalV2RetrievalResult,
@@ -193,6 +199,9 @@ class CaseSimilarityStage1Runtime:
     colbert_error_type: str | None = None
     fast_retrieval_profile: str = "dense"
     fast_retrieval_profile_source: str = "default"
+    fast_dense_variant: str = "current"
+    fast_dense_variant_source: str = "default"
+    fast_dense_variant_applied: bool = True
 
     def _uses_b_indexes(self, profile_id: str) -> bool:
         return profile_id in {"precise", "balanced", "ce7"}
@@ -303,8 +312,19 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             fast_profile, fast_profile_source = resolve_fast_retrieval_profile()
         except ValueError as exc:
             raise RetrievalConfigurationError(str(exc)) from exc
+        try:
+            dense_variant, dense_variant_source = resolve_fast_dense_variant()
+        except ValueError as exc:
+            raise RetrievalConfigurationError(str(exc)) from exc
         uses_dense = fast_profile_uses_dense(fast_profile)
         uses_bm25 = fast_profile_uses_bm25(fast_profile)
+        # Dense variant only applies on the dense channel; bm25/hybrid ignore it.
+        dense_variant_applied = uses_dense
+        use_quant_params = True
+        if dense_variant_applied and dense_variant_uses_legacy_qdrant_search(
+            dense_variant
+        ):
+            use_quant_params = False
         # Dense-only / CE-off hosts (e.g. WEDOS 4 GB) must not require CE BM25
         # sidecars or load a second hybrid index into RAM.
         skip_ce_bm25 = (fast_profile == "dense") or (not cross_encoder_enabled())
@@ -312,18 +332,35 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             fast_config,
             dense_enabled=uses_dense,
             bm25_enabled=uses_bm25,
+            use_quantization_search_params=use_quant_params,
         )
         logger.info(
             "[legal_v2.stage1] FAST retrieval profile=%s source=%s "
-            "dense_enabled=%s bm25_enabled=%s",
+            "dense_enabled=%s bm25_enabled=%s dense_variant=%s "
+            "dense_variant_source=%s dense_variant_applied=%s "
+            "use_quantization_search_params=%s",
             fast_profile,
             fast_profile_source,
             uses_dense,
             uses_bm25,
+            dense_variant,
+            dense_variant_source,
+            dense_variant_applied,
+            use_quant_params,
         )
+        if dense_variant_applied and dense_variant == "v2":
+            logger.info(
+                "[legal_v2.stage1] dense variant v2 active source_commit=%s note=%s",
+                V2_DENSE_SOURCE_COMMIT,
+                V2_DENSE_SOURCE_NOTE,
+            )
         if skip_ce_bm25:
             ce_config = _replace_config(
-                ce_config, dense_enabled=True, bm25_enabled=False
+                ce_config,
+                dense_enabled=True,
+                bm25_enabled=False,
+                # CE/B path stays on current dense search policy.
+                use_quantization_search_params=True,
             )
             logger.info(
                 "[legal_v2.stage1] skipping CE BM25 load "
@@ -390,6 +427,9 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             ce_config=None if skip_ce_bm25 else ce_config,
             fast_retrieval_profile=fast_profile,
             fast_retrieval_profile_source=fast_profile_source,
+            fast_dense_variant=dense_variant,
+            fast_dense_variant_source=dense_variant_source,
+            fast_dense_variant_applied=dense_variant_applied,
         )
         logger.info(
             "[legal_v2.stage1] runtime ready "
@@ -665,6 +705,16 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
         "retrieval_stage": STAGE_1_RETRIEVAL,
         "fast_retrieval_profile": fast_profile,
         "fast_retrieval_profile_source": fast_profile_source,
+        "fast_dense_variant": getattr(runtime, "fast_dense_variant", "current"),
+        "fast_dense_variant_source": getattr(
+            runtime, "fast_dense_variant_source", "default"
+        ),
+        "fast_dense_variant_applied": bool(
+            getattr(runtime, "fast_dense_variant_applied", uses_dense)
+        ),
+        "use_quantization_search_params": bool(
+            getattr(runtime.config, "use_quantization_search_params", True)
+        ),
         "model_loaded": model_loaded,
         "bm25_loaded": bm25_loaded if uses_bm25 else False,
         "fast_bm25_warmup_enabled": warm_fast_bm25,
@@ -990,6 +1040,14 @@ async def search_case_similarity_stage1(
         "fast_retrieval_profile": getattr(active, "fast_retrieval_profile", None),
         "fast_retrieval_profile_source": getattr(
             active, "fast_retrieval_profile_source", None
+        ),
+        "fast_dense_variant": getattr(active, "fast_dense_variant", None),
+        "fast_dense_variant_source": getattr(active, "fast_dense_variant_source", None),
+        "fast_dense_variant_applied": bool(
+            getattr(active, "fast_dense_variant_applied", False)
+        ),
+        "use_quantization_search_params": bool(
+            getattr(active_config, "use_quantization_search_params", True)
         ),
         "dense_enabled": bool(getattr(active_config, "dense_enabled", True)),
         "bm25_enabled": bool(getattr(active_config, "bm25_enabled", True)),

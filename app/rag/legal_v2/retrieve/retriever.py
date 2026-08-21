@@ -46,6 +46,8 @@ class LegalV2RetrieverConfig:
     dense_enabled: bool = True
     # When False, skip BM25 (dense-only). Ops flag for low-RAM coexistence with full-B ingest.
     bm25_enabled: bool = True
+    # Dense Qdrant search: True = current INT8 policy path; False = classic v2 plain query.
+    use_quantization_search_params: bool = True
 
     def validate(self) -> None:
         for field_name in (
@@ -195,6 +197,9 @@ class LegalV2HybridRetriever:
                 "bm25_enabled": bm25_enabled,
                 "dense_only": dense_enabled and not bm25_enabled,
                 "bm25_only": bm25_enabled and not dense_enabled,
+                "use_quantization_search_params": bool(
+                    self._config.use_quantization_search_params
+                ),
                 "source_filters": (
                     source_filters.as_dict()
                     if source_filters is not None and source_filters.is_active()
@@ -247,7 +252,12 @@ def build_live_legal_v2_retriever(client: Any, embedder: Any, config: LegalV2Ret
             max_candidate_count=max(config.dense_candidate_chunks, config.bm25_candidate_chunks),
             lexical_filter_enabled=False,
         )
-        dense: Any = QdrantDenseStore(client=client, embedder=embedder, config=prod_config)
+        dense: Any = QdrantDenseStore(
+            client=client,
+            embedder=embedder,
+            config=prod_config,
+            use_quantization_search_params=bool(config.use_quantization_search_params),
+        )
     else:
         dense = _DisabledDenseStore()
     if config.bm25_enabled:

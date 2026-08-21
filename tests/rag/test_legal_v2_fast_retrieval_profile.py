@@ -5,6 +5,10 @@ from __future__ import annotations
 import pytest
 
 from app.rag.legal_v2.query_spec import build_query_spec_v2
+from app.rag.legal_v2.retrieve.fast_dense_variant import (
+    normalize_fast_dense_variant,
+    resolve_fast_dense_variant,
+)
 from app.rag.legal_v2.retrieve.fast_retrieval_profile import (
     normalize_fast_retrieval_profile,
     resolve_fast_retrieval_profile,
@@ -23,6 +27,25 @@ def test_resolve_fast_profile_default_dense(monkeypatch) -> None:
     profile, source = resolve_fast_retrieval_profile()
     assert profile == "dense"
     assert source == "default"
+
+
+def test_resolve_fast_dense_variant_default_current(monkeypatch) -> None:
+    monkeypatch.delenv("NALUS_FAST_DENSE_VARIANT", raising=False)
+    variant, source = resolve_fast_dense_variant()
+    assert variant == "current"
+    assert source == "default"
+
+
+def test_resolve_fast_dense_variant_v2(monkeypatch) -> None:
+    monkeypatch.setenv("NALUS_FAST_DENSE_VARIANT", "v2")
+    variant, source = resolve_fast_dense_variant()
+    assert variant == "v2"
+    assert source == "NALUS_FAST_DENSE_VARIANT"
+
+
+def test_invalid_fast_dense_variant_fails_safe() -> None:
+    with pytest.raises(ValueError, match="unknown NALUS_FAST_DENSE_VARIANT"):
+        normalize_fast_dense_variant("legacy")
 
 
 def test_resolve_fast_profile_explicit_hybrid(monkeypatch) -> None:

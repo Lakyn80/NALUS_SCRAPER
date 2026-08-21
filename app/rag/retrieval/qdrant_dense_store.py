@@ -20,10 +20,13 @@ class QdrantDenseStore:
         client: Any,
         embedder: Any,
         config: ProductionRetrievalConfig,
+        use_quantization_search_params: bool = True,
     ) -> None:
         self._client = client
         self._embedder = embedder
         self._config = config
+        # False = classic Legal v2 FAST dense (pre-INT8 policy): plain query_points.
+        self._use_quantization_search_params = bool(use_quantization_search_params)
 
     def search(
         self,
@@ -43,15 +46,30 @@ class QdrantDenseStore:
                 f"{len(vector)} != {self._config.profile.embedding_dimension}"
             )
 
-        quantization = qdrant_quantization_policy_from_env()
         qdrant_started = time.perf_counter()
         query_kwargs: dict[str, Any] = {
             "collection_name": self._config.qdrant_collection,
             "query": vector,
             "limit": top_k,
             "with_payload": True,
-            "search_params": quantization.to_search_params(),
         }
+        quantization_diag: dict[str, Any]
+        if self._use_quantization_search_params:
+            quantization = qdrant_quantization_policy_from_env()
+            query_kwargs["search_params"] = quantization.to_search_params()
+            quantization_diag = {
+                **quantization.diagnostics(),
+                "dense_search_mode": "current_quantization_policy",
+            }
+        else:
+            # Exact pre-INT8 Legal v2 behavior (e9fa438^): no search_params.
+            quantization_diag = {
+                "quantization_enabled": False,
+                "quantization_ignore": True,
+                "quantization_rescore": False,
+                "quantization_oversampling": 1.0,
+                "dense_search_mode": "v2_legacy_plain_query_points",
+            }
         if query_filter is not None:
             query_kwargs["query_filter"] = query_filter
         result = self._client.query_points(**query_kwargs)
@@ -62,12 +80,11 @@ class QdrantDenseStore:
         conversion_latency_ms = _elapsed_ms(conversion_started)
         total_latency_ms = _elapsed_ms(started)
 
-        quantization_diag = quantization.diagnostics()
         logger.info(
             "[dense_store] search completed embedding_latency_ms=%.3f "
             "qdrant_latency_ms=%.3f conversion_latency_ms=%.3f "
             "total_latency_ms=%.3f top_k=%s query_length=%s "
-            "quantization_enabled=%s quantization_ignore=%s",
+            "quantization_enabled=%s quantization_ignore=%s dense_search_mode=%s",
             embedding_latency_ms,
             qdrant_latency_ms,
             conversion_latency_ms,
@@ -76,6 +93,7 @@ class QdrantDenseStore:
             len(query),
             quantization_diag["quantization_enabled"],
             quantization_diag["quantization_ignore"],
+            quantization_diag["dense_search_mode"],
             extra={
                 "event_name": "dense_store.search.completed",
                 "embedding_latency_ms": round(embedding_latency_ms, 3),
