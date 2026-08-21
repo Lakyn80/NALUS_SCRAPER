@@ -1,6 +1,9 @@
 # Lex production compose — dense FAST only (WEDOS 4 GB RAM).
 # Bind app ports to localhost; Nginx terminates HTTPS for lex.lukiora.com.
 #
+# FAST channel switch (no FE/API/source change on stronger hosts):
+#   NALUS_FAST_RETRIEVAL_PROFILE=dense|bm25|hybrid
+#
 # Usage on VPS:
 #   cd /home/lucky/projects/apps/lex
 #   docker compose -f docker-compose.lex.prod.yml --env-file .env.prod up -d
@@ -37,16 +40,20 @@ services:
       NALUS_LEGAL_V2_CASE_SIMILARITY_ENABLED: "1"
       NALUS_LEGAL_V2_STAGE1_WARMUP_ON_START: "1"
       NALUS_LEGAL_V2_STAGE1_WARMUP_FAST_BM25: "0"
+      # Canonical FAST selector (dense on WEDOS). Legacy dense-only kept as alias.
+      NALUS_FAST_RETRIEVAL_PROFILE: dense
       NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY: "1"
       NALUS_LEGAL_V2_LONG_INPUT_ENABLED: "0"
       NALUS_LEGAL_V2_CROSS_ENCODER_ENABLED: "0"
       NALUS_LEGAL_V2_CE_ALLOW_DOWNLOAD: "0"
+      NALUS_LEGAL_V2_COLBERT_ENABLED: "0"
       NALUS_LEGAL_V2_FAST_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full
       NALUS_LEGAL_V2_FAST_BM25_INDEX_ID: nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full
       NALUS_LEGAL_V2_FAST_BM25_SIDECAR_PATH: /app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full.sqlite
       NALUS_LEGAL_V2_QDRANT_COLLECTION: nalus_legal_paragraph_chunks_v2_chunk_ab_v8_a_current_full
       NALUS_LEGAL_V2_BM25_SIDECAR_PATH: /app/storage/rag/bm25/nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full.sqlite
       NALUS_LEGAL_V2_BM25_INDEX_ID: nalus_legal_paragraph_bm25_v2_chunk_ab_v8_a_current_full
+      NALUS_JUDGMENT_ARCHIVE_SQLITE_PATH: /app/storage/rag/archive/judgment_archive_v1.sqlite
       NALUS_LEGAL_V2_DEFAULT_RESULT_LIMIT: "10"
       NALUS_LEGAL_V2_MAX_RESULT_LIMIT: "50"
       NALUS_LEGAL_V2_CANDIDATE_DOCUMENTS: "50"

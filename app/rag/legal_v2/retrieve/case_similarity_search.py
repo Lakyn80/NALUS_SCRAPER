@@ -28,6 +28,11 @@ from app.rag.legal_v2.retrieve.retrieval_profiles import (
     fast_index_binding,
     resolve_retrieval_profile,
 )
+from app.rag.legal_v2.retrieve.fast_retrieval_profile import (
+    fast_profile_uses_bm25,
+    fast_profile_uses_dense,
+    resolve_fast_retrieval_profile,
+)
 from app.rag.legal_v2.retrieve.retriever import (
     LegalV2HybridRetriever,
     LegalV2RetrievalResult,
@@ -80,14 +85,25 @@ def stage1_warmup_fast_bm25_enabled() -> bool:
 
 
 def stage1_fast_dense_only_enabled() -> bool:
-    """Skip FAST BM25 entirely (dense-only Stage 1) when set.
+    """True when FAST channel is dense-only (no BM25 load).
 
-    Disabled by default. Enable with ``NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY=1``
-    so FAST can stay available on a 16GB host while full-B ingest holds GPU RAM
-    without loading the multi-GB FAST BM25 sidecar on first query.
+    Prefer ``NALUS_FAST_RETRIEVAL_PROFILE=dense``. Legacy
+    ``NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY=1`` remains supported when the new
+    selector is unset (see ``resolve_fast_retrieval_profile``).
     """
-    raw = os.getenv("NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY", "0")
-    return str(raw).strip().lower() in _TRUTHY
+    try:
+        profile, _source = resolve_fast_retrieval_profile()
+    except ValueError:
+        return False
+    return profile == "dense"
+
+
+def stage1_fast_retrieval_profile() -> tuple[str, str]:
+    """Return ``(profile_id, source)`` for FAST channel selection."""
+    try:
+        return resolve_fast_retrieval_profile()
+    except ValueError as exc:
+        raise RetrievalConfigurationError(str(exc)) from exc
 
 
 def default_result_limit() -> int:
@@ -175,6 +191,8 @@ class CaseSimilarityStage1Runtime:
     colbert_config: Any | None = None
     colbert_ready: bool = False
     colbert_error_type: str | None = None
+    fast_retrieval_profile: str = "dense"
+    fast_retrieval_profile_source: str = "default"
 
     def _uses_b_indexes(self, profile_id: str) -> bool:
         return profile_id in {"precise", "balanced", "ce7"}
@@ -281,27 +299,41 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
 
         from app.rag.legal_v2.rerank.config import cross_encoder_enabled
 
-        fast_dense_only = stage1_fast_dense_only_enabled()
+        try:
+            fast_profile, fast_profile_source = resolve_fast_retrieval_profile()
+        except ValueError as exc:
+            raise RetrievalConfigurationError(str(exc)) from exc
+        uses_dense = fast_profile_uses_dense(fast_profile)
+        uses_bm25 = fast_profile_uses_bm25(fast_profile)
         # Dense-only / CE-off hosts (e.g. WEDOS 4 GB) must not require CE BM25
         # sidecars or load a second hybrid index into RAM.
-        skip_ce_bm25 = fast_dense_only or (not cross_encoder_enabled())
-        if fast_dense_only:
-            fast_config = _replace_config(fast_config, bm25_enabled=False)
-            logger.info(
-                "[legal_v2.stage1] FAST dense-only enabled "
-                "(NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY=1); skipping FAST BM25 load"
-            )
+        skip_ce_bm25 = (fast_profile == "dense") or (not cross_encoder_enabled())
+        fast_config = _replace_config(
+            fast_config,
+            dense_enabled=uses_dense,
+            bm25_enabled=uses_bm25,
+        )
+        logger.info(
+            "[legal_v2.stage1] FAST retrieval profile=%s source=%s "
+            "dense_enabled=%s bm25_enabled=%s",
+            fast_profile,
+            fast_profile_source,
+            uses_dense,
+            uses_bm25,
+        )
         if skip_ce_bm25:
-            ce_config = _replace_config(ce_config, bm25_enabled=False)
+            ce_config = _replace_config(
+                ce_config, dense_enabled=True, bm25_enabled=False
+            )
             logger.info(
                 "[legal_v2.stage1] skipping CE BM25 load "
-                "(dense-only=%s cross_encoder_enabled=%s)",
-                fast_dense_only,
+                "(fast_profile=%s cross_encoder_enabled=%s)",
+                fast_profile,
                 cross_encoder_enabled(),
             )
         fast_config.validate()
         ce_config.validate()
-        if (not fast_dense_only) and (not fast_config.bm25_sidecar_path.exists()):
+        if uses_bm25 and (not fast_config.bm25_sidecar_path.exists()):
             raise RetrievalConfigurationError(
                 f"FAST BM25 sidecar missing: {fast_config.bm25_sidecar_path}"
             )
@@ -314,27 +346,31 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             url=os.getenv("QDRANT_URL", "http://qdrant:6333"),
             timeout=10,
         )
-        fast_info = _require_collection(client, fast_config.qdrant_collection)
+        fast_info = None
+        if uses_dense:
+            fast_info = _require_collection(client, fast_config.qdrant_collection)
         ce_info = None
         if not skip_ce_bm25:
             ce_info = _require_collection(client, ce_config.qdrant_collection)
-        prod_config = ProductionRetrievalConfig(
-            profile=LEGAL_V2_PROFILE,
-            qdrant_collection=fast_config.qdrant_collection,
-            bm25_sidecar_path=fast_config.bm25_sidecar_path,
-            bm25_index_id=fast_config.bm25_index_id,
-            model_path=fast_config.model_path,
-            local_files_only=True,
-            trust_remote_code=False,
-            device=os.getenv("EMBEDDING_DEVICE", "cpu"),
-            candidate_multiplier=1,
-            min_candidate_count=1,
-            max_candidate_count=max(
-                fast_config.dense_candidate_chunks, fast_config.bm25_candidate_chunks
-            ),
-            lexical_filter_enabled=False,
-        )
-        embedder = BgeM3Embedder(prod_config)
+        embedder: Any | None = None
+        if uses_dense:
+            prod_config = ProductionRetrievalConfig(
+                profile=LEGAL_V2_PROFILE,
+                qdrant_collection=fast_config.qdrant_collection,
+                bm25_sidecar_path=fast_config.bm25_sidecar_path,
+                bm25_index_id=fast_config.bm25_index_id,
+                model_path=fast_config.model_path,
+                local_files_only=True,
+                trust_remote_code=False,
+                device=os.getenv("EMBEDDING_DEVICE", "cpu"),
+                candidate_multiplier=1,
+                min_candidate_count=1,
+                max_candidate_count=max(
+                    fast_config.dense_candidate_chunks, fast_config.bm25_candidate_chunks
+                ),
+                lexical_filter_enabled=False,
+            )
+            embedder = BgeM3Embedder(prod_config)
         fast_retriever = build_live_legal_v2_retriever(client, embedder, fast_config)
         ce_retriever = (
             None
@@ -347,19 +383,22 @@ def get_case_similarity_stage1_runtime() -> CaseSimilarityStage1Runtime:
             embedder=embedder,
             ready=True,
             ready_error=None,
-            model_loaded=bool(getattr(embedder, "loaded", False)),
+            model_loaded=bool(getattr(embedder, "loaded", False)) if embedder else False,
             bm25_loaded=False,
             warmup_status="cold",
             ce_retriever=ce_retriever,
             ce_config=None if skip_ce_bm25 else ce_config,
+            fast_retrieval_profile=fast_profile,
+            fast_retrieval_profile_source=fast_profile_source,
         )
         logger.info(
             "[legal_v2.stage1] runtime ready "
-            "fast_collection=%s fast_bm25=%s fast_points=%s "
+            "fast_profile=%s fast_collection=%s fast_bm25=%s fast_points=%s "
             "ce_collection=%s ce_bm25=%s ce_points=%s",
+            fast_profile,
             fast_config.qdrant_collection,
             fast_config.bm25_index_id,
-            getattr(fast_info, "points_count", None),
+            None if fast_info is None else getattr(fast_info, "points_count", None),
             None if skip_ce_bm25 else ce_config.qdrant_collection,
             None if skip_ce_bm25 else ce_config.bm25_index_id,
             None if ce_info is None else getattr(ce_info, "points_count", None),
@@ -402,23 +441,31 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
         }
 
     runtime = get_case_similarity_stage1_runtime()
+    fast_profile = str(getattr(runtime, "fast_retrieval_profile", "dense") or "dense")
+    uses_dense = bool(getattr(runtime.config, "dense_enabled", True))
+    uses_bm25 = bool(getattr(runtime.config, "bm25_enabled", False))
     # Dense-only ops mode never loads FAST BM25 (even if warmup flag is on).
     warm_fast_bm25 = (
         stage1_warmup_fast_bm25_enabled()
-        and (not stage1_fast_dense_only_enabled())
-        and bool(getattr(runtime.config, "bm25_enabled", True))
+        and uses_bm25
+        and fast_profile != "dense"
     )
     bm25_ready = _bm25_is_loaded(runtime) if warm_fast_bm25 else _ce_bm25_is_loaded(runtime)
+    if uses_dense:
+        embedder_ready = _embedder_is_loaded(runtime)
+    else:
+        embedder_ready = True
     if (
         runtime.warmup_status == "warm"
-        and _embedder_is_loaded(runtime)
+        and embedder_ready
         and bm25_ready
     ):
         return {
             "warmup_status": "warm",
-            "model_loaded": True,
-            "bm25_loaded": _fast_bm25_is_loaded(runtime),
+            "model_loaded": bool(uses_dense and _embedder_is_loaded(runtime)),
+            "bm25_loaded": _fast_bm25_is_loaded(runtime) if uses_bm25 else False,
             "fast_bm25_warmed": warm_fast_bm25 and _fast_bm25_is_loaded(runtime),
+            "fast_retrieval_profile": fast_profile,
             "warmup_latency_ms": runtime.warmup_latency_ms,
             "collection": runtime.config.qdrant_collection,
             "fast_collection": runtime.config.qdrant_collection,
@@ -431,28 +478,45 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
     runtime.warmup_error_type = None
     started = time.perf_counter()
     try:
-        embedder = runtime.embedder
-        if embedder is None:
-            raise RetrievalConfigurationError("Stage 1 embedder is not configured.")
-        embedder.load()
-        # Force a real encode so first user query does not pay JIT / graph costs.
-        vector = embedder.embed_query(_WARMUP_QUERY)
-        if not vector:
-            raise RetrievalConfigurationError("Stage 1 warmup embedder returned an empty vector.")
-        runtime.model_loaded = True
+        if uses_dense:
+            embedder = runtime.embedder
+            if embedder is None:
+                raise RetrievalConfigurationError("Stage 1 embedder is not configured.")
+            embedder.load()
+            # Force a real encode so first user query does not pay JIT / graph costs.
+            vector = embedder.embed_query(_WARMUP_QUERY)
+            if not vector:
+                raise RetrievalConfigurationError(
+                    "Stage 1 warmup embedder returned an empty vector."
+                )
+            runtime.model_loaded = True
+        else:
+            runtime.model_loaded = False
+            logger.info(
+                "[legal_v2.stage1] warmup skipping dense embedder "
+                "(fast_retrieval_profile=%s)",
+                fast_profile,
+            )
 
         if warm_fast_bm25:
             bm25 = getattr(runtime.retriever, "_bm25", None)
             if bm25 is None:
                 raise RetrievalConfigurationError("Stage 1 BM25 sidecar is not configured.")
             bm25.search(_WARMUP_QUERY, top_k=1)
-        else:
+        elif uses_bm25:
             logger.info(
                 "[legal_v2.stage1] warmup skipping FAST BM25 load "
-                "(NALUS_LEGAL_V2_STAGE1_WARMUP_FAST_BM25=0); lazy on first query"
+                "(lazy on first query; profile=%s)",
+                fast_profile,
+            )
+        else:
+            logger.info(
+                "[legal_v2.stage1] warmup skipping FAST BM25 "
+                "(fast_retrieval_profile=%s)",
+                fast_profile,
             )
 
-        if runtime.ce_retriever is not None and not stage1_fast_dense_only_enabled():
+        if runtime.ce_retriever is not None and fast_profile != "dense":
             ce_bm25 = getattr(runtime.ce_retriever, "_bm25", None)
             if ce_bm25 is None:
                 raise RetrievalConfigurationError(
@@ -465,23 +529,29 @@ def warmup_case_similarity_stage1_runtime() -> dict[str, Any]:
                 "(CE retriever not loaded for dense-only / CE-disabled host)"
             )
 
-        runtime.bm25_loaded = _bm25_is_loaded(runtime) if warm_fast_bm25 else _ce_bm25_is_loaded(runtime)
+        runtime.bm25_loaded = (
+            _bm25_is_loaded(runtime) if warm_fast_bm25 else _ce_bm25_is_loaded(runtime)
+        )
         runtime.warmup_status = "warm"
         runtime.warmup_latency_ms = (time.perf_counter() - started) * 1000.0
         logger.info(
-            "[legal_v2.stage1] warmup complete fast_collection=%s ce_collection=%s "
-            "model_loaded=1 fast_bm25_warmed=%s bm25_loaded=%s warmup_latency_ms=%.1f",
+            "[legal_v2.stage1] warmup complete fast_profile=%s fast_collection=%s "
+            "ce_collection=%s model_loaded=%s fast_bm25_warmed=%s bm25_loaded=%s "
+            "warmup_latency_ms=%.1f",
+            fast_profile,
             runtime.config.qdrant_collection,
             runtime.ce_config.qdrant_collection if runtime.ce_config else None,
+            runtime.model_loaded,
             warm_fast_bm25,
             runtime.bm25_loaded,
             runtime.warmup_latency_ms,
         )
         return {
             "warmup_status": "warm",
-            "model_loaded": True,
-            "bm25_loaded": bool(runtime.bm25_loaded),
+            "model_loaded": bool(runtime.model_loaded),
+            "bm25_loaded": bool(runtime.bm25_loaded) if uses_bm25 else False,
             "fast_bm25_warmed": warm_fast_bm25 and bool(runtime.bm25_loaded),
+            "fast_retrieval_profile": fast_profile,
             "warmup_latency_ms": runtime.warmup_latency_ms,
             "collection": runtime.config.qdrant_collection,
             "fast_collection": runtime.config.qdrant_collection,
@@ -540,22 +610,30 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
             "cross_encoder": _cross_encoder_readiness_payload(),
         }
 
-    model_loaded = _embedder_is_loaded(runtime)
-    dense_only = stage1_fast_dense_only_enabled() or (
-        not bool(getattr(runtime.config, "bm25_enabled", True))
+    model_loaded = _embedder_is_loaded(runtime) if runtime.embedder is not None else False
+    fast_profile = str(getattr(runtime, "fast_retrieval_profile", "dense") or "dense")
+    fast_profile_source = str(
+        getattr(runtime, "fast_retrieval_profile_source", "default") or "default"
     )
-    warm_fast_bm25 = stage1_warmup_fast_bm25_enabled() and (not dense_only)
+    uses_dense = bool(getattr(runtime.config, "dense_enabled", True))
+    uses_bm25 = bool(getattr(runtime.config, "bm25_enabled", False))
+    dense_only = fast_profile == "dense" or (uses_dense and not uses_bm25)
+    warm_fast_bm25 = stage1_warmup_fast_bm25_enabled() and uses_bm25 and (not dense_only)
     if warm_fast_bm25:
         bm25_loaded = _bm25_is_loaded(runtime)
-        warm_enough = model_loaded and bm25_loaded
+        warm_enough = (model_loaded if uses_dense else True) and bm25_loaded
     elif dense_only:
         # Dense-only FAST: model (+ optional small CE BM25) is enough; FAST BM25 stays unloaded.
         bm25_loaded = False
-        warm_enough = model_loaded
+        warm_enough = model_loaded if uses_dense else True
+    elif fast_profile == "bm25":
+        bm25_loaded = _fast_bm25_is_loaded(runtime)
+        # BM25 loads lazily; readiness does not require it preloaded unless warmup asks.
+        warm_enough = True if not warm_fast_bm25 else bm25_loaded
     else:
         # Model + (optional) small CE BM25 is enough for ready when FAST BM25 is lazy.
         bm25_loaded = _fast_bm25_is_loaded(runtime)
-        warm_enough = model_loaded and _ce_bm25_is_loaded(runtime)
+        warm_enough = (model_loaded if uses_dense else True) and _ce_bm25_is_loaded(runtime)
     warmup_required = stage1_warmup_on_start_enabled()
 
     if warmup_required and not warm_enough:
@@ -585,10 +663,13 @@ def probe_case_similarity_stage1_readiness() -> dict[str, Any]:
             runtime.ce_config.bm25_index_id if runtime.ce_config else None
         ),
         "retrieval_stage": STAGE_1_RETRIEVAL,
+        "fast_retrieval_profile": fast_profile,
+        "fast_retrieval_profile_source": fast_profile_source,
         "model_loaded": model_loaded,
-        "bm25_loaded": bm25_loaded,
+        "bm25_loaded": bm25_loaded if uses_bm25 else False,
         "fast_bm25_warmup_enabled": warm_fast_bm25,
         "fast_dense_only": dense_only,
+        "colbert_loaded": bool(getattr(runtime, "colbert_ready", False)),
         "warmup_status": runtime.warmup_status,
         "warmup_required": warmup_required,
         "warmup_latency_ms": runtime.warmup_latency_ms,
@@ -906,6 +987,12 @@ async def search_case_similarity_stage1(
         "profile_label": profile.label,
         "profile_index_notes": profile.notes,
         "colbert_applied": colbert_applied,
+        "fast_retrieval_profile": getattr(active, "fast_retrieval_profile", None),
+        "fast_retrieval_profile_source": getattr(
+            active, "fast_retrieval_profile_source", None
+        ),
+        "dense_enabled": bool(getattr(active_config, "dense_enabled", True)),
+        "bm25_enabled": bool(getattr(active_config, "bm25_enabled", True)),
     }
     rerank_payload = diagnostics["rerank"]
     passages_per_document = rerank_payload.get("requested_passages_per_document")

@@ -42,6 +42,8 @@ class LegalV2RetrieverConfig:
     candidate_documents: int = 40
     returned_verified_documents: int = 10
     evidence_windows_per_constraint: int = 2
+    # Channel switches for FAST dense / bm25 / hybrid (see fast_retrieval_profile).
+    dense_enabled: bool = True
     # When False, skip BM25 (dense-only). Ops flag for low-RAM coexistence with full-B ingest.
     bm25_enabled: bool = True
 
@@ -56,6 +58,8 @@ class LegalV2RetrieverConfig:
         ):
             if int(getattr(self, field_name)) <= 0:
                 raise ValueError(f"{field_name} must be positive.")
+        if not self.dense_enabled and not self.bm25_enabled:
+            raise ValueError("at least one of dense_enabled or bm25_enabled must be True")
 
 
 @dataclass(frozen=True)
@@ -93,18 +97,26 @@ class LegalV2HybridRetriever:
         started = time.perf_counter()
         query = _retrieval_query(query_spec)
         filters_active = bool(source_filters is not None and source_filters.is_active())
-        dense_search_k = int(self._config.dense_candidate_chunks)
-        if filters_active:
-            # Oversample before the generic metadata filter so both channels
-            # still contribute court/year/type-constrained candidates.
-            dense_search_k = min(dense_search_k * 4, 320)
+        dense_enabled = bool(self._config.dense_enabled)
+        bm25_enabled = bool(self._config.bm25_enabled)
+
         dense_started = time.perf_counter()
-        dense = self._dense.search(query, top_k=dense_search_k)
-        dense = filter_chunks(dense, source_filters)[: self._config.dense_candidate_chunks]
-        dense_ms = _elapsed_ms(dense_started)
-        trace_event(logger, "legal_v2.dense_retrieval.completed", result_count=len(dense))
+        if dense_enabled:
+            dense_search_k = int(self._config.dense_candidate_chunks)
+            if filters_active:
+                # Oversample before the generic metadata filter so both channels
+                # still contribute court/year/type-constrained candidates.
+                dense_search_k = min(dense_search_k * 4, 320)
+            dense = self._dense.search(query, top_k=dense_search_k)
+            dense = filter_chunks(dense, source_filters)[: self._config.dense_candidate_chunks]
+            dense_ms = _elapsed_ms(dense_started)
+            trace_event(logger, "legal_v2.dense_retrieval.completed", result_count=len(dense))
+        else:
+            dense = []
+            dense_ms = _elapsed_ms(dense_started)
+
         bm25_started = time.perf_counter()
-        if self._config.bm25_enabled:
+        if bm25_enabled:
             bm25 = self._bm25.search(
                 query,
                 top_k=self._config.bm25_candidate_chunks,
@@ -112,7 +124,12 @@ class LegalV2HybridRetriever:
             )
             bm25_ms = _elapsed_ms(bm25_started)
             trace_event(logger, "legal_v2.bm25_retrieval.completed", result_count=len(bm25))
-            fused_started = time.perf_counter()
+        else:
+            bm25 = []
+            bm25_ms = _elapsed_ms(bm25_started)
+
+        fused_started = time.perf_counter()
+        if dense_enabled and bm25_enabled:
             if dense and bm25:
                 fused = rrf_fuse(
                     [dense, bm25],
@@ -137,18 +154,19 @@ class LegalV2HybridRetriever:
                     if not filters_active
                     else "Legal v2 source filters removed every dense and BM25 candidate."
                 )
-            fused_ms = _elapsed_ms(fused_started)
             trace_event(logger, "legal_v2.rrf_fusion.completed", result_count=len(fused))
-        else:
-            bm25 = []
-            bm25_ms = _elapsed_ms(bm25_started)
+        elif dense_enabled:
             if not dense:
                 raise RuntimeError("Legal v2 dense index must return candidates (dense-only mode).")
-            fused_started = time.perf_counter()
-            # Dense-only: preserve ranking by truncating dense hits (no lexical channel).
             fused = dense[: self._config.fused_candidate_chunks]
-            fused_ms = _elapsed_ms(fused_started)
             trace_event(logger, "legal_v2.dense_only_retrieval.completed", result_count=len(fused))
+        else:
+            if not bm25:
+                raise RuntimeError("Legal v2 BM25 index must return candidates (bm25-only mode).")
+            fused = bm25[: self._config.fused_candidate_chunks]
+            trace_event(logger, "legal_v2.bm25_only_retrieval.completed", result_count=len(fused))
+        fused_ms = _elapsed_ms(fused_started)
+
         documents = _aggregate_documents(
             fused,
             dense=dense,
@@ -173,8 +191,10 @@ class LegalV2HybridRetriever:
                 "total_retrieval_latency_ms": _elapsed_ms(started),
                 "collection": self._config.qdrant_collection,
                 "bm25_index_id": self._config.bm25_index_id,
-                "bm25_enabled": bool(self._config.bm25_enabled),
-                "dense_only": not bool(self._config.bm25_enabled),
+                "dense_enabled": dense_enabled,
+                "bm25_enabled": bm25_enabled,
+                "dense_only": dense_enabled and not bm25_enabled,
+                "bm25_only": bm25_enabled and not dense_enabled,
                 "source_filters": (
                     source_filters.as_dict()
                     if source_filters is not None and source_filters.is_active()
@@ -196,32 +216,55 @@ def legal_v2_retriever_config_from_env() -> LegalV2RetrieverConfig:
         candidate_documents=_int_env("NALUS_LEGAL_V2_CANDIDATE_DOCUMENTS", 50),
         returned_verified_documents=_int_env("NALUS_LEGAL_V2_RETURNED_VERIFIED_DOCUMENTS", 10),
         evidence_windows_per_constraint=_int_env("NALUS_LEGAL_V2_EVIDENCE_WINDOWS_PER_CONSTRAINT", 2),
+        dense_enabled=_bool_env("NALUS_LEGAL_V2_DENSE_ENABLED", True),
         bm25_enabled=_bool_env("NALUS_LEGAL_V2_BM25_ENABLED", True),
     )
 
 
+class _DisabledDenseStore:
+    """Stand-in dense store when FAST profile is bm25-only (no embedder load)."""
+
+    def search(self, query: str, top_k: int) -> list[RetrievedChunk]:
+        del query, top_k
+        raise RuntimeError("Dense retrieval is disabled for the active FAST profile.")
+
+
 def build_live_legal_v2_retriever(client: Any, embedder: Any, config: LegalV2RetrieverConfig) -> LegalV2HybridRetriever:
-    prod_config = ProductionRetrievalConfig(
-        profile=LEGAL_V2_PROFILE,
-        qdrant_collection=config.qdrant_collection,
-        bm25_sidecar_path=config.bm25_sidecar_path,
-        bm25_index_id=config.bm25_index_id,
-        model_path=config.model_path,
-        local_files_only=True,
-        trust_remote_code=False,
-        device=os.getenv("EMBEDDING_DEVICE", "cpu"),
-        candidate_multiplier=1,
-        min_candidate_count=1,
-        max_candidate_count=max(config.dense_candidate_chunks, config.bm25_candidate_chunks),
-        lexical_filter_enabled=False,
-    )
-    dense = QdrantDenseStore(client=client, embedder=embedder, config=prod_config)
-    bm25 = Bm25Sidecar(
-        config.bm25_sidecar_path,
-        k1=LEGAL_V2_PROFILE.bm25_k1,
-        b=LEGAL_V2_PROFILE.bm25_b,
-        index_id=config.bm25_index_id,
-    )
+    if config.dense_enabled:
+        if embedder is None:
+            raise ValueError("embedder is required when dense_enabled=True")
+        prod_config = ProductionRetrievalConfig(
+            profile=LEGAL_V2_PROFILE,
+            qdrant_collection=config.qdrant_collection,
+            bm25_sidecar_path=config.bm25_sidecar_path,
+            bm25_index_id=config.bm25_index_id,
+            model_path=config.model_path,
+            local_files_only=True,
+            trust_remote_code=False,
+            device=os.getenv("EMBEDDING_DEVICE", "cpu"),
+            candidate_multiplier=1,
+            min_candidate_count=1,
+            max_candidate_count=max(config.dense_candidate_chunks, config.bm25_candidate_chunks),
+            lexical_filter_enabled=False,
+        )
+        dense: Any = QdrantDenseStore(client=client, embedder=embedder, config=prod_config)
+    else:
+        dense = _DisabledDenseStore()
+    if config.bm25_enabled:
+        bm25: Any = Bm25Sidecar(
+            config.bm25_sidecar_path,
+            k1=LEGAL_V2_PROFILE.bm25_k1,
+            b=LEGAL_V2_PROFILE.bm25_b,
+            index_id=config.bm25_index_id,
+        )
+    else:
+        # Object exists for diagnostics only; search is never called when disabled.
+        bm25 = Bm25Sidecar(
+            config.bm25_sidecar_path,
+            k1=LEGAL_V2_PROFILE.bm25_k1,
+            b=LEGAL_V2_PROFILE.bm25_b,
+            index_id=config.bm25_index_id,
+        )
     return LegalV2HybridRetriever(dense_store=dense, bm25_sidecar=bm25, config=config)
 
 
