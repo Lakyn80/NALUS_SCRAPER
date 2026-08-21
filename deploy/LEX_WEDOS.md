@@ -14,12 +14,52 @@ GitHub is the source of truth. Manual bootstrap and GitHub Actions CD must use t
   data/
     qdrant/                     # Qdrant storage (Full A only)
     hf_cache/hub/models--BAAI--bge-m3/
-    storage/                    # stub dirs (BM25 not loaded on WEDOS)
-    batches/
+    storage/
+      rag/bm25/                 # BM25 sqlite may exist; NOT loaded when FAST=dense
+      rag/archive/              # judgment_archive_v1.sqlite (document metadata)
+    batches/                    # NALUS batch JSON for one-time archive build
 ```
 
 Do **not** create a separate manual-only deploy path. After bootstrap, CD
 (`.github/workflows/deploy-lex-wedos.yml`) updates this same installation.
+
+## FAST retrieval profile
+
+Compose sets:
+
+```text
+NALUS_FAST_RETRIEVAL_PROFILE=dense
+```
+
+Supported values (env-only switch; no FE/API/source change):
+
+- `dense` — BGE-M3 + Qdrant (WEDOS now)
+- `bm25` — BM25 only (stronger host)
+- `hybrid` — Dense + BM25 RRF (stronger host)
+
+Legacy alias: `NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY=1` still forces dense when the
+new selector is unset.
+
+## Jurisprudence archive index (one-time)
+
+Archive API reads `NALUS_JUDGMENT_ARCHIVE_SQLITE_PATH` (default under
+`/app/storage/rag/archive/`). Build once on the VPS from batch JSON — do **not**
+rebuild on every API restart:
+
+```bash
+cd /home/lucky/projects/apps/lex
+mkdir -p data/storage/rag/archive
+docker compose -f docker-compose.lex.prod.yml --env-file .env.prod run --rm \
+  --entrypoint python \
+  -v "$(pwd)/data/storage:/app/storage" \
+  -v "$(pwd)/data/batches:/app/batches:ro" \
+  api scripts/legal_v2/build_judgment_archive_index.py \
+    --batches-dir /app/batches \
+    --sqlite-path /app/storage/rag/archive/judgment_archive_v1.sqlite
+```
+
+Then recreate API (`docker compose ... up -d --no-deps api`) so the read-only
+mount sees the new sqlite file.
 
 ## CD secrets (GitHub → WEDOS)
 
@@ -34,9 +74,9 @@ pins; it must not upload secrets into git.
 
 ## Not started on 4 GB RAM
 
-- FAST BM25 (in-memory multi-GB)
+- FAST BM25 (in-memory multi-GB) — code ready; set `NALUS_FAST_RETRIEVAL_PROFILE=bm25|hybrid` later
 - Cross-encoder / PRECISE (GPU worker later)
-- ColBERT / BALANCED
+- ColBERT / BALANCED (PODROBNÉ)
 - Full B collection
 - Redis / Prometheus / Grafana
 

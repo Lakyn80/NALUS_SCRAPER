@@ -1,5 +1,17 @@
 # Project Progress
 
+## 2026-08-21 Europe/Moscow — Task: FAST profile selector + WEDOS deploy
+
+- Product FAST channels via `NALUS_FAST_RETRIEVAL_PROFILE=dense|bm25|hybrid`
+  (default **dense**). Legacy `NALUS_LEGAL_V2_STAGE1_FAST_DENSE_ONLY=1` still
+  maps to dense when the new selector is unset.
+- WEDOS compose: `NALUS_FAST_RETRIEVAL_PROFILE=dense`; BM25/ColBERT/CE stay off
+  and are not loaded for dense. Env-only future switch to bm25/hybrid.
+- Canonical decision collapse unchanged (chunk→ECLI unique ranks).
+- Archive API included; production needs one-time sqlite build under
+  `data/storage/rag/archive/` (see `deploy/LEX_WEDOS.md`).
+- Deploy path unchanged: CI on `main` → `deploy-lex-wedos.yml` → GHCR + SSH.
+
 ## 2026-08-21 Europe/Moscow — Task: Golden v3 zero-tuning A/B + weighted fusion (DEV)
 
 - Scope: frozen DEV qrels only (`DEV_QRELS_FROZEN_WITH_AGENT_LOW_GRADE_TAIL`).
