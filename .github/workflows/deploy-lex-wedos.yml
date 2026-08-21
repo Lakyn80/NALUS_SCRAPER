@@ -219,6 +219,86 @@ jobs:
             echo "FAST smoke passed http=${smoke_code}"
             rm -f /tmp/lex_fast_smoke.json
 
+            ARCHIVE_SQLITE="data/storage/rag/archive/judgment_archive_v1.sqlite"
+            ARCHIVE_BATCHES="data/batches"
+            mkdir -p data/storage/rag/archive
+            NEED_ARCHIVE_BUILD=0
+            if [ ! -f "$ARCHIVE_SQLITE" ]; then
+              NEED_ARCHIVE_BUILD=1
+              echo "Archive sqlite missing; will build"
+            else
+              DOC_COUNT=$(docker compose \
+                -f docker-compose.lex.prod.yml \
+                --env-file .env.prod \
+                run --rm --no-deps --entrypoint python \
+                -v "$(pwd)/data/storage:/app/storage:ro" \
+                api -c 'import sqlite3; c=sqlite3.connect("/app/storage/rag/archive/judgment_archive_v1.sqlite"); print(c.execute("select coalesce(document_count,0) from archive_meta limit 1").fetchone()[0])' \
+                2>/dev/null | tr -d '\r' | tail -n 1 || echo 0)
+              if ! [[ "$DOC_COUNT" =~ ^[0-9]+$ ]] || [ "$DOC_COUNT" -lt 1 ]; then
+                NEED_ARCHIVE_BUILD=1
+                echo "Archive sqlite empty/unready (count=${DOC_COUNT}); will build"
+              else
+                echo "Archive sqlite already present document_count=${DOC_COUNT}"
+              fi
+            fi
+            if [ "$NEED_ARCHIVE_BUILD" -eq 1 ]; then
+              if [ ! -d "$ARCHIVE_BATCHES" ]; then
+                echo "Archive batches dir missing: ${ARCHIVE_BATCHES}" >&2
+                ls -la data || true
+                exit 1
+              fi
+              BATCH_FILES=$(find "$ARCHIVE_BATCHES" -type f \( -name '*.json' -o -name '*.jsonl' \) 2>/dev/null | wc -l | tr -d ' ')
+              echo "Archive build starting batches_dir=${ARCHIVE_BATCHES} batch_files=${BATCH_FILES}"
+              if [ "${BATCH_FILES:-0}" -lt 1 ]; then
+                echo "No batch JSON files found under ${ARCHIVE_BATCHES}" >&2
+                find "$ARCHIVE_BATCHES" -maxdepth 2 -type f | head -n 50 || true
+                exit 1
+              fi
+              docker compose \
+                -f docker-compose.lex.prod.yml \
+                --env-file .env.prod \
+                run --rm --no-deps \
+                --entrypoint python \
+                -v "$(pwd)/data/storage:/app/storage" \
+                -v "$(pwd)/data/batches:/app/batches:ro" \
+                api scripts/legal_v2/build_judgment_archive_index.py \
+                  --batches-dir /app/batches \
+                  --sqlite-path /app/storage/rag/archive/judgment_archive_v1.sqlite
+              docker compose \
+                -f docker-compose.lex.prod.yml \
+                --env-file .env.prod \
+                up -d --no-deps api
+              for i in $(seq 1 30); do
+                if curl -sf http://127.0.0.1:8029/health >/dev/null; then
+                  break
+                fi
+                sleep 3
+              done
+            fi
+
+            archive_code=$(curl -sS -o /tmp/lex_archive_smoke.json -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              http://127.0.0.1:8029/api/judgments/archive || true)
+            if [ "$archive_code" != "200" ]; then
+              echo "Archive smoke FAILED http=${archive_code}" >&2
+              cat /tmp/lex_archive_smoke.json >&2 || true
+              docker logs --tail=200 lex-api || true
+              exit 1
+            fi
+            python3 - <<'PY'
+import json
+payload = json.load(open("/tmp/lex_archive_smoke.json", encoding="utf-8"))
+ready = bool(payload.get("index_ready"))
+courts = payload.get("courts") or []
+us = next((c for c in courts if c.get("court_id") == "constitutional_court"), None)
+count = int((us or {}).get("document_count") or 0)
+print(f"Archive smoke index_ready={ready} constitutional_document_count={count}")
+if not ready or count < 1:
+    raise SystemExit("Archive index not ready or empty after deploy")
+PY
+            rm -f /tmp/lex_archive_smoke.json
+
             echo "DEPLOY_SHA=${DEPLOY_SHA}"
             grep '^LEX_API_IMAGE=' .env.prod
             docker ps --filter name=lex-api --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
