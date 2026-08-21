@@ -286,17 +286,7 @@ jobs:
               docker logs --tail=200 lex-api || true
               exit 1
             fi
-            python3 - <<'PY'
-import json
-payload = json.load(open("/tmp/lex_archive_smoke.json", encoding="utf-8"))
-ready = bool(payload.get("index_ready"))
-courts = payload.get("courts") or []
-us = next((c for c in courts if c.get("court_id") == "constitutional_court"), None)
-count = int((us or {}).get("document_count") or 0)
-print(f"Archive smoke index_ready={ready} constitutional_document_count={count}")
-if not ready or count < 1:
-    raise SystemExit("Archive index not ready or empty after deploy")
-PY
+            python3 -c 'import json; p=json.load(open("/tmp/lex_archive_smoke.json",encoding="utf-8")); ready=bool(p.get("index_ready")); courts=p.get("courts") or []; us=next((c for c in courts if c.get("court_id")=="constitutional_court"), None); count=int((us or {}).get("document_count") or 0); print(f"Archive smoke index_ready={ready} constitutional_document_count={count}"); raise SystemExit(0 if ready and count>=1 else "Archive index not ready or empty after deploy")'
             rm -f /tmp/lex_archive_smoke.json
 
             echo "DEPLOY_SHA=${DEPLOY_SHA}"
