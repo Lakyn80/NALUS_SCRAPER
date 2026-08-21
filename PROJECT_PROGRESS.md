@@ -1,5 +1,37 @@
 # Project Progress
 
+## 2026-08-21 Europe/Moscow — Task: Golden v3 zero-tuning A/B + weighted fusion (DEV)
+
+- Scope: frozen DEV qrels only (`DEV_QRELS_FROZEN_WITH_AGENT_LOW_GRADE_TAIL`).
+  TEST untouched. No BM25/Dense param tuning. No deploy.
+- Integrity audit: document-level eval PASS for Dense/BM25/Hybrid; metric
+  corrections not required. Report:
+  `artifacts/legal_v2/golden_v3_graded/ab_zero_tuning/INTEGRITY_AUDIT.md`
+- Zero-tuning baseline (nDCG@10): Dense 0.3545 / BM25 **0.5027** / Hybrid RRF
+  0.4527 → baseline verdict **KEEP_BM25**. Artifacts under
+  `artifacts/legal_v2/golden_v3_graded/ab_zero_tuning/`
+- Runner: `scripts/legal_v2/run_golden_v3_ab_zero_tuning.py`
+- Weighted RRF (BM25:Dense 1.0:0 … 0.5:0.5) research-only over frozen rankings:
+  best mix 0.90:0.10 still −0.0009 vs BM25 → **KEEP_BM25**. Artifacts under
+  `artifacts/legal_v2/golden_v3_graded/weighted_fusion_dev/`
+- Runner: `scripts/legal_v2/run_golden_v3_weighted_fusion_dev.py` (no production
+  routing change). Next sensible step: stage-2 rerank, not more Dense weight.
+
+## 2026-08-21 Europe/Moscow — Task: Read-only jurisprudence archive browser
+
+- Scope: document-level Judikatura archive browse (Court → Year → Month →
+  paginated decisions). No retrieval ranking changes; no Golden v3/qrels edits.
+- Data: SQLite document metadata index
+  `storage/rag/archive/judgment_archive_v1.sqlite` built offline from NALUS
+  batch JSON (not Qdrant chunk scans). Identity = canonical ECLI. No full text.
+- Backend: async `GET /api/judgments/archive`, `/{year}`, `/{year}/{month}` with
+  cursor pagination (~50). Court schema ready for supreme_court /
+  supreme_administrative_court (empty until ingested).
+- Frontend (NalusFE): `/judikatura` with lazy year/month expansion, load-more /
+  infinite scroll, links to existing `/rozhodnuti/{canonical_document_id}`.
+- Tests: `tests/rag/test_legal_v2_judgment_archive.py` — 8 passed.
+- Index build remains a local PowerShell offline step when needed.
+
 ## 2026-08-14 Europe/Moscow — Task: LLM retrieval augmentation plan (docs only)
 
 - Scope: documentation / architecture planning only. No production code, ranking,
