@@ -41,3 +41,6 @@ backend/models/
 storage/rag/bm25/*.sqlite
 storage/rag/bm25/*.sqlite-shm
 storage/rag/bm25/*.sqlite-wal
+storage/rag/archive/*.sqlite
+storage/rag/archive/*.sqlite-shm
+storage/rag/archive/*.sqlite-wal

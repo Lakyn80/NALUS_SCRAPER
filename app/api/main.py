@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
+from app.api.judgments_archive_router import router as judgments_archive_router
 from app.api.middleware import install_observability_middleware
 from app.api.rag_router import router
 from app.core.logging import get_logger
@@ -197,6 +198,7 @@ app = FastAPI(
 
 install_observability_middleware(app)
 app.include_router(router)
+app.include_router(judgments_archive_router)
 
 
 @app.get("/health")
