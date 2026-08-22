@@ -29,6 +29,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--delay", type=float, default=1.0)
     p.add_argument("--max-pages", type=int, default=50)
     p.add_argument("--limit-per-court", type=int, default=500)
+    p.add_argument(
+        "--skip-watermark",
+        action="store_true",
+        help="Do not persist watermark changes (dry-run / inspect).",
+    )
     return p.parse_args()
 
 
@@ -125,28 +130,29 @@ def run_nss_incremental(root: Path, *, start: date, end: date, delay: float, max
     }
 
 
-def run_us_incremental(root: Path, *, start: date, end: date) -> dict[str, Any]:
-    """US delta into staging only — never writes batches/.
-
-    Uses a lightweight marker + optional invoke of staging scrape helper.
-    Full Playwright year crawl remains available via scrape_all_nalus with
-    an explicit future staging adapter; daily path records the requested window
-    and writes an incremental job stub that ops can execute when browser deps are ready.
-    """
+def run_us_incremental(
+    root: Path,
+    *,
+    start: date,
+    end: date,
+    max_pages: int = 50,
+    limit: int = 500,
+) -> dict[str, Any]:
+    """US delta into staging only — never writes batches/."""
     out_dir = assert_safe_staging_path(root / "us" / "incremental", staging_root=root)
     report_path = out_dir / f"us_incr_{start.isoformat()}_{end.isoformat()}.json"
-    # Prefer real helper if present.
+    meta_path = out_dir / f"usoud_{start.isoformat()}_{end.isoformat()}_meta.json"
     helper = PROJECT_ROOT / "scripts" / "scrape_us_staging_incremental.py"
     payload: dict[str, Any] = {
         "court": "us",
         "date_from": start.isoformat(),
         "date_to": end.isoformat(),
         "batches_write": False,
+        "qdrant": False,
         "helper": str(helper),
         "status": "scheduled",
     }
     if helper.exists():
-        # Import-run without touching batches.
         import runpy
 
         sys.argv = [
@@ -158,6 +164,10 @@ def run_us_incremental(root: Path, *, start: date, end: date) -> dict[str, Any]:
             "--out-dir",
             str(out_dir),
             "--no-ingest",
+            "--max-pages",
+            str(max_pages),
+            "--limit",
+            str(limit),
         ]
         try:
             runpy.run_path(str(helper), run_name="__main__")
@@ -169,6 +179,29 @@ def run_us_incremental(root: Path, *, start: date, end: date) -> dict[str, Any]:
         except Exception as exc:
             payload["status"] = "failed"
             payload["error"] = str(exc)
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                meta_status = str(meta.get("status") or "")
+                payload.update(
+                    {
+                        "new": meta.get("new", meta.get("written", 0)),
+                        "updated": meta.get("updated", 0),
+                        "unchanged": meta.get("unchanged", 0),
+                        "failed": meta.get("failed", 0),
+                        "out_jsonl": meta.get("out_jsonl"),
+                        "meta": str(meta_path),
+                        "reason": meta.get("reason"),
+                        "listing_complete": meta.get("listing_complete"),
+                        "total_pages": meta.get("total_pages"),
+                        "pages_scanned": meta.get("pages_scanned"),
+                        "watermark_advanced": bool(meta.get("watermark_advanced")),
+                    }
+                )
+                if meta_status:
+                    payload["status"] = meta_status
+            except (OSError, json.JSONDecodeError):
+                pass
     else:
         payload["status"] = "pending_helper"
         payload["notes"] = [
@@ -260,7 +293,13 @@ def main() -> int:
                     limit=args.limit_per_court,
                 )
             elif court == "us":
-                result = run_us_incremental(root, start=start, end=end)
+                result = run_us_incremental(
+                    root,
+                    start=start,
+                    end=end,
+                    max_pages=args.max_pages,
+                    limit=args.limit_per_court,
+                )
             else:
                 result = {"court": court, "status": "skipped", "error": "unknown_court"}
         except Exception as exc:
@@ -269,16 +308,23 @@ def main() -> int:
             failed += 1
 
         report["results"].append(result)
-        if result.get("status") in {"ok", "partial", "scheduled", "pending_helper"}:
+        status = str(result.get("status") or "")
+        if status == "ok":
             watermarks.setdefault(court, {})
             watermarks[court]["watermark_date"] = end.isoformat()
             watermarks[court]["last_success_date"] = end.isoformat()
             watermarks[court]["last_run_id"] = run_id
-            watermarks[court]["last_status"] = result.get("status")
+            watermarks[court]["last_status"] = status
+            result["watermark_advanced"] = True
         else:
-            failed += 1
+            result["watermark_advanced"] = False
+            if status not in {"skipped"}:
+                failed += 1
 
-    save_watermarks(root, watermarks)
+    if not args.skip_watermark:
+        save_watermarks(root, watermarks)
+    else:
+        report["watermark_skipped"] = True
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
     report["failed"] = failed
     out = root / "updater" / f"run_{run_id}.json"
