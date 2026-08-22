@@ -7,11 +7,32 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.models.search_result import NalusResult
 from scripts.scrape_us_staging_incremental import (
     CollectOutcome,
+    _as_record,
     _collect_date_scoped,
     _resolve_status,
 )
+
+
+def test_as_record_supports_slotted_nalus_result() -> None:
+    item = NalusResult(
+        result_id=1,
+        case_reference="I. ÚS 1/26",
+        ecli="ECLI:CZ:US:2026:1.US.1.26.1",
+        judge_rapporteur=None,
+        petitioner=None,
+        popular_name=None,
+        decision_date="01. 01. 2026",
+        announcement_date=None,
+        filing_date=None,
+        publication_date=None,
+    )
+    record = _as_record(item)
+    assert record["result_id"] == 1
+    assert record["ecli"] == "ECLI:CZ:US:2026:1.US.1.26.1"
+    assert record["source"] == "nalus"
 
 
 def test_resolve_status_incomplete_on_cap() -> None:

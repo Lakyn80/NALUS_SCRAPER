@@ -53,12 +53,20 @@ def parse_args() -> argparse.Namespace:
 
 
 def _as_record(item: object) -> dict:
-    if hasattr(item, "__dict__"):
-        raw = dict(item.__dict__)
-    elif isinstance(item, dict):
+    if isinstance(item, dict):
         raw = dict(item)
     else:
-        raise TypeError(f"Unsupported result type: {type(item)}")
+        try:
+            from dataclasses import asdict, is_dataclass
+
+            if is_dataclass(item) and not isinstance(item, type):
+                raw = asdict(item)
+            elif hasattr(item, "__dict__"):
+                raw = dict(item.__dict__)
+            else:
+                raise TypeError(f"Unsupported result type: {type(item)}")
+        except TypeError:
+            raise
     raw.setdefault("source", "nalus")
     return enrich_record_identity(raw, source="nalus")
 

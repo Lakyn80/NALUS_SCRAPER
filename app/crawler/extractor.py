@@ -82,7 +82,17 @@ def _extract_text_url(action_row: Tag) -> str | None:
 def _extract_page_counts(soup: BeautifulSoup) -> tuple[int, int, int, int]:
     header = soup.find("tr", class_="resultHeaderCount")
     if header is None:
-        raise RuntimeError("Results header was not found in the NALUS response.")
+        # Some small result sets omit the dedicated count row class.
+        header_text = soup.get_text(" ", strip=True)
+        match = _HEADER_RE.search(header_text)
+        if not match:
+            raise RuntimeError("Results header was not found in the NALUS response.")
+        start_result = int(match.group("start"))
+        end_result = int(match.group("end"))
+        total_results = int(match.group("total"))
+        page_number = 1
+        total_pages = 1
+        return start_result, end_result, total_results, total_pages
 
     header_text = " ".join(header.get_text(" ", strip=True).split())
     match = _HEADER_RE.search(header_text)
@@ -95,7 +105,11 @@ def _extract_page_counts(soup: BeautifulSoup) -> tuple[int, int, int, int]:
 
     page_input = header.find("input", attrs={"name": "pageNumber"})
     if page_input is None or not page_input.get("value"):
-        raise RuntimeError("Could not determine current NALUS page number.")
+        # Single-page result sets often omit the pageNumber control.
+        page_number = 1
+        page_size = max(end_result - start_result + 1, 1)
+        total_pages = max(1, ceil(total_results / page_size))
+        return start_result, end_result, total_results, total_pages
     page_number = int(page_input["value"])
 
     page_links = []
