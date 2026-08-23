@@ -94,6 +94,7 @@ class ScrapeStats:
     records_updated: int = 0
     duplicates_skipped: int = 0
     parse_failures: int = 0
+    skipped_unavailable: int = 0
     pages_visited: int = 0
     records_discovered: int = 0
     unique_candidates: int = 0
@@ -504,7 +505,10 @@ class PlaywrightProvider(BaseProvider):
             raise RuntimeError("Playwright is unavailable.")
 
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            try:
+                browser = playwright.chromium.launch(headless=True)
+            except Exception as exc:
+                raise RuntimeError(f"Playwright browser launch failed: {exc}") from exc
             page = browser.new_page(user_agent=USER_AGENT)
 
             if action == "home":
@@ -596,6 +600,15 @@ def run_discovery(
     logger.info("Discovery detail URLs: %s", discovery.detail_urls)
 
     if not discovery.detail_urls:
+        # Empty archive windows are valid (e.g. early years with no web results).
+        if search_page.total_results == 0:
+            logger.info(
+                "Discovery empty result set for window %s..%s via %s",
+                window_start.isoformat(),
+                window_end.isoformat(),
+                provider.name,
+            )
+            return discovery
         raise RuntimeError("Discovery did not yield any detail URLs.")
 
     detail_response = provider.fetch_detail(discovery.detail_urls[0])
@@ -618,6 +631,7 @@ def discover_provider(config: ScrapeConfig) -> tuple[BaseProvider, DiscoveryResu
         PlaywrightProvider(debug_dir=config.debug_dir),
     ]
     failures: list[str] = []
+    empty_discovery: tuple[BaseProvider, DiscoveryResult] | None = None
 
     for provider in providers:
         try:
@@ -628,6 +642,13 @@ def discover_provider(config: ScrapeConfig) -> tuple[BaseProvider, DiscoveryResu
                 window_end=window_end,
                 page_size=page_size,
             )
+            if not discovery.detail_urls:
+                empty_discovery = (provider, discovery)
+                logger.info(
+                    "Provider %s reported empty discovery; skipping fallback providers",
+                    provider.name,
+                )
+                return provider, discovery
             logger.info(
                 "Discovery succeeded with provider=%s transport=%s",
                 discovery.provider_name,
@@ -638,6 +659,8 @@ def discover_provider(config: ScrapeConfig) -> tuple[BaseProvider, DiscoveryResu
             failures.append(f"{provider.name}: {exc}")
             logger.warning("Discovery failed for provider=%s: %s", provider.name, exc)
 
+    if empty_discovery is not None:
+        return empty_discovery
     raise RuntimeError("All scraper providers failed discovery: " + " | ".join(failures))
 
 
@@ -990,7 +1013,7 @@ def scrape_sample(config: ScrapeConfig) -> ScrapeStats:
             continue
 
         if record is None:
-            stats.parse_failures += 1
+            stats.skipped_unavailable += 1
             stats.failure_reasons["empty_or_invalid_detail"] = (
                 stats.failure_reasons.get("empty_or_invalid_detail", 0) + 1
             )
@@ -1038,7 +1061,8 @@ def scrape_sample(config: ScrapeConfig) -> ScrapeStats:
 
     logger.info(
         "Scrape finished: pages_visited=%s records_discovered=%s unique_candidates=%s "
-        "records_written=%s records_updated=%s duplicates_skipped=%s local_date_filtered=%s failed=%s",
+        "records_written=%s records_updated=%s duplicates_skipped=%s "
+        "local_date_filtered=%s failed=%s skipped_unavailable=%s",
         stats.pages_visited,
         stats.records_discovered,
         stats.unique_candidates,
@@ -1047,6 +1071,7 @@ def scrape_sample(config: ScrapeConfig) -> ScrapeStats:
         stats.duplicates_skipped,
         stats.locally_filtered_out,
         stats.parse_failures,
+        stats.skipped_unavailable,
     )
     return stats
 

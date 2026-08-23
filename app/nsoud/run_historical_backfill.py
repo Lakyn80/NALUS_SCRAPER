@@ -142,6 +142,7 @@ def run_month(
         failed=stats.parse_failures,
         duplicates=stats.duplicates_skipped,
         skipped_classified=stats.locally_filtered_out,
+        skipped_unavailable=stats.skipped_unavailable,
         failure_reasons=dict(stats.failure_reasons),
     )
     # Locally filtered rows are classified skips (out of range), not failures.
@@ -227,12 +228,22 @@ def main() -> int:
     ok = sum(1 for r in results if r.status == "ok")
     partial = sum(1 for r in results if r.status == "partial")
     failed = sum(1 for r in results if r.status == "failed")
+    incomplete = sum(
+        1
+        for year in range(args.year_from, args.year_to + 1)
+        for month in range(1, 13)
+        if date(year, month, 1) <= date.today()
+        and (months.get(month_key(year, month)) or {}).get("status") != "ok"
+    )
     print(f"months_run: {len(results)}")
     print(f"ok: {ok}")
     print(f"partial: {partial}")
     print(f"failed: {failed}")
+    print(f"incomplete_in_manifest: {incomplete}")
     print(f"manifest: {man_path}")
-    return 0 if failed == 0 else 1
+    # Exit 0 only when the planned range is fully ok — triggers Docker restart: on-failure
+    # when partial/failed months remain (resume picks up from manifest, not from zero).
+    return 0 if failed == 0 and incomplete == 0 else 1
 
 
 if __name__ == "__main__":

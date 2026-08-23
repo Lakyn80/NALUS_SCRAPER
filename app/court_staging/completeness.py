@@ -15,6 +15,7 @@ class MonthCompleteness:
     failed: int = 0
     duplicates: int = 0
     skipped_classified: int = 0
+    skipped_unavailable: int = 0
     status: str = "pending"
     failure_reasons: dict[str, int] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
@@ -31,14 +32,18 @@ class MonthCompleteness:
 def finalize_month_status(stats: MonthCompleteness) -> MonthCompleteness:
     """Month is ok only when every unique discovered id is accounted for.
 
-    Accounted = fetched_ok + failed + skipped_classified (+ duplicates already
-    collapsed into unique_source_ids).
+    Accounted = fetched_ok + failed + skipped_classified + skipped_unavailable
+    (+ duplicates already collapsed into unique_source_ids).
+
+    Permanently unavailable detail pages (empty NS/NSS body) count as
+    skipped_unavailable, not failed, so one broken URL does not block the month.
     """
     unique = max(0, int(stats.unique_source_ids))
     accounted = (
         int(stats.fetched_ok)
         + int(stats.failed)
         + int(stats.skipped_classified)
+        + int(stats.skipped_unavailable)
     )
 
     if unique == 0 and (stats.discovered_entries or 0) == 0:
@@ -62,6 +67,9 @@ def finalize_month_status(stats: MonthCompleteness) -> MonthCompleteness:
         stats.status = "partial"
         stats.notes.append("has_explicit_failures")
         return stats
+
+    if stats.skipped_unavailable > 0:
+        stats.notes.append(f"unavailable_details={stats.skipped_unavailable}")
 
     # Soft signal: site total much higher than unique discovered → incomplete crawl.
     if (

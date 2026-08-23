@@ -91,6 +91,22 @@ def test_completeness_ok_requires_full_accounting():
     assert stats3.status == "ok"
 
 
+def test_completeness_ok_with_skipped_unavailable_gaps():
+    stats = MonthCompleteness(
+        site_total_results=671,
+        discovered_entries=671,
+        unique_source_ids=671,
+        fetched_ok=670,
+        failed=0,
+        skipped_unavailable=1,
+        skipped_classified=0,
+        failure_reasons={"empty_or_invalid_detail": 1},
+    )
+    finalize_month_status(stats)
+    assert stats.status == "ok"
+    assert any("unavailable_details=1" in note for note in stats.notes)
+
+
 def test_path_guard_rejects_batches(tmp_path: Path):
     staging = ensure_staging_tree(tmp_path / "court_staging")
     ok = assert_safe_staging_path(staging / "ns" / "historical" / "x.jsonl", staging_root=staging)

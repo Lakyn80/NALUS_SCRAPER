@@ -97,6 +97,7 @@ def main() -> int:
                     fetched_ok=stats.records_written + stats.records_updated + stats.duplicates_skipped,
                     failed=stats.parse_failures,
                     duplicates=stats.duplicates_skipped,
+                    skipped_unavailable=stats.skipped_unavailable,
                     failure_reasons=dict(stats.failure_reasons),
                     notes=list(stats.notes),
                 )
@@ -137,8 +138,19 @@ def main() -> int:
             )
 
     failed = sum(1 for r in results if r.status == "failed")
-    print(f"months_run: {len(results)} failed: {failed} manifest: {man_path}")
-    return 0 if failed == 0 else 1
+    partial = sum(1 for r in results if r.status == "partial")
+    incomplete = sum(
+        1
+        for year in range(args.year_from, args.year_to + 1)
+        for month in range(1, 13)
+        if date(year, month, 1) <= date.today()
+        and (months.get(f"{year:04d}-{month:02d}") or {}).get("status") != "ok"
+    )
+    print(
+        f"months_run: {len(results)} partial: {partial} failed: {failed} "
+        f"incomplete_in_manifest: {incomplete} manifest: {man_path}"
+    )
+    return 0 if failed == 0 and incomplete == 0 else 1
 
 
 if __name__ == "__main__":

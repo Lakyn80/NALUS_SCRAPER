@@ -56,6 +56,7 @@ class ScrapeStats:
     records_updated: int = 0
     duplicates_skipped: int = 0
     parse_failures: int = 0
+    skipped_unavailable: int = 0
     pages_visited: int = 0
     records_discovered: int = 0
     unique_candidates: int = 0
@@ -112,6 +113,10 @@ def parse_czech_date(raw: str | None) -> str | None:
         return None
 
 
+_RETRYABLE_STATUS = {500, 502, 503, 504}
+_GET_MAX_ATTEMPTS = 5
+
+
 def _client() -> Any:
     if httpx is None:
         raise RuntimeError("httpx is required for nssoud scraper")
@@ -120,6 +125,46 @@ def _client() -> Any:
         follow_redirects=True,
         headers={"User-Agent": USER_AGENT},
     )
+
+
+def _get_with_retries(client: Any, url: str) -> Any:
+    """GET with bounded backoff for transient NSS origin 5xx."""
+    last_exc: Exception | None = None
+    for attempt in range(1, _GET_MAX_ATTEMPTS + 1):
+        try:
+            response = client.get(url)
+            if response.status_code in _RETRYABLE_STATUS and attempt < _GET_MAX_ATTEMPTS:
+                wait = min(60.0, 2.0 ** attempt)
+                logger.warning(
+                    "NSS GET %s status=%s attempt=%s/%s; sleeping %.1fs",
+                    url,
+                    response.status_code,
+                    attempt,
+                    _GET_MAX_ATTEMPTS,
+                    wait,
+                )
+                time.sleep(wait)
+                continue
+            response.raise_for_status()
+            return response
+        except Exception as exc:
+            last_exc = exc
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            retryable = status in _RETRYABLE_STATUS or status is None
+            if attempt >= _GET_MAX_ATTEMPTS or not retryable:
+                raise
+            wait = min(60.0, 2.0 ** attempt)
+            logger.warning(
+                "NSS GET %s error attempt=%s/%s: %s; sleeping %.1fs",
+                url,
+                attempt,
+                _GET_MAX_ATTEMPTS,
+                exc,
+                wait,
+            )
+            time.sleep(wait)
+    assert last_exc is not None
+    raise last_exc
 
 
 def _post_form(client: Any, url: str, pairs: list[tuple[str, str]], *, referer: str) -> Any:
@@ -313,13 +358,11 @@ def scrape(config: ScrapeConfig) -> ScrapeStats:
             html_url = candidate.get("html_url") or ""
             polite_delay(config.delay_seconds)
             try:
-                detail_response = client.get(url)
-                detail_response.raise_for_status()
+                detail_response = _get_with_retries(client, url)
                 full_text_html = None
                 if html_url:
                     polite_delay(config.delay_seconds)
-                    html_response = client.get(html_url)
-                    html_response.raise_for_status()
+                    html_response = _get_with_retries(client, html_url)
                     full_text_html = html_response.text
                 record = parse_decision_detail(
                     detail_response.text,
@@ -334,7 +377,7 @@ def scrape(config: ScrapeConfig) -> ScrapeStats:
                 logger.warning("NSS detail failed %s: %s", url, exc)
                 continue
             if record is None:
-                stats.parse_failures += 1
+                stats.skipped_unavailable += 1
                 stats.failure_reasons["empty_or_invalid_detail"] = (
                     stats.failure_reasons.get("empty_or_invalid_detail", 0) + 1
                 )
